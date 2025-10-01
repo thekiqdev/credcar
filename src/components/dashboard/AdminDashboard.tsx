@@ -8,10 +8,12 @@ import {
   contractService,
   clientService,
   supabase,
-  authService,
+  authService as oldAuthService,
   commissionPlansService,
   administratorService,
 } from "../../lib/supabase";
+import { authService } from "@/lib/auth.service";
+import { uploadService } from "../../lib/upload.service";
 import { Database } from "../../types/supabase";
 import {
   Card,
@@ -144,25 +146,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const form = useForm();
   const [activeSection, setActiveSection] = useState("dashboard");
 
-  // Check authentication on component mount
-  useEffect(() => {
-    const checkAuth = () => {
-      const currentUser = authService.getCurrentUser();
-      if (
-        !currentUser ||
-        (currentUser.role !== "Administrador" &&
-          currentUser.email !== "admin@credicar.com")
-      ) {
-        console.log(
-          "User not authenticated or not admin, redirecting to login",
-        );
-        navigate("/");
-        return;
-      }
-    };
-
-    checkAuth();
-  }, [navigate]);
+  // Authentication check removed - ProtectedRoute already handles this
   const [activeConfigTab, setActiveConfigTab] = useState("commission-tables");
   const [showContractFlow, setShowContractFlow] = useState(false);
   const [contractFlowStep, setContractFlowStep] = useState<string>("");
@@ -1260,7 +1244,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     if (!confirmDelete) return;
 
     try {
-      const currentUser = authService.getCurrentUser();
+      const currentUser = await authService.getCurrentUser();
       if (!currentUser) {
         alert("Usuário não autenticado");
         return;
@@ -1674,6 +1658,39 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
         setIsContractTransferDialogOpen(true);
       } else {
         // No contracts, proceed with deletion
+        
+        // First, delete all representative documents from database
+        try {
+          const { error: deleteDocsError } = await supabase
+            .from('representative_documents')
+            .delete()
+            .eq('representative_id', deletingRepresentative.id);
+          
+          if (deleteDocsError) {
+            console.error("❌ Erro ao deletar documentos do banco:", deleteDocsError);
+          } else {
+            console.log("✅ Documentos deletados do banco de dados");
+          }
+        } catch (dbError) {
+          console.error("❌ Erro ao deletar documentos do banco:", dbError);
+        }
+        
+        // Delete representative documents folder
+        try {
+          const folderDeleted = await uploadService.deleteRepresentativeFolder(
+            deletingRepresentative.id,
+            (deletingRepresentative as any).cpf || (deletingRepresentative as any).cnpj || ''
+          );
+          if (folderDeleted) {
+            console.log("✅ Pasta de documentos deletada com sucesso");
+          } else {
+            console.log("⚠️ Pasta de documentos não encontrada ou erro ao deletar");
+          }
+        } catch (folderError) {
+          console.error("❌ Erro ao deletar pasta de documentos:", folderError);
+          // Continue with representative deletion even if folder deletion fails
+        }
+        
         await representativeService.delete(deletingRepresentative.id);
         console.log("Representative deleted:", deletingRepresentative);
 
@@ -1683,11 +1700,30 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
         setIsDeleteRepDialogOpen(false);
         setDeletingRepresentative(null);
         setAdminPassword("");
+        setRepresentativesSearch(""); // Limpar campo de busca
+        setGlobalSearch(""); // Limpar busca global
         alert("Representante excluído com sucesso!");
       }
     } catch (error) {
       console.error("Error deleting representative:", error);
-      alert("Erro ao excluir representante.");
+      
+      // Extrair mensagem de erro mais específica
+      let errorMessage = "Erro ao excluir representante.";
+      
+      if (error && typeof error === 'object') {
+        if ('code' in error) {
+          const err = error as any;
+          if (err.code === '23503') {
+            errorMessage = "⚠️ Não é possível excluir este representante porque ele possui contratos ou clientes associados.\n\nPor favor, transfira ou exclua os dados relacionados primeiro.";
+          } else if (err.code === '409' || err.message?.includes('409')) {
+            errorMessage = "⚠️ Conflito detectado. Este representante pode ter dados associados.\n\nVerifique contratos e clientes vinculados.";
+          } else if (err.message) {
+            errorMessage = `Erro: ${err.message}`;
+          }
+        }
+      }
+      
+      alert(errorMessage);
     }
   };
 
@@ -1767,6 +1803,38 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
         throw new Error("Erro ao transferir contratos");
       }
 
+      // First, delete all representative documents from database
+      try {
+        const { error: deleteDocsError } = await supabase
+          .from('representative_documents')
+          .delete()
+          .eq('representative_id', deletingRepresentative.id);
+        
+        if (deleteDocsError) {
+          console.error("❌ Erro ao deletar documentos do banco:", deleteDocsError);
+        } else {
+          console.log("✅ Documentos deletados do banco de dados");
+        }
+      } catch (dbError) {
+        console.error("❌ Erro ao deletar documentos do banco:", dbError);
+      }
+
+      // Delete representative documents folder
+      try {
+        const folderDeleted = await uploadService.deleteRepresentativeFolder(
+          deletingRepresentative.id,
+          (deletingRepresentative as any).cpf || (deletingRepresentative as any).cnpj || ''
+        );
+        if (folderDeleted) {
+          console.log("✅ Pasta de documentos deletada com sucesso");
+        } else {
+          console.log("⚠️ Pasta de documentos não encontrada ou erro ao deletar");
+        }
+      } catch (folderError) {
+        console.error("❌ Erro ao deletar pasta de documentos:", folderError);
+        // Continue with representative deletion even if folder deletion fails
+      }
+
       // Now delete the representative
       await representativeService.delete(deletingRepresentative.id);
       console.log(
@@ -1785,6 +1853,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       setTransferOption("");
       setSelectedTransferRepresentative("");
       setRepresentativeContracts([]);
+      setRepresentativesSearch(""); // Limpar campo de busca
+      setGlobalSearch(""); // Limpar busca global
 
       const transferTarget =
         transferOption === "admin" ? "administrador" : "outro representante";
@@ -3011,9 +3081,17 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => {
-                      authService.logout();
-                      navigate("/");
+                    onClick={async () => {
+                      console.log("🔓 Admin logout clicked");
+                      
+                      // Limpar AMBOS os sistemas
+                      await authService.logout(); // Supabase Auth
+                      
+                      const { authService: oldAuthService } = await import("../../lib/supabase");
+                      oldAuthService.logout(); // localStorage (caso exista)
+                      
+                      console.log("✅ Logout complete, navigating to home");
+                      navigate("/", { replace: true });
                     }}
                     className="ml-2 text-muted-foreground hover:text-foreground"
                   >

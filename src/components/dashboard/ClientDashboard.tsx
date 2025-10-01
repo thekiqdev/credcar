@@ -192,9 +192,11 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({
     checkAuth();
   }, [searchParams]);
 
-  const handleLogout = () => {
-    authService.logout();
-    navigate("/");
+  const handleLogout = async () => {
+    console.log("🔓 Client logout clicked");
+    await authService.logout();
+    console.log("✅ Logout complete, navigating to home");
+    navigate("/", { replace: true });
   };
 
   const handleLoginSuccess = () => {

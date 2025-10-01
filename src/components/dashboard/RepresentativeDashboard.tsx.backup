@@ -142,8 +142,8 @@ const RepresentativeDashboard: React.FC<RepresentativeDashboardProps> = ({
     const checkAuth = async () => {
       console.log("🔍 RepresentativeDashboard: Iniciando verificação de autenticação");
       
-      // Primeiro tentar Supabase Auth (admins)
-      let user = await authService.getCurrentUser();
+      // Primeiro tentar Supabase Auth
+      let user = authService.getCurrentUser();
       console.log("🔍 Supabase Auth user:", user);
       
       // Se não encontrar, tentar localStorage (representantes)
@@ -156,14 +156,14 @@ const RepresentativeDashboard: React.FC<RepresentativeDashboardProps> = ({
       
       if (!user || user.role !== "Representante") {
         console.log(
-          "❌ RepresentativeDashboard: User not authenticated or not representative, redirecting to login"
+          "User not authenticated or not representative, redirecting to login",
         );
         navigate("/");
         return false;
       }
       
       console.log("🔍 User encontrado:", user);
-      console.log("🔍 CPF/CNPJ:", user.cnpj);
+      console.log("🔍 CPF/CNPJ:", user.cpf_cnpj);
       
       // Definir currentUser
       setCurrentUser(user);
@@ -260,7 +260,6 @@ const RepresentativeDashboard: React.FC<RepresentativeDashboardProps> = ({
     };
 
     loadDashboardData();
-    });
   }, [navigate, currentUser && currentUser.id, showContractFlow]); // Add navigate and showContractFlow as dependency to reload when contract is created
 
   const salesProgress =
@@ -513,11 +512,11 @@ const RepresentativeDashboard: React.FC<RepresentativeDashboardProps> = ({
           {currentUser && currentUser.status === 'Pendente de Aprovação' && (
             <>
               {console.log('🔍 Current User:', currentUser)}
-              {console.log('🔍 CPF/CNPJ:', currentUser.cnpj)}
+              {console.log('🔍 CPF/CNPJ:', currentUser.cpf_cnpj)}
               <DocumentNotification 
                 representativeId={currentUser.id}
                 representativeName={currentUser.name || currentUser.full_name || 'Representante'}
-                representativeCpfCnpj={currentUser.cnpj || ''}
+                representativeCpfCnpj={currentUser.cpf_cnpj || ''}
                 onClose={() => {
                   // Notificação não pode ser fechada - sempre visível até documentos enviados
                   console.log('Notificação obrigatória - não pode ser fechada');

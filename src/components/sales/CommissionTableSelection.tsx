@@ -33,9 +33,10 @@ const CommissionTableSelection: React.FC<CommissionTableSelectionProps> = ({
 
   // Get current user to check role
   const currentUser = authService.getCurrentUser();
+  const adminEmails = ["admin@credicar.com", "admin@credcar.com"];
   const isAdmin =
     currentUser?.role === "Administrador" ||
-    currentUser?.email === "admin@credicar.com";
+    adminEmails.includes(currentUser?.email?.toLowerCase() || "");
 
   useEffect(() => {
     fetchCommissionPlans();

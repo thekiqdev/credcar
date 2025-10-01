@@ -24,9 +24,10 @@ const Home = () => {
           );
 
           // User is logged in, redirect to appropriate dashboard
+          const adminEmails = ["admin@credicar.com", "admin@credcar.com"];
           if (
             user.role === "Administrador" ||
-            user.email === "admin@credicar.com"
+            adminEmails.includes(user.email?.toLowerCase() || "")
           ) {
             console.log("Redirecting admin to dashboard");
             navigate("/admindashboard");
@@ -36,8 +37,8 @@ const Home = () => {
           // Handle representative users based on status
           switch (user.status) {
             case "Pendente de Aprovação":
-              console.log("Redirecting to status page - pending approval");
-              navigate("/status-cadastro");
+              console.log("Redirecting to representative dashboard with notification");
+              navigate("/representante");
               break;
 
             case "Documentos Pendentes":
@@ -77,7 +78,7 @@ const Home = () => {
             case "Inativo":
             case "Cancelado":
               console.log("Inactive user, clearing session");
-              authService.logout();
+              await authService.logout();
               setAuthError(
                 "Sua conta está inativa. Entre em contato com o administrador.",
               );
@@ -93,7 +94,7 @@ const Home = () => {
         }
       } catch (error) {
         console.error("Error checking auth status:", error);
-        authService.logout();
+        await authService.logout();
         setAuthError(
           "Erro ao verificar status de autenticação. Por favor, tente novamente.",
         );

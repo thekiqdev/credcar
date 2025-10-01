@@ -611,7 +611,7 @@ const RepresentativeProfile: React.FC<RepresentativeProfileProps> = () => {
         </Card>
 
         {/* Document Approval Section */}
-        <DocumentApproval
+        <DocumentApproval 
           representativeId={id || ''}
           onDocumentStatusChange={() => {
             // Recarregar dados se necessário

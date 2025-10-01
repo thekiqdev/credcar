@@ -112,8 +112,13 @@ const ContractCreationFlow: React.FC<ContractCreationFlowProps> = ({
         throw new Error("Dados do cliente não encontrados");
       }
 
-      // Get current user from localStorage (custom auth)
-      const currentUser = authService.getCurrentUser();
+      // Get current user - try both auth methods
+      let currentUser = await authService.getCurrentUser();
+      if (!currentUser) {
+        // Try old auth service for representatives
+        const { authService: oldAuthService } = await import("../../lib/supabase");
+        currentUser = oldAuthService.getCurrentUser();
+      }
       if (!currentUser) throw new Error("User not authenticated");
 
       // Determine the representative for the contract
@@ -126,28 +131,41 @@ const ContractCreationFlow: React.FC<ContractCreationFlowProps> = ({
         }
         // If no representative selected, admin creates contract under their own name
       } else {
-        // For regular representatives, verify documents and status
-        const documentsApproved = await authService.checkDocumentsApproved(
-          currentUser.id,
-        );
+        // For regular representatives, get fresh data from database
+        console.log("Contract creation - fetching fresh representative data for:", currentUser.id);
+        
+        const { data: freshRepresentative, error: repError } = await supabase
+          .from('profiles')
+          .select('id, status, documents_approved')
+          .eq('id', currentUser.id)
+          .single();
 
-        console.log("Contract creation - user status check:", {
-          userId: currentUser.id,
-          userStatus: currentUser.status,
-          documentsApproved,
+        if (repError) {
+          console.error("Error fetching representative data:", repError);
+          throw new Error("Erro ao verificar status do representante");
+        }
+
+        if (!freshRepresentative) {
+          throw new Error("Representante não encontrado");
+        }
+
+        console.log("Contract creation - fresh representative data:", {
+          userId: freshRepresentative.id,
+          userStatus: freshRepresentative.status,
+          documentsApproved: freshRepresentative.documents_approved,
         });
 
-        // Allow contract creation for active users with approved documents
-        if (!documentsApproved && currentUser.status !== "Ativo") {
+        // Check if representative is active
+        if (freshRepresentative.status !== "Ativo") {
           throw new Error(
-            "Documentos não aprovados ou perfil inativo. Entre em contato com o administrador.",
+            "Perfil não está ativo. Entre em contato com o administrador.",
           );
         }
 
-        // Additional check: if user status is active, allow contract creation even if documents_approved flag is not set
-        if (currentUser.status !== "Ativo") {
+        // Check if documents are approved
+        if (!freshRepresentative.documents_approved) {
           throw new Error(
-            "Perfil não está ativo. Entre em contato com o administrador.",
+            "Documentos não aprovados. Entre em contato com o administrador.",
           );
         }
       }

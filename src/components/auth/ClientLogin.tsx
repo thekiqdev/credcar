@@ -91,7 +91,7 @@ const ClientLogin = ({ onLogin = () => {} }: ClientLoginProps) => {
     } catch (err) {
       console.error("Client login error:", err);
       setError("Erro interno do sistema. Tente novamente em alguns instantes.");
-      authService.logout();
+      await authService.logout();
     } finally {
       setIsLoading(false);
     }

@@ -445,9 +445,11 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
           <div className="flex justify-between items-center mt-8 pt-6 border-t">
             <Button
               variant="outline"
-              onClick={() => {
-                authService.logout();
-                navigate("/");
+              onClick={async () => {
+                console.log("🔓 Document upload logout clicked");
+                await authService.logout();
+                console.log("✅ Logout complete, navigating to home");
+                navigate("/", { replace: true });
               }}
             >
               Sair do Sistema

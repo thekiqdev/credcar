@@ -30,8 +30,20 @@ const PublicRegistration = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
 
-  const formatCnpj = (value: string) => {
+  // Formatar CPF ou CNPJ dinamicamente
+  const formatCpfCnpj = (value: string) => {
     const numbers = value.replace(/\D/g, "");
+    
+    // CPF: 000.000.000-00 (11 dígitos)
+    if (numbers.length <= 11) {
+      return numbers
+        .replace(/(\d{3})(\d)/, "$1.$2")
+        .replace(/(\d{3})(\d)/, "$1.$2")
+        .replace(/(\d{3})(\d{1,2})/, "$1-$2")
+        .replace(/(-\d{2})\d+?$/, "$1");
+    }
+    
+    // CNPJ: 00.000.000/0000-00 (14 dígitos)
     return numbers
       .replace(/(\d{2})(\d)/, "$1.$2")
       .replace(/(\d{3})(\d)/, "$1.$2")
@@ -66,9 +78,12 @@ const PublicRegistration = () => {
     }
 
     if (!formData.cnpj.trim()) {
-      newErrors["cnpj"] = "CNPJ é obrigatório";
-    } else if (formData.cnpj.replace(/\D/g, "").length !== 14) {
-      newErrors["cnpj"] = "CNPJ deve ter 14 dígitos";
+      newErrors["cnpj"] = "CPF/CNPJ é obrigatório";
+    } else {
+      const numbers = formData.cnpj.replace(/\D/g, "");
+      if (numbers.length !== 11 && numbers.length !== 14) {
+        newErrors["cnpj"] = "CPF deve ter 11 dígitos ou CNPJ deve ter 14 dígitos";
+      }
     }
 
     if (!formData.razao_social.trim()) {
@@ -99,7 +114,7 @@ const PublicRegistration = () => {
     let formattedValue = value;
 
     if (field === "cnpj") {
-      formattedValue = formatCnpj(value);
+      formattedValue = formatCpfCnpj(value);
     } else if (field === "phone") {
       formattedValue = formatPhone(value);
     }
@@ -154,9 +169,9 @@ const PublicRegistration = () => {
       // Show success message
       setIsSuccess(true);
 
-      // Redirect to status page after a short delay
+      // Redirect to representative dashboard after a short delay
       setTimeout(() => {
-        navigate("/status-cadastro");
+        navigate("/representante");
       }, 1500);
     } catch (error) {
       console.error("Registration error:", error);
@@ -271,16 +286,19 @@ const PublicRegistration = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="cnpj">CNPJ *</Label>
+                  <Label htmlFor="cnpj">CPF/CNPJ *</Label>
                   <Input
                     id="cnpj"
                     type="text"
                     value={formData.cnpj}
                     onChange={(e) => handleInputChange("cnpj", e.target.value)}
-                    placeholder="00.000.000/0000-00"
+                    placeholder="000.000.000-00 ou 00.000.000/0000-00"
                     maxLength={18}
                     className={errors["cnpj"] ? "border-red-500" : ""}
                   />
+                  <p className="text-xs text-gray-500">
+                    Digite seu CPF (11 dígitos) ou CNPJ (14 dígitos)
+                  </p>
                   {errors["cnpj"] && (
                     <p className="text-sm text-red-500">{errors["cnpj"]}</p>
                   )}
