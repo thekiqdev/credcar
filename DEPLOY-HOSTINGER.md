@@ -116,7 +116,7 @@ server {
 # Habilitar site
 sudo ln -s /etc/nginx/sites-available/credcar /etc/nginx/sites-enabled/
 
-# Remover site padrão (se existir)
+# Remover site padrão (IMPORTANTE!)
 sudo rm -f /etc/nginx/sites-enabled/default
 
 # Testar configuração
@@ -125,6 +125,74 @@ sudo nginx -t
 # Reiniciar Nginx
 sudo systemctl restart nginx
 sudo systemctl enable nginx
+
+# Verificar se está funcionando
+curl -I http://localhost
+```
+
+---
+
+## 🔧 **TROUBLESHOOTING - PÁGINA PADRÃO DO NGINX**
+
+Se você ver a página "Welcome to nginx!" em vez da aplicação:
+
+```bash
+# 1. Verificar se o site padrão foi removido
+sudo ls -la /etc/nginx/sites-enabled/
+
+# 2. Se ainda existir o arquivo 'default', removê-lo
+sudo rm -f /etc/nginx/sites-enabled/default
+
+# 3. Verificar se nosso site está ativo
+sudo ls -la /etc/nginx/sites-enabled/credcar
+
+# 4. Recarregar configuração
+sudo nginx -s reload
+
+# 5. Verificar logs
+sudo tail -f /var/log/nginx/error.log
+```
+
+**Se ainda não funcionar, use configuração direta:**
+
+```bash
+# Editar configuração principal
+sudo nano /etc/nginx/nginx.conf
+```
+
+**Adicione dentro do bloco `http {`:**
+
+```nginx
+server {
+    listen 80 default_server;
+    listen [::]:80 default_server;
+    
+    root /var/www/CredCar-Finance/dist;
+    index index.html;
+    
+    server_name _;
+    
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+    
+    location /assets/ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
+    
+    location /documentos/ {
+        alias /var/www/CredCar-Finance/documentos/;
+        expires 1y;
+        add_header Cache-Control "public";
+    }
+}
+```
+
+```bash
+# Testar e recarregar
+sudo nginx -t
+sudo nginx -s reload
 ```
 
 ---
