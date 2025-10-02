@@ -2537,7 +2537,7 @@ const ContractDetails: React.FC<ContractDetailsProps> = ({
                       </p>
                     </div>
                     <Editor
-                      apiKey="8b0xydth3kx0va6g1ekaakj4p0snbelodd1df6m9ps5u6rnn"
+                      apiKey="46lebzjws4vt4ywtma8d15683tj61n80shufdxg1spuuwpbm"
                       onInit={(evt, editor) => {
                         editorRef.current = editor;
                         console.log("TinyMCE editor initialized");
