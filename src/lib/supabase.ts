@@ -1,6 +1,19 @@
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { Database } from "../types/supabase";
 
+// Função para gerar UUID compatível com todos os ambientes
+function generateUUID(): string {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  // Fallback para ambientes que não suportam crypto.randomUUID
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+}
+
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
@@ -184,7 +197,7 @@ export const representativeService = {
       }
 
       // Generate a proper UUID for the new profile
-      const profileId = crypto.randomUUID();
+      const profileId = generateUUID();
 
       // Prepare the insert data with proper field mapping
       const insertData = {
@@ -330,7 +343,7 @@ export const representativeService = {
       }
 
       // Generate a proper UUID for the new profile
-      const profileId = crypto.randomUUID();
+      const profileId = generateUUID();
       console.log("Generated profile ID for public registration:", profileId);
 
       // Prepare the insert data with proper field mapping

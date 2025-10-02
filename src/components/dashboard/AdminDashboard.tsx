@@ -12,6 +12,19 @@ import {
   commissionPlansService,
   administratorService,
 } from "../../lib/supabase";
+
+// Função para gerar UUID compatível com todos os ambientes
+function generateUUID(): string {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  // Fallback para ambientes que não suportam crypto.randomUUID
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+}
 import { authService } from "@/lib/auth.service";
 import { uploadService } from "../../lib/upload.service";
 import { Database } from "../../types/supabase";
@@ -1767,7 +1780,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
           newRepresentativeId = adminUser.id;
         } else {
           // Create a system admin entry for contract transfers
-          const adminId = crypto.randomUUID();
+          const adminId = generateUUID();
           const { error: createAdminError } = await supabase
             .from("profiles")
             .insert({
