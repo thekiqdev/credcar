@@ -49,7 +49,7 @@ class UploadService {
     try {
       const response = await fetch(`${this.baseUrl}/health`);
       const data = await response.json();
-      return data.status === 'OK';
+      return data.status === 'online';
     } catch (error) {
       console.error('❌ Servidor de upload não está funcionando:', error);
       return false;
@@ -258,7 +258,7 @@ class UploadService {
       const data = await response.json();
       
       return {
-        online: data.status === 'OK',
+        online: data.status === 'online',
         message: data.message || 'Servidor funcionando'
       };
     } catch (error) {
