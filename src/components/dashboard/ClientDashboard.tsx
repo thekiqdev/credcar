@@ -35,6 +35,7 @@ import {
   AlertCircle,
   CheckCircle,
   XCircle,
+  User,
 } from "lucide-react";
 import {
   Dialog,
@@ -273,15 +274,8 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({
             </Button>
             <div className="flex items-center gap-2">
               <Avatar>
-                <AvatarImage
-                  src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${clientName}`}
-                  alt={clientName}
-                />
-                <AvatarFallback>
-                  {clientName
-                    .split(" ")
-                    .map((n) => n[0])
-                    .join("")}
+                <AvatarFallback className="bg-green-100 text-green-600">
+                  <User className="h-6 w-6" />
                 </AvatarFallback>
               </Avatar>
               <div>

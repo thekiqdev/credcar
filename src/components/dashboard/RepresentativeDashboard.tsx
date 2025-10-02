@@ -38,6 +38,7 @@ import {
   Edit,
   Trash2,
   Key,
+  User,
 } from "lucide-react";
 import DocumentNotification from './DocumentNotification';
 import {
@@ -438,15 +439,8 @@ const RepresentativeDashboard: React.FC<RepresentativeDashboardProps> = ({
             </Button>
             <div className="flex items-center gap-2">
               <Avatar>
-                <AvatarImage
-                  src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${displayName}`}
-                  alt={displayName}
-                />
-                <AvatarFallback>
-                  {displayName
-                    .split(" ")
-                    .map((n) => n[0])
-                    .join("")}
+                <AvatarFallback className="bg-blue-100 text-blue-600">
+                  <User className="h-6 w-6" />
                 </AvatarFallback>
               </Avatar>
               <div>

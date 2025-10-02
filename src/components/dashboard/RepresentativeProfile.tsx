@@ -41,6 +41,7 @@ import {
   Trash2,
   CheckCircle,
   XCircle,
+  User,
 } from "lucide-react";
 import {
   Select,
@@ -336,14 +337,8 @@ const RepresentativeProfile: React.FC<RepresentativeProfileProps> = () => {
             <div className="h-6 w-px bg-border" />
             <div className="flex items-center space-x-3">
               <Avatar className="h-12 w-12">
-                <AvatarImage
-                  src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${representative.name}`}
-                />
-                <AvatarFallback>
-                  {representative.name
-                    .split(" ")
-                    .map((n) => n[0])
-                    .join("")}
+                <AvatarFallback className="bg-blue-100 text-blue-600">
+                  <User className="h-8 w-8" />
                 </AvatarFallback>
               </Avatar>
               <div>

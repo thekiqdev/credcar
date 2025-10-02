@@ -117,6 +117,7 @@ import {
   UserCheck,
   UserX,
   Calculator,
+  User,
   Key,
 } from "lucide-react";
 import ContractCreationFlow from "@/components/sales/ContractCreationFlow";
@@ -6183,15 +6184,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
               <div className="space-y-6">
                 <div className="flex items-center gap-4">
                   <Avatar className="h-16 w-16">
-                    <AvatarImage
-                      src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${selectedRepresentativeForModal.name}`}
-                    />
-                    <AvatarFallback className="text-lg">
-                      {selectedRepresentativeForModal.name
-                        .split(" ")
-                        .map((n) => n[0])
-                        .join("")
-                        .toUpperCase()}
+                    <AvatarFallback className="bg-blue-100 text-blue-600 text-lg">
+                      <User className="h-10 w-10" />
                     </AvatarFallback>
                   </Avatar>
                   <div>
