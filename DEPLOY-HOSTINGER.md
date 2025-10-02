@@ -103,6 +103,32 @@ server {
         add_header Cache-Control "public";
     }
     
+    # Proxy para servidor de upload
+    location /api/ {
+        proxy_pass http://localhost:3001;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+    }
+    
+    # Proxy para servidor de upload
+    location /api/ {
+        proxy_pass http://localhost:3001;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+    }
+    
     # Configuração de segurança
     add_header X-Frame-Options "SAMEORIGIN" always;
     add_header X-XSS-Protection "1; mode=block" always;
@@ -185,6 +211,19 @@ server {
         alias /var/www/CredCar-Finance/documentos/;
         expires 1y;
         add_header Cache-Control "public";
+    }
+    
+    # Proxy para servidor de upload
+    location /api/ {
+        proxy_pass http://localhost:3001;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
     }
 }
 ```
@@ -457,10 +496,33 @@ sudo systemctl restart nginx
 # 6. Configurar SSL
 sudo certbot --nginx -d SEU_DOMINIO_AQUI
 
-# 7. Configurar firewall
+# 7. Configurar servidor de upload de documentos
+cd /var/www/CredCar-Finance
+npm install express multer cors helmet morgan
+sudo pm2 start upload-server.js --name "upload-server"
+sudo pm2 save
+sudo pm2 startup
+
+# 8. Configurar firewall
 sudo ufw allow ssh
 sudo ufw allow 'Nginx Full'
+sudo ufw allow 3001  # Porta do servidor de upload
 sudo ufw --force enable
+```
+
+### **Configuração do Servidor de Upload:**
+```bash
+# Verificar se o servidor está rodando
+sudo pm2 status upload-server
+
+# Ver logs do servidor de upload
+sudo pm2 logs upload-server
+
+# Reiniciar servidor de upload
+sudo pm2 restart upload-server
+
+# Parar servidor de upload
+sudo pm2 stop upload-server
 ```
 
 ### **Atualizações Futuras:**
