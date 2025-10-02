@@ -37,7 +37,7 @@ import {
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -2871,14 +2871,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       return (
                         <div key={rep.id} className="flex items-center">
                           <Avatar className="h-9 w-9">
-                            <AvatarImage
-                              src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${rep.name}`}
-                            />
-                            <AvatarFallback>
-                              {rep.name
-                                .split(" ")
-                                .map((n) => n[0])
-                                .join("")}
+                            <AvatarFallback className="bg-blue-100 text-blue-600">
+                              <User className="h-5 w-5" />
                             </AvatarFallback>
                           </Avatar>
                           <div className="ml-4 space-y-1 flex-1">
@@ -3083,8 +3077,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 </Button>
                 <div className="flex items-center">
                   <Avatar className="h-8 w-8">
-                    <AvatarImage src="https://api.dicebear.com/7.x/avataaars/svg?seed=admin" />
-                    <AvatarFallback>AU</AvatarFallback>
+                    <AvatarFallback className="bg-purple-100 text-purple-600">
+                      <User className="h-5 w-5" />
+                    </AvatarFallback>
                   </Avatar>
                   <div className="ml-2 hidden md:block">
                     <p className="text-sm font-medium">{userName}</p>
@@ -3379,15 +3374,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                               <div className="flex-1">
                                 <div className="flex items-center gap-4">
                                   <Avatar className="h-10 w-10">
-                                    <AvatarImage
-                                      src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${rep.name}`}
-                                    />
-                                    <AvatarFallback>
-                                      {rep.name
-                                        .split(" ")
-                                        .map((n) => n[0])
-                                        .join("")
-                                        .toUpperCase()}
+                                    <AvatarFallback className="bg-blue-100 text-blue-600">
+                                      <User className="h-6 w-6" />
                                     </AvatarFallback>
                                   </Avatar>
                                   <div>
