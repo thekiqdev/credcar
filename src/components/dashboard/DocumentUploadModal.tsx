@@ -121,11 +121,11 @@ const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
       console.log('💾 Salvando metadados no banco:', fileData);
       console.log('🔍 Representative ID:', representativeId);
       console.log('📄 Document Type:', fileData.documentType);
-      console.log('📁 File Path:', fileData.filePath);
+      console.log('📁 File Path:', fileData.path || fileData.filePath);
       
       // Validar dados obrigatórios
-      if (!fileData.filePath && !fileData.directory) {
-        throw new Error('filePath ou directory é obrigatório');
+      if (!fileData.path && !fileData.filePath && !fileData.directory) {
+        throw new Error('path, filePath ou directory é obrigatório');
       }
       
       if (!fileData.documentType) {
@@ -135,7 +135,7 @@ const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
       const insertData = {
         representative_id: representativeId,
         document_type: fileData.documentType,
-        file_url: fileData.filePath || fileData.directory,
+        file_url: fileData.path || fileData.filePath || fileData.directory,
         status: 'Pendente',
         uploaded_at: new Date().toISOString()
       };
@@ -225,8 +225,8 @@ const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
           console.log('📁 Dados do upload:', result.data);
           
           // Validar dados antes de salvar
-          if (!result.data || (!result.data.filePath && !result.data.directory)) {
-            throw new Error(`Dados de upload inválidos para ${doc.type}: sem filePath ou directory`);
+          if (!result.data || (!result.data.path && !result.data.filePath && !result.data.directory)) {
+            throw new Error(`Dados de upload inválidos para ${doc.type}: sem path, filePath ou directory`);
           }
           
           const saveData = {

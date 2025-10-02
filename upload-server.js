@@ -19,26 +19,27 @@ app.use(helmet());
 app.use(morgan('combined'));
 app.use(express.json());
 
+// Middleware de tratamento de erros
+app.use((error, req, res, next) => {
+  console.error('❌ Erro no servidor:', error);
+  res.status(500).json({ 
+    error: error.message || 'Erro interno do servidor',
+    details: error.stack 
+  });
+});
+
 // Configuração do multer para upload
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    const { cpfCnpj, documentType } = req.body;
-    
-    if (!cpfCnpj || !documentType) {
-      return cb(new Error('CPF/CNPJ e tipo de documento são obrigatórios'), null);
-    }
-
-    // Criar estrutura de pastas
+    // Para uploads multipart/form-data, os dados vêm do req.body
+    // mas precisamos aguardar o multer processar primeiro
     const baseDir = path.join(__dirname, 'documentos');
-    const sanitizedCpfCnpj = cpfCnpj.replace(/[^a-zA-Z0-9]/g, '');
-    const sanitizedDocType = documentType.toLowerCase().replace(/[^a-z0-9]/g, '_');
+    const tempPath = path.join(baseDir, 'temp');
     
-    const uploadPath = path.join(baseDir, sanitizedCpfCnpj, sanitizedDocType);
+    // Criar diretório temporário se não existir
+    fs.mkdirSync(tempPath, { recursive: true });
     
-    // Criar diretório se não existir
-    fs.mkdirSync(uploadPath, { recursive: true });
-    
-    cb(null, uploadPath);
+    cb(null, tempPath);
   },
   filename: (req, file, cb) => {
     const timestamp = Date.now();
@@ -112,20 +113,50 @@ app.post('/api/create-folder', (req, res) => {
 // Rota para upload de documentos
 app.post('/api/upload-document', upload.single('file'), (req, res) => {
   try {
+    console.log('📤 Recebendo upload...');
+    console.log('📋 Body:', req.body);
+    console.log('📁 File:', req.file);
+    
     if (!req.file) {
+      console.log('❌ Nenhum arquivo recebido');
       return res.status(400).json({ error: 'Nenhum arquivo foi enviado' });
     }
 
     const { cpfCnpj, documentType } = req.body;
     
     if (!cpfCnpj || !documentType) {
+      console.log('❌ Dados obrigatórios faltando:', { cpfCnpj, documentType });
       return res.status(400).json({ error: 'CPF/CNPJ e tipo de documento são obrigatórios' });
     }
+
+    // Criar estrutura de pastas correta
+    const baseDir = path.join(__dirname, 'documentos');
+    const sanitizedCpfCnpj = cpfCnpj.replace(/[^a-zA-Z0-9]/g, '');
+    
+    // Mapear tipos de documento para nomes corretos
+    const documentTypeMap = {
+      'certidão negativa civil': 'certidao_negativa_civil',
+      'comprovante de endereço': 'comprovante_endereco',
+      'cartão do cnpj/cpf': 'cartao_cnpj_cpf',
+      'certidão de antecedente criminal': 'certidao_antecedente_criminal'
+    };
+    
+    const sanitizedDocType = documentTypeMap[documentType.toLowerCase()] || 
+      documentType.toLowerCase().replace(/[^a-z0-9]/g, '_');
+    
+    const finalPath = path.join(baseDir, sanitizedCpfCnpj, sanitizedDocType);
+    
+    // Criar diretório final se não existir
+    fs.mkdirSync(finalPath, { recursive: true });
+    
+    // Mover arquivo do temp para o local final
+    const finalFilePath = path.join(finalPath, req.file.filename);
+    fs.renameSync(req.file.path, finalFilePath);
 
     const fileInfo = {
       originalName: req.file.originalname,
       filename: req.file.filename,
-      path: req.file.path,
+      path: finalFilePath,
       size: req.file.size,
       mimetype: req.file.mimetype,
       documentType: documentType,
@@ -133,7 +164,7 @@ app.post('/api/upload-document', upload.single('file'), (req, res) => {
       uploadedAt: new Date().toISOString()
     };
 
-    console.log('Arquivo enviado com sucesso:', fileInfo);
+    console.log('✅ Arquivo enviado com sucesso:', fileInfo);
 
     res.json({
       success: true,
@@ -141,7 +172,7 @@ app.post('/api/upload-document', upload.single('file'), (req, res) => {
       data: fileInfo
     });
   } catch (error) {
-    console.error('Erro no upload:', error);
+    console.error('❌ Erro no upload:', error);
     res.status(500).json({ error: error.message || 'Erro interno do servidor' });
   }
 });
