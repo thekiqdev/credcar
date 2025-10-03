@@ -475,10 +475,26 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   // Payment settings state
   const [paymentSettings, setPaymentSettings] = useState({
+    // Asaas API Configuration
     asaasApiKey: "",
-    autoGenerateBoletos: false,
-    enablePix: false,
+    asaasEnvironment: "sandbox", // sandbox ou production
+    webhookSecret: "",
+    webhookUrl: "",
+    
+    // Payment Methods
+    enablePix: true,
+    enableBoleto: true,
+    enableCreditCard: false,
+    
+    // General Settings
+    autoGenerateBoletos: true,
     defaultDueDays: 30,
+    maxInstallments: 12,
+    
+    // Notification Settings
+    sendPaymentNotifications: true,
+    sendOverdueNotifications: true,
+    notificationDaysBeforeDue: 7,
   });
 
   // Email settings state
@@ -5351,30 +5367,236 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   </TabsContent>
 
                   <TabsContent value="payment-settings" className="space-y-4">
+                    {/* Configurações da API Asaas */}
                     <Card>
                       <CardHeader>
-                        <CardTitle>Configurações de Pagamento</CardTitle>
+                        <CardTitle>Configurações da API Asaas</CardTitle>
                         <CardDescription>
-                          Configure as opções de pagamento e integração com
-                          gateways
+                          Configure a integração com a plataforma de pagamentos Asaas
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-6">
+                        {/* API Configuration */}
+                        <div className="space-y-4">
+                          <div>
+                            <Label htmlFor="asaas-api-key">Chave API Asaas</Label>
+                            <Input
+                              id="asaas-api-key"
+                              type="password"
+                              value={paymentSettings.asaasApiKey}
+                              onChange={(e) =>
+                                setPaymentSettings({
+                                  ...paymentSettings,
+                                  asaasApiKey: e.target.value,
+                                })
+                              }
+                              placeholder="$aact_hmlg_000MzkwODA2MWY2OGM3MWRlMDU2NWM3MzJlNzZmNGZhZGY6OmNhZWFkOGRhLThjYWQtNDcyMS04NTk3LTlkMDkxY2ZlNmI2ZDo6JGFhY2hfOWU3MjdlZDYtNTg5NC00OWYwLWJjMzgtNWUwZDZjZTdiMjM1"
+                            />
+                            <p className="text-sm text-muted-foreground mt-1">
+                              Chave de acesso fornecida pelo Asaas
+                            </p>
+                          </div>
+                          
+                          <div>
+                            <Label htmlFor="asaas-environment">Ambiente</Label>
+                            <Select
+                              value={paymentSettings.asaasEnvironment}
+                              onValueChange={(value) =>
+                                setPaymentSettings({
+                                  ...paymentSettings,
+                                  asaasEnvironment: value,
+                                })
+                              }
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Selecione o ambiente" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="sandbox">Sandbox (Testes)</SelectItem>
+                                <SelectItem value="production">Produção</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          <div>
+                            <Label htmlFor="webhook-url">URL do Webhook</Label>
+                            <Input
+                              id="webhook-url"
+                              value={paymentSettings.webhookUrl}
+                              onChange={(e) =>
+                                setPaymentSettings({
+                                  ...paymentSettings,
+                                  webhookUrl: e.target.value,
+                                })
+                              }
+                              placeholder="https://seudominio.com/api/webhooks/asaas"
+                            />
+                            <p className="text-sm text-muted-foreground mt-1">
+                              URL para receber notificações de pagamento
+                            </p>
+                          </div>
+
+                          <div>
+                            <Label htmlFor="webhook-secret">Chave Secreta do Webhook</Label>
+                            <Input
+                              id="webhook-secret"
+                              type="password"
+                              value={paymentSettings.webhookSecret}
+                              onChange={(e) =>
+                                setPaymentSettings({
+                                  ...paymentSettings,
+                                  webhookSecret: e.target.value,
+                                })
+                              }
+                              placeholder="Chave secreta para validar webhooks"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Test Connection Button */}
+                        <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                          <div>
+                            <h4 className="font-medium">Testar Conexão</h4>
+                            <p className="text-sm text-muted-foreground">
+                              Verificar se a API está funcionando corretamente
+                            </p>
+                          </div>
+                          <Button variant="outline" onClick={() => {
+                            // TODO: Implementar teste de conexão
+                            alert('Função de teste será implementada na Etapa 1');
+                          }}>
+                            <span className="mr-2">🔗</span>Testar
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    {/* Métodos de Pagamento */}
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Métodos de Pagamento</CardTitle>
+                        <CardDescription>
+                          Configure quais métodos de pagamento estarão disponíveis
                         </CardDescription>
                       </CardHeader>
                       <CardContent className="space-y-4">
-                        <div>
-                          <Label htmlFor="asaas-api-key">Chave API Asaas</Label>
-                          <Input
-                            id="asaas-api-key"
-                            type="password"
-                            value={paymentSettings.asaasApiKey}
-                            onChange={(e) =>
-                              setPaymentSettings({
-                                ...paymentSettings,
-                                asaasApiKey: e.target.value,
-                              })
-                            }
-                            placeholder="Insira sua chave API do Asaas"
-                          />
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <div className="flex items-center space-x-2">
+                            <input
+                              type="checkbox"
+                              id="enable-pix"
+                              checked={paymentSettings.enablePix}
+                              onChange={(e) =>
+                                setPaymentSettings({
+                                  ...paymentSettings,
+                                  enablePix: e.target.checked,
+                                })
+                              }
+                            />
+                            <Label htmlFor="enable-pix">
+                              <div className="flex items-center">
+                                <span className="mr-2">💳</span>
+                                PIX
+                              </div>
+                            </Label>
+                          </div>
+
+                          <div className="flex items-center space-x-2">
+                            <input
+                              type="checkbox"
+                              id="enable-boleto"
+                              checked={paymentSettings.enableBoleto}
+                              onChange={(e) =>
+                                setPaymentSettings({
+                                  ...paymentSettings,
+                                  enableBoleto: e.target.checked,
+                                })
+                              }
+                            />
+                            <Label htmlFor="enable-boleto">
+                              <div className="flex items-center">
+                                <span className="mr-2">🧾</span>
+                                Boleto Bancário
+                              </div>
+                            </Label>
+                          </div>
+
+                          <div className="flex items-center space-x-2">
+                            <input
+                              type="checkbox"
+                              id="enable-credit-card"
+                              checked={paymentSettings.enableCreditCard}
+                              onChange={(e) =>
+                                setPaymentSettings({
+                                  ...paymentSettings,
+                                  enableCreditCard: e.target.checked,
+                                })
+                              }
+                            />
+                            <Label htmlFor="enable-credit-card">
+                              <div className="flex items-center">
+                                <span className="mr-2">💳</span>
+                                Cartão de Crédito
+                              </div>
+                            </Label>
+                          </div>
                         </div>
+                      </CardContent>
+                    </Card>
+
+                    {/* Configurações Gerais */}
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Configurações Gerais</CardTitle>
+                        <CardDescription>
+                          Defina as regras padrão para geração de faturas
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <Label htmlFor="default-due-days">
+                              Dias para Vencimento
+                            </Label>
+                            <Input
+                              id="default-due-days"
+                              type="number"
+                              value={paymentSettings.defaultDueDays}
+                              onChange={(e) =>
+                                setPaymentSettings({
+                                  ...paymentSettings,
+                                  defaultDueDays: parseInt(e.target.value) || 30,
+                                })
+                              }
+                              placeholder="30"
+                            />
+                            <p className="text-sm text-muted-foreground mt-1">
+                              Dias entre emissão e vencimento
+                            </p>
+                          </div>
+
+                          <div>
+                            <Label htmlFor="max-installments">
+                              Máximo de Parcelas
+                            </Label>
+                            <Input
+                              id="max-installments"
+                              type="number"
+                              value={paymentSettings.maxInstallments}
+                              onChange={(e) =>
+                                setPaymentSettings({
+                                  ...paymentSettings,
+                                  maxInstallments: parseInt(e.target.value) || 12,
+                                })
+                              }
+                              placeholder="12"
+                            />
+                            <p className="text-sm text-muted-foreground mt-1">
+                              Máximo de parcelas permitidas
+                            </p>
+                          </div>
+                        </div>
+
                         <div className="flex items-center space-x-2">
                           <input
                             type="checkbox"
@@ -5388,47 +5610,89 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                             }
                           />
                           <Label htmlFor="auto-generate-boletos">
-                            Gerar boletos automaticamente
+                            Gerar boletos automaticamente ao aprovar contrato
                           </Label>
                         </div>
-                        <div className="flex items-center space-x-2">
-                          <input
-                            type="checkbox"
-                            id="enable-pix"
-                            checked={paymentSettings.enablePix}
-                            onChange={(e) =>
-                              setPaymentSettings({
-                                ...paymentSettings,
-                                enablePix: e.target.checked,
-                              })
-                            }
-                          />
-                          <Label htmlFor="enable-pix">
-                            Habilitar pagamento via PIX
-                          </Label>
-                        </div>
-                        <div>
-                          <Label htmlFor="default-due-days">
-                            Dias padrão para vencimento
-                          </Label>
-                          <Input
-                            id="default-due-days"
-                            type="number"
-                            value={paymentSettings.defaultDueDays}
-                            onChange={(e) =>
-                              setPaymentSettings({
-                                ...paymentSettings,
-                                defaultDueDays: parseInt(e.target.value),
-                              })
-                            }
-                            placeholder="30"
-                          />
-                        </div>
-                        <Button className="bg-red-600 hover:bg-red-700">
-                          Salvar Configurações
-                        </Button>
                       </CardContent>
                     </Card>
+
+                    {/* Configurações de Notificação */}
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Configurações de Notificação</CardTitle>
+                        <CardDescription>
+                          Configure quando enviar notificações de pagamento
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <div className="space-y-3">
+                          <div className="flex items-center space-x-2">
+                            <input
+                              type="checkbox"
+                              id="send-payment-notifications"
+                              checked={paymentSettings.sendPaymentNotifications}
+                              onChange={(e) =>
+                                setPaymentSettings({
+                                  ...paymentSettings,
+                                  sendPaymentNotifications: e.target.checked,
+                                })
+                              }
+                            />
+                            <Label htmlFor="send-payment-notifications">
+                              Enviar notificações de pagamento confirmado
+                            </Label>
+                          </div>
+
+                          <div className="flex items-center space-x-2">
+                            <input
+                              type="checkbox"
+                              id="send-overdue-notifications"
+                              checked={paymentSettings.sendOverdueNotifications}
+                              onChange={(e) =>
+                                setPaymentSettings({
+                                  ...paymentSettings,
+                                  sendOverdueNotifications: e.target.checked,
+                                })
+                              }
+                            />
+                            <Label htmlFor="send-overdue-notifications">
+                              Enviar notificações de inadimplência
+                            </Label>
+                          </div>
+
+                          <div>
+                            <Label htmlFor="notification-days-before-due">
+                              Dias antes do vencimento para lembrete
+                            </Label>
+                            <Input
+                              id="notification-days-before-due"
+                              type="number"
+                              value={paymentSettings.notificationDaysBeforeDue}
+                              onChange={(e) =>
+                                setPaymentSettings({
+                                  ...paymentSettings,
+                                  notificationDaysBeforeDue: parseInt(e.target.value) || 7,
+                                })
+                              }
+                              placeholder="7"
+                            />
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    {/* Botão de Salvar */}
+                    <div className="flex justify-end">
+                      <Button 
+                        className="bg-red-600 hover:bg-red-700"
+                        onClick={() => {
+                          // TODO: Implementar salvamento no banco de dados
+                          alert('Salvamento será implementado na Etapa 1');
+                        }}
+                      >
+                        Salvar Configurações de Pagamento
+                      </Button>
+                    </div>
                   </TabsContent>
 
                   <TabsContent value="email-settings" className="space-y-4">

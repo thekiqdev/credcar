@@ -69,3 +69,4 @@ echo "📊 Status dos serviços:"
 echo "   - Frontend: https://sistema.credcarmultimarcas.com.br"
 echo "   - Upload Server: http://localhost:3001"
 echo "   - Documentos: /var/www/CredCar-Finance/documentos"
+

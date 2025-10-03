@@ -81,3 +81,4 @@ function cleanUpFolders() {
 
 // Executar limpeza
 cleanUpFolders();
+
