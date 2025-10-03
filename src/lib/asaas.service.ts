@@ -389,7 +389,7 @@ class AsaasService {
   }
 
   /**
-   * Create customer or return existing one if found by CPF/CNPJ
+   * Create customer or return existing one if-found by CPF/CNPJ
    */
   async createOrFindCustomer(customerData: {
     name: string;
@@ -423,6 +423,58 @@ class AsaasService {
     } catch (error) {
       console.error('Error in createOrFindCustomer:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Sync local client with ASAAS customer
+   * Creates ASAAS customer if needed and updates local database
+   */
+  async syncClientWithAsaas(localClient: {
+    id: string;
+    full_name: string;
+    email: string;
+    phone: string;
+    cpf_cnpj: string;
+    address?: string;
+  }): Promise<{
+    success: boolean;
+    asaasCustomer?: AsaasCustomer;
+    error?: string;
+  }> {
+    try {
+      console.log('🔄 Sincronizando cliente local com ASAAS:', localClient.id);
+
+      // Prepare client data for ASAAS
+      const asaasCustomerData = {
+        name: localClient.full_name,
+        email: localClient.email,
+        cpfCnpj: localClient.cpf_cnpj,
+        phone: localClient.phone || undefined,
+        address: localClient.address || undefined,
+        externalReference: `credcar-client-${localClient.id}`
+      };
+
+      // Create or find customer in ASAAS
+      const asaasCustomer = await this.createOrFindCustomer(asaasCustomerData);
+      
+      console.log('✅ Cliente sincron successfully:', {
+        localId: localClient.id,
+        asaasId: asaasCustomer.id,
+        name: asaasCustomer.name
+      });
+
+      return {
+        success: true,
+        asaasCustomer
+      };
+
+    } catch (error) {
+      console.error('❌ Error syncing client with ASAAS:', error);
+      return {
+        success: false,
+        error: error.message || 'Unknown error during sync'
+      };
     }
   }
 
