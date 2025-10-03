@@ -6,10 +6,10 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const cors = require('cors');
-const fetch = require('node-fetch'); // For Asaas API calls
+// import { fetch } from 'node-fetch'; // Node v18+ has built-in fetch
 
-// Importando o módulo do multer diretamente
-const { v4: uuidv4 } = require('crypto');
+// Node.js crypto module
+const crypto = require('crypto');
 
 const app = express();
 const PORT = process.env.PORT || 3001;

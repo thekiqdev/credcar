@@ -239,8 +239,8 @@ class AsaasService {
       console.log(`   Webhook URL: ${config.webhookUrl || 'Não configurado'}`);
 
       try {
-        // Real API call via backend proxy
-        const response = await fetch('/api/test-asaas', {
+        // Try backend proxy first
+        const proxyResponse = await fetch('/api/test-asaas', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -252,20 +252,26 @@ class AsaasService {
           }),
         });
 
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        if (proxyResponse.ok) {
+          const result = await proxyResponse.json();
+          return {
+            success: result.success,
+            message: result.message,
+            environment: config.environment,
+            apiKeyConfigured: true,
+          };
+        } else if (proxyResponse.status === 404) {
+          // Backend not running, fallback to validation
+          return this.fallbackValidation(config);
+        } else {
+          throw new Error(`HTTP ${proxyResponse.status}: ${proxyResponse.statusText}`);
         }
 
-        const result = await response.json();
-        
-        return {
-          success: result.success,
-          message: result.message,
-          environment: config.environment,
-          apiKeyConfigured: true,
-        };
-
       } catch (error: any) {
+        if (error.message.includes('404') || error.message.includes('fetch')) {
+          // Backend not available, use fallback
+          return this.fallbackValidation(config);
+        }
         console.error('Error calling Asaas API:', error);
         
         if (error.message.includes('404')) {
@@ -291,6 +297,51 @@ class AsaasService {
         message: `Erro de conexão: ${error.message}`,
         environment: 'unknown',
         apiKeyConfigured: false,
+      };
+    }
+  }
+
+  /**
+   * Fallback validation when backend is not available
+   */
+  private fallbackValidation(config: any) {
+    console.log('🔄 Usando validação fallback (backend não disponível)');
+    
+    // Validate API Key pattern
+    const apiKeyPattern = /^\$[a-z]+\_[a-z]+\_[A-Za-z0-9]+$/;
+    const isValidFormat = apiKeyPattern.test(config.apiKey);
+    
+    if (isValidFormat) {
+      const isTestKey = config.apiKey.startsWith('$act_test_') || config.apiKey.startsWith('$act_hmlg_');
+      
+      if (isTestKey && config.environment === 'sandbox') {
+        return {
+          success: true,
+          message: `✅ Validação local bem-sucedida!\n\n📊 Configuração validada:\n• Environment: ${config.environment}\n• URL: ${config.baseUrl}\n• API Key: Formato válido\n• Tipo: ${isTestKey.startsWith('$act_test_') ? 'Sandbox' : 'Homologação'}\n\n⚠️ Nota: Validação local sem chamada real à API\n💡 Para testes reais, inicie o backend: npm run backend`,
+          environment: config.environment,
+          apiKeyConfigured: true,
+        };
+      } else if (!isTestKey && config.environment === 'production') {
+        return {
+          success: true,
+          message: `✅ Validação local bem-sucedida!\n\n📊 Configuração validada:\n• Environment: ${config.environment}\n• URL: ${config.baseUrl}\n• API Key: Formato de produção\n\n⚠️ Nota: Validação local sem chamada real à API\n💡 Para testes reais, inicie o backend: npm run backend`,
+          environment: config.environment,
+          apiKeyConfigured: true,
+        };
+      } else {
+        return {
+          success: false,
+          message: `❌ Ambiente e chave incompatíveis!\n\n🔍 Configuração:\n• Ambiente: ${config.environment}\n• Chave: ${config.apiKey.substring(0, 15)}...\n\n💡 Para ${config.environment === 'sandbox' ? 'sandbox' : 'produção'}, use uma chave que${config.environment === 'sandbox' ? ' não seja de produção' : ' seja de produção'}.\n\n🔧 Para testes reais: npm run backend`,
+          environment: config.environment,
+          apiKeyConfigured: true,
+        };
+      }
+    } else {
+      return {
+        success: false,
+        message: `❌ Formato da API Key inválido!\n\n🔍 Formato esperado: $act_test_xxxxxxxxxx\n📝 Recebida: ${config.apiKey}\n\n💡 Verifique a chave no painel Asaas\n🔧 Para testes reais: npm run backend`,
+        environment: config.environment,
+        apiKeyConfigured: true,
       };
     }
   }
