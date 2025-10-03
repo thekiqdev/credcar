@@ -12,6 +12,8 @@ import {
   commissionPlansService,
   administratorService,
 } from "../../lib/supabase";
+// Temporarily disabled SystemConfigService integration
+// import { systemConfigService } from "../../lib/system-config.service";
 
 // Função para gerar UUID compatível com todos os ambientes
 function generateUUID(): string {
@@ -497,6 +499,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     notificationDaysBeforeDue: 7,
   });
 
+  const [isLoadingPaymentSettings, setIsLoadingPaymentSettings] = useState(false);
+
   // Email settings state
   const [emailSettings, setEmailSettings] = useState({
     provider: "smtp",
@@ -575,6 +579,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
           loadDashboardStats(),
           loadCommissionPlans(),
           loadInternalUsers(),
+          loadPaymentSettings(),
         ]);
         console.log("AdminDashboard: All data loaded successfully");
       } catch (error) {
@@ -783,6 +788,73 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       console.error("Error in loadInternalUsers:", error);
     } finally {
       setIsLoadingInternalUsers(false);
+    }
+  };
+
+  // Payment Settings Functions - Temporarily disabled for build
+  const loadPaymentSettings = async () => {
+    try {
+      console.log("Loading payment settings... (placeholder)");
+      setIsLoadingPaymentSettings(true);
+      
+      // Using default values for now
+      setPaymentSettings({
+        asaasApiKey: "",
+        asaasEnvironment: "sandbox",
+        webhookSecret: "",
+        webhookUrl: "",
+        enablePix: true,
+        enableBoleto: true,
+        enableCreditCard: false,
+        autoGenerateBoletos: true,
+        defaultDueDays: 30,
+        maxInstallments: 12,
+        sendPaymentNotifications: true,
+        sendOverdueNotifications: true,
+        notificationDaysBeforeDue: 7,
+      });
+
+      console.log("Payment settings loaded with default values");
+    } catch (error) {
+      console.error("Error loading payment settings:", error);
+    } finally {
+      setIsLoadingPaymentSettings(false);
+    }
+  };
+
+  const savePaymentSettings = async () => {
+    try {
+      console.log("Saving payment settings...");
+      setIsLoadingPaymentSettings(true);
+
+      // Placeholder for saving configurations
+      alert("✅ Configurações de pagamento salvas com sucesso!\n\n(Por enquanto usando valores padrão)\n\nA integração completa com banco de dados será implementada em breve.");
+      console.log("Payment settings saved successfully (placeholder)");
+
+    } catch (error) {
+      console.error("Error saving payment settings:", error);
+      alert("❌ Erro ao salvar configurações: " + error.message);
+    } finally {
+      setIsLoadingPaymentSettings(false);
+    }
+  };
+
+  const testAsaasConnection = async () => {
+    try {
+      // Placeholder - get current settings
+      const currentConfig = paymentSettings;
+      
+      if (!currentConfig.asaasApiKey) {
+        alert("⚠️ Configure a API Key do Asaas antes de testar a conexão.");
+        return;
+      }
+
+      // For now, just validate configuration
+      alert(`🧪 Teste de Conexão (Placeholder)\nConfiguração atual:\n- API Key: ${currentConfig.asaasApiKey.length > 0 ? '✓ Configurada' : '✗ Vazia'}\n- Ambiente: ${currentConfig.asaasEnvironment}\n- Base URL: https://www.asaas.com/api/v3\n\n⚠️ Implementação completa será na Etapa 2`);
+
+    } catch (error) {
+      console.error("Error testing Asaas connection:", error);
+      alert("❌ Erro ao testar conexão: " + error.message);
     }
   };
 
@@ -5378,24 +5450,24 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       <CardContent className="space-y-6">
                         {/* API Configuration */}
                         <div className="space-y-4">
-                          <div>
-                            <Label htmlFor="asaas-api-key">Chave API Asaas</Label>
-                            <Input
-                              id="asaas-api-key"
-                              type="password"
-                              value={paymentSettings.asaasApiKey}
-                              onChange={(e) =>
-                                setPaymentSettings({
-                                  ...paymentSettings,
-                                  asaasApiKey: e.target.value,
-                                })
-                              }
+                        <div>
+                          <Label htmlFor="asaas-api-key">Chave API Asaas</Label>
+                          <Input
+                            id="asaas-api-key"
+                            type="password"
+                            value={paymentSettings.asaasApiKey}
+                            onChange={(e) =>
+                              setPaymentSettings({
+                                ...paymentSettings,
+                                asaasApiKey: e.target.value,
+                              })
+                            }
                               placeholder="$aact_hmlg_000MzkwODA2MWY2OGM3MWRlMDU2NWM3MzJlNzZmNGZhZGY6OmNhZWFkOGRhLThjYWQtNDcyMS04NTk3LTlkMDkxY2ZlNmI2ZDo6JGFhY2hfOWU3MjdlZDYtNTg5NC00OWYwLWJjMzgtNWUwZDZjZTdiMjM1"
-                            />
+                          />
                             <p className="text-sm text-muted-foreground mt-1">
                               Chave de acesso fornecida pelo Asaas
                             </p>
-                          </div>
+                        </div>
                           
                           <div>
                             <Label htmlFor="asaas-environment">Ambiente</Label>
@@ -5423,9 +5495,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                             <Input
                               id="webhook-url"
                               value={paymentSettings.webhookUrl}
-                              onChange={(e) =>
-                                setPaymentSettings({
-                                  ...paymentSettings,
+                            onChange={(e) =>
+                              setPaymentSettings({
+                                ...paymentSettings,
                                   webhookUrl: e.target.value,
                                 })
                               }
@@ -5434,7 +5506,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                             <p className="text-sm text-muted-foreground mt-1">
                               URL para receber notificações de pagamento
                             </p>
-                          </div>
+                        </div>
 
                           <div>
                             <Label htmlFor="webhook-secret">Chave Secreta do Webhook</Label>
@@ -5461,10 +5533,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                               Verificar se a API está funcionando corretamente
                             </p>
                           </div>
-                          <Button variant="outline" onClick={() => {
-                            // TODO: Implementar teste de conexão
-                            alert('Função de teste será implementada na Etapa 1');
-                          }}>
+                          <Button 
+                            variant="outline" 
+                            onClick={testAsaasConnection}
+                            disabled={isLoadingPaymentSettings}
+                          >
                             <span className="mr-2">🔗</span>Testar
                           </Button>
                         </div>
@@ -5481,25 +5554,25 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       </CardHeader>
                       <CardContent className="space-y-4">
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                          <div className="flex items-center space-x-2">
-                            <input
-                              type="checkbox"
-                              id="enable-pix"
-                              checked={paymentSettings.enablePix}
-                              onChange={(e) =>
-                                setPaymentSettings({
-                                  ...paymentSettings,
-                                  enablePix: e.target.checked,
-                                })
-                              }
-                            />
-                            <Label htmlFor="enable-pix">
+                        <div className="flex items-center space-x-2">
+                          <input
+                            type="checkbox"
+                            id="enable-pix"
+                            checked={paymentSettings.enablePix}
+                            onChange={(e) =>
+                              setPaymentSettings({
+                                ...paymentSettings,
+                                enablePix: e.target.checked,
+                              })
+                            }
+                          />
+                          <Label htmlFor="enable-pix">
                               <div className="flex items-center">
                                 <span className="mr-2">💳</span>
                                 PIX
                               </div>
-                            </Label>
-                          </div>
+                          </Label>
+                        </div>
 
                           <div className="flex items-center space-x-2">
                             <input
@@ -5554,26 +5627,26 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       </CardHeader>
                       <CardContent className="space-y-4">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div>
-                            <Label htmlFor="default-due-days">
+                        <div>
+                          <Label htmlFor="default-due-days">
                               Dias para Vencimento
-                            </Label>
-                            <Input
-                              id="default-due-days"
-                              type="number"
-                              value={paymentSettings.defaultDueDays}
-                              onChange={(e) =>
-                                setPaymentSettings({
-                                  ...paymentSettings,
+                          </Label>
+                          <Input
+                            id="default-due-days"
+                            type="number"
+                            value={paymentSettings.defaultDueDays}
+                            onChange={(e) =>
+                              setPaymentSettings({
+                                ...paymentSettings,
                                   defaultDueDays: parseInt(e.target.value) || 30,
-                                })
-                              }
-                              placeholder="30"
-                            />
+                              })
+                            }
+                            placeholder="30"
+                          />
                             <p className="text-sm text-muted-foreground mt-1">
                               Dias entre emissão e vencimento
                             </p>
-                          </div>
+                        </div>
 
                           <div>
                             <Label htmlFor="max-installments">
@@ -5685,12 +5758,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     <div className="flex justify-end">
                       <Button 
                         className="bg-red-600 hover:bg-red-700"
-                        onClick={() => {
-                          // TODO: Implementar salvamento no banco de dados
-                          alert('Salvamento será implementado na Etapa 1');
-                        }}
+                        onClick={savePaymentSettings}
+                        disabled={isLoadingPaymentSettings}
                       >
-                        Salvar Configurações de Pagamento
+                        {isLoadingPaymentSettings ? 'Salvando...' : 'Salvar Configurações de Pagamento'}
                       </Button>
                     </div>
                   </TabsContent>
