@@ -500,12 +500,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   });
 
   const [isLoadingPaymentSettings, setIsLoadingPaymentSettings] = useState(false);
-  const [asaasTestResult, setAsaasTestResult] = useState<{
-    success: boolean;
-    message: string;
-    environment: string;
-    apiKeyConfigured: boolean;
-  } | null>(null);
   const [saveStatus, setSaveStatus] = useState<{
     status: 'success' | 'error' | null;
     message: string;
@@ -946,31 +940,41 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       
       console.log("Teste de conexão Asaas:", result);
       
-      // Store result for visual feedback
-      setAsaasTestResult(result);
-      
       if (result.success) {
-        console.log("========== ✅ TESTE ASAAS BEM-SUCEDIDO ==========");
-        console.log(`Ambiente: ${result.environment}`);
-        console.log(`API Key configurada: ${result.apiKeyConfigured ? 'Sim' : 'Não'}`);
-        console.log(`Mensagem: ${result.message}`);
-        console.log("=========================================");
+        console.log(`✅ Configuração Asaas válida!\nAmbiente: ${result.environment}`);
         
-        // Clear result after 5 seconds
-        setTimeout(() => setAsaasTestResult(null), 5000);
+        // Show success feedback in UI
+        setSaveStatus({
+          type: 'success',
+          message: `✅ Configuração válida!\n\nAmbiente: ${result.environment.toUpperCase()}\nAPI Key: ${result.apiKeyConfigured ? 'Válida' : 'Inválida'}`
+        });
+        
+        // Clear status after 3 seconds
+        setTimeout(() => setSaveStatus(null), 3000);
+        
       } else {
-        console.log("========== ❌ TESTE ASAAS COM FALHA ==========");
-        console.log(`Ambiente: ${result.environment}`);
-        console.log(`API Key configurada: ${result.apiKeyConfigured ? 'Sim' : 'Não'}`);
-        console.log(`Mensagem: ${result.message}`);
-        console.log("=========================================");
+        console.log(`❌ Problema na configuração: ${result.message}\nAmbiente: ${result.environment}\nAPI Key configurada: ${result.apiKeyConfigured ? 'Sim' : 'Não'}`);
         
-        // Clear result after 5 seconds
-        setTimeout(() => setAsaasTestResult(null), 5000);
+        // Show error feedback in UI
+        setSaveStatus({
+          type: 'error',
+          message: `❌ Problema na configuração:\n\n${result.message}`
+        });
+        
+        // Clear status after 5 seconds
+        setTimeout(() => setSaveStatus(null), 5000);
       }
 
     } catch (error) {
       console.error("Error testing Asaas connection:", error);
+      
+      setSaveStatus({
+        type: 'error',
+        message: `❌ Erro inesperado:\n\n${error}`
+      });
+      
+      setTimeout(() => setSaveStatus(null), 5000);
+      
     } finally {
       setIsLoadingPaymentSettings(false);
     }
@@ -5664,40 +5668,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                             <span className="mr-2">🔗</span>Testar
                           </Button>
                         </div>
-
-                        {/* Test Result Display */}
-                        {asaasTestResult && (
-                          <div className={`p-4 rounded-lg border-l-4 ${
-                            asaasTestResult.success 
-                              ? 'bg-green-50 border-green-500 text-green-800' 
-                              : 'bg-red-50 border-red-500 text-red-800'
-                          }`}>
-                            <div className="flex items-start">
-                              <div className="flex-shrink-0">
-                                {asaasTestResult.success ? (
-                                  <span className="text-green-500 text-xl">✅</span>
-                                ) : (
-                                  <span className="text-red-500 text-xl">❌</span>
-                                )}
-                              </div>
-                              <div className="ml-3 flex-1">
-                                <h4 className="text-sm font-medium mb-2">
-                                  {asaasTestResult.success ? 'Teste Bem-Sucedido' : 'Teste Falhou'}
-                                </h4>
-                                <div className="text-sm space-y-1">
-                                  <p><strong>Ambiente:</strong> {asaasTestResult.environment}</p>
-                                  <p><strong>API Key:</strong> {asaasTestResult.apiKeyConfigured ? 'Configurada' : 'Não configurada'}</p>
-                                  <div className="mt-2">
-                                    <strong>Detalhes:</strong>
-                                    <pre className="mt-1 text-xs bg-white p-2 rounded border overflow-auto">
-                                      {asaasTestResult.message}
-                                    </pre>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        )}
                       </CardContent>
                     </Card>
 

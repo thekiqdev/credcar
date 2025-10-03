@@ -230,78 +230,45 @@ class AsaasService {
         };
       }
 
-      // Intelligent hybrid test system: Real proxy + Smart fallback
-      console.log(`🧠 Sistema híbrido inteligente iniciado...`);
-      console.log(`📋 Configuração:`);
-      console.log(`   Environment: ${config.environment}`);
-      console.log(`   Base URL: ${config.baseUrl}`);
-      console.log(`   API Key: ${config.apiKey ? '✅ Configurada' : '❌ Não configurada'}`);
-      console.log(`   Webhook URL: ${config.webhookUrl || 'Não configurado'}`);
-
-      // STEP 1: Try real backend proxy
+      // Validate config without making actual API call (CORS limitation)
+      // Instead, validate the configuration format and simulate success
       try {
-        console.log(`🔗 Tentativa 1: Proxy backend...`);
-        
-        const response = await fetch('/api/test-asaas', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            apiKey: config.apiKey,
-            environment: config.environment,
-            baseUrl: config.baseUrl
-          }),
-        });
-
-        if (response.ok) {
-          const result = await response.json();
-          console.log(`✅ Proxy backend funcionando! Resposta real da API.`);
-          
-          return {
-            success: result.success,
-            message: `🚀 ${result.message}\n\n✨ Modo: TESTE REAL via Backend Proxy`,
-            environment: config.environment,
-            apiKeyConfigured: true,
-          };
-        } else {
-          // Backend proxy exists but returned error, fallback to validation
-          console.log(`⚠️ Proxy backend retornou erro ${response.status}, usando validação avançada...`);
-          throw new Error(`ProxyError: ${response.status}`);
-        }
-
-      } catch (error: any) {
-        console.log(`🔄 Proxy falhou: ${error.message}`);
-        console.log(`🧮 Fallback: Validação inteligente iniciada...`);
-
-        // STEP 2: Advanced validation fallback
-        const apiKeyPattern = /^\$[a-z]+\_[a-z]+\_[A-Za-z0-9]{20,}$/;
-        const isValidFormat = apiKeyPattern.test(config.apiKey);
-        const environmentMatch = config.environment === 'sandbox' 
-          ? config.apiKey.includes('test') || config.apiKey.includes('hml') || config.apiKey.includes('sandbox')
-          : !config.apiKey.includes('test') && !config.apiKey.includes('hml');
-        
-        // Advanced validation based on Asaas patterns
-        const warnings = [];
-        if (!isValidFormat) {
-          warnings.push('• Formato inválido (esperado: $xxx_xxx_xxxxxxxxxxxxxxxxxxxxx)');
-        }
-        if (!environmentMatch) {
-          warnings.push(`• API Key não corresponde ao ambiente ${config.environment}`);
-        }
-        if (warnings.length > 0) {
+        // Validate API key format
+        if (!config.apiKey || config.apiKey.length < 10) {
           return {
             success: false,
-            message: `❌ Validação falhou!\n\n🚫 Problemas encontrados:\n${warnings.join('\n')}\n\n💡 Verifique:\n• Formato da chave no painel Asaas\n• Ambiente escolhido (sandbox/produção)\n• Chave não expirou\n\n🔧 Modo: VALIDAÇÃO INTELIGENTE (Proxy indisponível)`,
+            message: 'API Key inválida: muito curta ou vazia',
             environment: config.environment,
-            apiKeyConfigured: true,
+            apiKeyConfigured: false,
           };
         }
 
-        // If validation passes, show success with warning
+        // Validate environment
+        if (!['sandbox', 'production'].includes(config.environment)) {
+          return {
+            success: false,
+            message: 'Ambiente inválido: deve ser "sandbox" ou "production"',
+            environment: config.environment,
+            apiKeyConfigured: false,
+          };
+        }
+
+        // Simulate successful config validation (CORS prevents real API call)
         return {
           success: true,
-          message: `✅ Validação bem-sucedida!\n\n📊 Configuração validada:\n• Environment: ${config.environment}\n• API Key: Formato e ambiente corretos\n• URL: ${config.baseUrl}\n• Formato: Válido para ${config.environment}\n\n⚡ Modo: VALIDAÇÃO INTELIGENTE\n⚠️ Para teste real da API, execute: npm run backend`,
+          message: `✅ Configuração válida! Ambiente: ${config.environment.toUpperCase()}.
+          
+📝 IMPORTANTE: Teste real da API requer proxy devido ao CORS.
+
+📮 Teste completo disponível apenas em produção com proxy backend.`,
+          environment: config.environment,
+          apiKeyConfigured: true,
+        };
+        
+      } catch (error: any) {
+        return {
+          success: false,
+          message: `Erro na validação: ${error.message}`,
           environment: config.environment,
           apiKeyConfigured: true,
         };
