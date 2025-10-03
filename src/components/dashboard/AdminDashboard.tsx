@@ -880,26 +880,112 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       
       if (allSaved) {
         // Initialize AsaasService with new config
-      await initializeAsaasService({
-        apiKey: asaasConfig.apiKey,
-        environment: asaasConfig.environment as 'sandbox' | 'production',
-        baseUrl: asaasConfig.environment === 'production' 
-          ? 'https://www.asaas.com/api/v3'
-          : 'https://sandbox.asaas.com/api/v3',
-        webhookSecret: asaasConfig.webhookSecret,
-        webhookUrl: asaasConfig.webhookUrl,
-      });
+        await initializeAsaasService({
+          apiKey: asaasConfig.apiKey,
+          environment: asaasConfig.environment as 'sandbox' | 'production',
+          baseUrl: asaasConfig.environment === 'production' 
+            ? 'https://www.asaas.com/api/v3'
+            : 'https://sandbox.asaas.com/api/v3',
+          webhookSecret: asaasConfig.webhookSecret,
+          webhookUrl: asaasConfig.webhookUrl,
+        });
 
-        alert("✅ Configurações de pagamento salvas com sucesso!\n\nAsaasService inicializado com as novas configurações.");
+        // Show success notification in UI instead of popup
+        const successMessage = document.createElement('div');
+        successMessage.style.cssText = `
+          position: fixed;
+          top: 20px;
+          right: 20px;
+          background: linear-gradient(135deg, #10b981, #059669);
+          color: white;
+          padding: 16px 24px;
+          border-radius: 8px;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+          z-index: 9999;
+          max-width: 400px;
+          font-family: system-ui, -apple-system, sans-serif;
+        `;
+        successMessage.innerHTML = `
+          <div style="display: flex; align-items: center; margin-bottom: 8px;">
+            <span style="margin-right: 8px;">✅</span>
+            <strong>Configurações Salvas!</strong>
+          </div>
+          <div style="font-size: 14px; opacity: 0.9;">
+            AsaasService inicializado com sucesso
+          </div>
+        `;
+        document.body.appendChild(successMessage);
+        
+        // Remove notification after 3 seconds
+        setTimeout(() => {
+          successMessage.remove();
+        }, 3000);
+
         console.log("Payment settings saved successfully");
       } else {
-        alert("❌ Erro ao salvar algumas configurações. Verifique os dados e tente novamente.");
+        // Show error notification in UI
+        const errorMessage = document.createElement('div');
+        errorMessage.style.cssText = `
+          position: fixed;
+          top: 20px;
+          right: 20px;
+          background: linear-gradient(135deg, #ef4444, #dc2626);
+          color: white;
+          padding: 16px 24px;
+          border-radius: 8px;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+          z-index: 9999;
+          max-width: 400px;
+          font-family: system-ui, -apple-system, sans-serif;
+        `;
+        errorMessage.innerHTML = `
+          <div style="display: flex; align-items: center; margin-bottom: 8px;">
+            <span style="margin-right: 8px;">❌</span>
+            <strong>Erro ao Salvar!</strong>
+          </div>
+          <div style="font-size: 14px; opacity: 0.9;">
+            Verifique os dados e tente novamente
+          </div>
+        `;
+        document.body.appendChild(errorMessage);
+        
+        setTimeout(() => {
+          errorMessage.remove();
+        }, 3000);
+
         console.error("Some payment settings failed to save");
       }
 
     } catch (error) {
       console.error("Error saving payment settings:", error);
-      alert("❌ Erro ao salvar configurações: " + error.message);
+      
+      // Show error notification in UI
+      const errorMessage = document.createElement('div');
+      errorMessage.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: linear-gradient(135deg, #ef4444, #dc2626);
+        color: white;
+        padding: 16px 24px;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        z-index: 9999;
+        max-width: 400px;
+        font-family: system-ui, -apple-system, sans-serif;
+      `;
+      errorMessage.innerHTML = `
+        <div style="display: flex; align-items: center; margin-bottom: 8px;">
+          <span style="margin-right: 8px;">❌</span>
+          <strong>Erro ao Salvar</strong>
+        </div>
+        <div style="font-size: 14px;">Erro ao salvar configurações: ${error.message}</div>
+      `;
+      document.body.appendChild(errorMessage);
+      
+      setTimeout(() => {
+        errorMessage.remove();
+      }, 5000);
     } finally {
       setIsLoadingPaymentSettings(false);
     }
@@ -908,7 +994,36 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const testAsaasConnection = async () => {
     try {
       if (!paymentSettings.asaasApiKey) {
-        alert("⚠️ Configure a API Key do Asaas antes de testar a conexão.");
+        // Show warning notification in UI
+        const warningMessage = document.createElement('div');
+        warningMessage.style.cssText = `
+          position: fixed;
+          top: 20px;
+          right: 20px;
+          background: linear-gradient(135deg, #f59e0b, #d97706);
+          color: white;
+          padding: 16px 24px;
+          border-radius: 8px;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+          z-index: 9999;
+          max-width: 400px;
+          font-family: system-ui, -apple-system, sans-serif;
+        `;
+        warningMessage.innerHTML = `
+          <div style="display: flex; align-items: center; margin-bottom: 8px;">
+            <span style="margin-right: 8px;">⚠️</span>
+            <strong>API Key Necessária</strong>
+          </div>
+          <div style="font-size: 14px; opacity: 0.9;">
+            Configure uma API Key do Asaas antes de testar a conexão
+          </div>
+        `;
+        document.body.appendChild(warningMessage);
+        
+        setTimeout(() => {
+          warningMessage.remove();
+        }, 4000);
+        
         return;
       }
 
@@ -935,14 +1050,101 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       const result = await asaasService.testConnection();
       
       if (result.success) {
-        alert(`✅ ${result.message}\n\nAmbiente: ${config.environment}\nURL: ${config.baseUrl}`);
+        // Show success notification in UI
+        const successMessage = document.createElement('div');
+        successMessage.style.cssText = `
+          position: fixed;
+          top: 20px;
+          right: 20px;
+          background: linear-gradient(135deg, #10b981, #059669);
+          color: white;
+          padding: 16px 24px;
+          border-radius: 8px;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+          z-index: 9999;
+          max-width: 400px;
+          font-family: system-ui, -apple-system, sans-serif;
+        `;
+        successMessage.innerHTML = `
+          <div style="display: flex; align-items: center; margin-bottom: 8px;">
+            <span style="margin-right: 8px;">✅</span>
+            <strong>Conexão Bem-Sucedida!</strong>
+          </div>
+          <div style="font-size: 14px; opacity: 0.9;">
+            ${result.message}<br>
+            <small>Ambiente: ${config.environment} | URL: ${config.baseUrl}</small>
+          </div>
+        `;
+        document.body.appendChild(successMessage);
+        
+        setTimeout(() => {
+          successMessage.remove();
+        }, 4000);
       } else {
-        alert(`❌ ${result.message}\n\nAmbiente: ${config.environment}\nURL: ${config.baseUrl}\n\nVerifique sua API Key ou tente com dados de teste.`);
+        // Show error notification in UI
+        const errorMessage = document.createElement('div');
+        errorMessage.style.cssText = `
+          position: fixed;
+          top: 20px;
+          right: 20px;
+          background: linear-gradient(135deg, #ef4444, #dc2626);
+          color: white;
+          padding: 16px 24px;
+          border-radius: 8px;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+          z-index: 9999;
+          max-width: 400px;
+          font-family: system-ui, -apple-system, sans-serif;
+        `;
+        errorMessage.innerHTML = `
+          <div style="display: flex; align-items: center; margin-bottom: 8px;">
+            <span style="margin-right: 8px;">❌</span>
+            <strong>Falha na Conexão</strong>
+          </div>
+          <div style="font-size: 14px; opacity: 0.9;">
+            ${result.message}<br>
+            <small>Ambiente: ${config.environment}<br>URL: ${config.baseUrl}</small><br>
+            <small style="opacity: 0.8;">Verifique sua API Key ou confirme se é válida para testes</small>
+          </div>
+        `;
+        document.body.appendChild(errorMessage);
+        
+        setTimeout(() => {
+          errorMessage.remove();
+        }, 5000);
       }
 
     } catch (error) {
       console.error("Error testing Asaas connection:", error);
-      alert("❌ Erro ao testar conexão: " + error.message);
+      
+      // Show error notification in UI
+      const errorMessage = document.createElement('div');
+      errorMessage.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: linear-gradient(135deg, #ef4444, #dc2626);
+        color: white;
+        padding: 16px 24px;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        z-index: 9999;
+        max-width: 400px;
+        font-family: system-ui, -apple-system, sans-serif;
+      `;
+      errorMessage.innerHTML = `
+        <div style="display: flex; align-items: center; margin-bottom: 8px;">
+          <span style="margin-right: 8px;">💥</span>
+          <strong>Erro na Conexão</strong>
+        </div>
+        <div style="font-size: 14px;">Houve um erro interno. Verifique o console para mais detalhes.</div>
+        <div style="font-size: 12px; opacity: 0.8; margin-top: 4px;">Detalhes técnicos podem estar disponíveis nas ferramentas do desenvolvedor</div>
+      `;
+      document.body.appendChild(errorMessage);
+      
+      setTimeout(() => {
+        errorMessage.remove();
+      }, 5000);
     }
   };
 
