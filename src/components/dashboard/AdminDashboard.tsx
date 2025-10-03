@@ -12,8 +12,8 @@ import {
   commissionPlansService,
   administratorService,
 } from "../../lib/supabase";
-// Temporarily disabled SystemConfigService integration
-// import { systemConfigService } from "../../lib/system-config.service";
+import { systemConfigService } from "../../lib/system-config.service";
+import { asaasService, initializeAsaasService, testAsaasConnection } from "../../lib/asaas.service";
 
 // Função para gerar UUID compatível com todos os ambientes
 function generateUUID(): string {
@@ -791,30 +791,35 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     }
   };
 
-  // Payment Settings Functions - Temporarily disabled for build
+  // Payment Settings Functions
   const loadPaymentSettings = async () => {
     try {
-      console.log("Loading payment settings... (placeholder)");
+      console.log("Loading payment settings...");
       setIsLoadingPaymentSettings(true);
-      
-      // Using default values for now
+
+      const [asaasConfig, paymentConfig, notificationConfig] = await Promise.all([
+        systemConfigService.getAsaasConfig(),
+        systemConfigService.getPaymentConfig(),
+        systemConfigService.getNotificationConfig(),
+      ]);
+
       setPaymentSettings({
-        asaasApiKey: "",
-        asaasEnvironment: "sandbox",
-        webhookSecret: "",
-        webhookUrl: "",
-        enablePix: true,
-        enableBoleto: true,
-        enableCreditCard: false,
-        autoGenerateBoletos: true,
-        defaultDueDays: 30,
-        maxInstallments: 12,
-        sendPaymentNotifications: true,
-        sendOverdueNotifications: true,
-        notificationDaysBeforeDue: 7,
+        asaasApiKey: asaasConfig.apiKey || "",
+        asaasEnvironment: asaasConfig.environment || "sandbox",
+        webhookSecret: asaasConfig.webhookSecret || "",
+        webhookUrl: asaasConfig.webhookUrl || "",
+        enablePix: paymentConfig.enablePix !== undefined ? paymentConfig.enablePix : true,
+        enableBoleto: paymentConfig.enableBoleto !== undefined ? paymentConfig.enableBoleto : true,
+        enableCreditCard: paymentConfig.enableCreditCard !== undefined ? paymentConfig.enableCreditCard : false,
+        autoGenerateBoletos: paymentConfig.autoGenerateBoletos !== undefined ? paymentConfig.autoGenerateBoletos : true,
+        defaultDueDays: paymentConfig.defaultDueDays || 30,
+        maxInstallments: paymentConfig.maxInstallments || 12,
+        sendPaymentNotifications: notificationConfig.sendPaymentConfirmed !== undefined ? notificationConfig.sendPaymentConfirmed : true,
+        sendOverdueNotifications: notificationConfig.sendOverdue !== undefined ? notificationConfig.sendOverdue : true,
+        notificationDaysBeforeDue: notificationConfig.daysBeforeDue || 7,
       });
 
-      console.log("Payment settings loaded with default values");
+      console.log("Payment settings loaded successfully");
     } catch (error) {
       console.error("Error loading payment settings:", error);
     } finally {
@@ -827,9 +832,57 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       console.log("Saving payment settings...");
       setIsLoadingPaymentSettings(true);
 
-      // Placeholder for saving configurations
-      alert("✅ Configurações de pagamento salvas com sucesso!\n\n(Por enquanto usando valores padrão)\n\nA integração completa com banco de dados será implementada em breve.");
-      console.log("Payment settings saved successfully (placeholder)");
+      // Prepare configurations
+      const asaasConfig = {
+        apiKey: paymentSettings.asaasApiKey,
+        environment: paymentSettings.asaasEnvironment,
+        webhookSecret: paymentSettings.webhookSecret,
+        webhookUrl: paymentSettings.webhookUrl,
+      };
+
+      const paymentConfig = {
+        defaultMethod: 'PIX',
+        enablePix: paymentSettings.enablePix,
+        enableBoleto: paymentSettings.enableBoleto,
+        enableCreditCard: paymentSettings.enableCreditCard,
+        defaultDueDays: paymentSettings.defaultDueDays,
+        maxInstallments: paymentSettings.maxInstallments,
+        autoGenerateBoletos: paymentSettings.autoGenerateBoletos,
+      };
+
+      const notificationConfig = {
+        sendPaymentConfirmed: paymentSettings.sendPaymentNotifications,
+        sendOverdue: paymentSettings.sendOverdueNotifications,
+        daysBeforeDue: paymentSettings.notificationDaysBeforeDue,
+      };
+
+      // Save configurations
+      const results = await Promise.all([
+        systemConfigService.setAsaasConfig(asaasConfig),
+        systemConfigService.setPaymentConfig(paymentConfig),
+        systemConfigService.setNotificationConfig(notificationConfig),
+      ]);
+
+      const allSaved = results.every(result => result);
+      
+      if (allSaved) {
+        // Initialize AsaasService with new config
+      await initializeAsaasService({
+        apiKey: asaasConfig.apiKey,
+        environment: asaasConfig.environment as 'sandbox' | 'production',
+        baseUrl: asaasConfig.environment === 'production' 
+          ? 'https://www.asaas.com/api/v3'
+          : 'https://sandbox.asaas.com/api/v3',
+        webhookSecret: asaasConfig.webhookSecret,
+        webhookUrl: asaasConfig.webhookUrl,
+      });
+
+        alert("✅ Configurações de pagamento salvas com sucesso!\n\nAsaasService inicializado com as novas configurações.");
+        console.log("Payment settings saved successfully");
+      } else {
+        alert("❌ Erro ao salvar algumas configurações. Verifique os dados e tente novamente.");
+        console.error("Some payment settings failed to save");
+      }
 
     } catch (error) {
       console.error("Error saving payment settings:", error);
@@ -841,16 +894,38 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   const testAsaasConnection = async () => {
     try {
-      // Placeholder - get current settings
-      const currentConfig = paymentSettings;
-      
-      if (!currentConfig.asaasApiKey) {
+      if (!paymentSettings.asaasApiKey) {
         alert("⚠️ Configure a API Key do Asaas antes de testar a conexão.");
         return;
       }
 
-      // For now, just validate configuration
-      alert(`🧪 Teste de Conexão (Placeholder)\nConfiguração atual:\n- API Key: ${currentConfig.asaasApiKey.length > 0 ? '✓ Configurada' : '✗ Vazia'}\n- Ambiente: ${currentConfig.asaasEnvironment}\n- Base URL: https://www.asaas.com/api/v3\n\n⚠️ Implementação completa será na Etapa 2`);
+      // Initialize service with current configuration
+      const config = {
+        apiKey: paymentSettings.asaasApiKey,
+        environment: paymentSettings.asaasEnvironment,
+        baseUrl: paymentSettings.asaasEnvironment === 'production' 
+          ? 'https://www.asaas.com/api/v3'
+          : 'https://sandbox.asaas.com/api/v3',
+        webhookSecret: paymentSettings.webhookSecret,
+        webhookUrl: paymentSettings.webhookUrl,
+      };
+
+      await initializeAsaasService({
+        apiKey: config.apiKey,
+        environment: config.environment as 'sandbox' | 'production',
+        baseUrl: config.baseUrl,
+        webhookSecret: config.webhookSecret,
+        webhookUrl: config.webhookUrl,
+      });
+      
+      // Test connection
+      const result = await asaasService.testConnection();
+      
+      if (result.success) {
+        alert(`✅ ${result.message}\n\nAmbiente: ${config.environment}\nURL: ${config.baseUrl}`);
+      } else {
+        alert(`❌ ${result.message}\n\nAmbiente: ${config.environment}\nURL: ${config.baseUrl}\n\nVerifique sua API Key ou tente com dados de teste.`);
+      }
 
     } catch (error) {
       console.error("Error testing Asaas connection:", error);
