@@ -199,10 +199,15 @@ class SystemConfigService {
     try {
       const configs = await this.getConfigsByCategory('asaas');
       
+      const environment = (configs.find(c => c.key === 'asaas.environment')?.value || 'sandbox') as 'sandbox' | 'production';
+      
+      // Define URLs baseadas no environment (Asaas usa mesma URL para ambos)
+      const baseUrl = 'https://www.asaas.com/api/v3';
+      
       return {
         apiKey: configs.find(c => c.key === 'asaas.api.key')?.value || '',
-        environment: (configs.find(c => c.key === 'asaas.environment')?.value || 'sandbox') as 'sandbox' | 'production',
-        baseUrl: configs.find(c => c.key === 'asaas.base.url')?.value || 'https://www.asaas.com/api/v3',
+        environment: environment,
+        baseUrl: baseUrl,
         webhookSecret: configs.find(c => c.key === 'asaas.webhook.secret')?.value || '',
         webhookUrl: configs.find(c => c.key === 'asaas.webhook.url')?.value || '',
       };
@@ -228,12 +233,22 @@ class SystemConfigService {
       if (config.apiKey !== undefined) {
         promises.push(this.setConfig('asaas.api.key', config.apiKey, 'Chave API do Asaas', 'asaas'));
       }
+      
       if (config.environment !== undefined) {
         promises.push(this.setConfig('asaas.environment', config.environment, 'Ambiente do Asaas', 'asaas'));
+        
+        // AUTOMATICAMENTE atualiza a URL baseada no environment (Asaas usa mesma URL)
+        const autoBaseUrl = 'https://www.asaas.com/api/v3';
+        
+        promises.push(this.setConfig('asaas.base.url', autoBaseUrl, 'URL base da API do Asaas (Auto)', 'asaas'));
+        
+        console.log(`🔄 Auto-atualizando base URL para: ${autoBaseUrl} (Environment: ${config.environment})`);
       }
+      
       if (config.baseUrl !== undefined) {
         promises.push(this.setConfig('asaas.base.url', config.baseUrl, 'URL base da API do Asaas', 'asaas'));
       }
+      
       if (config.webhookSecret !== undefined) {
         promises.push(this.setConfig('asaas.webhook.secret', config.webhookSecret, 'Chave secreta do webhook', 'asaas'));
       }

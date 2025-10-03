@@ -937,9 +937,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       console.log("Teste de conexão Asaas:", result);
       
       if (result.success) {
-        console.log(`✅ Conexão com Asaas estabelecida com sucesso!\nAmbiente: ${result.environment}`);
+        console.log(`✅ ${result.message}\nAmbiente: ${result.environment}\nAPI Key: ${result.apiKeyPrefix || '[N/A]'}`);
       } else {
-        console.log(`❌ Falha na conexão com Asaas: ${result.message}\nAmbiente: ${result.environment}\nAPI Key configurada: ${result.apiKeyConfigured ? 'Sim' : 'Não'}`);
+        console.log(`❌ ${result.message}\nAmbiente: ${result.environment}\nAPI Key configurada: ${result.apiKeyConfigured ? 'Sim' : 'Não'}\nAPI Key: ${result.apiKeyPrefix || '[N/A]'}`);
       }
 
     } catch (error) {
