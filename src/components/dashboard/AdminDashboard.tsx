@@ -13,6 +13,7 @@ import {
   administratorService,
 } from "../../lib/supabase";
 import { asaasIntegrationService } from "../../lib/asaas-integration.service";
+import { notify } from "../ui/notification-system";
 
 // Função para gerar UUID compatível com todos os ambientes
 function generateUUID(): string {
@@ -846,7 +847,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       const currentConfig = paymentSettings;
       
       if (!currentConfig.asaasApiKey) {
-        alert("⚠️ Configure a API Key do Asaas antes de testar a conexão.");
+        notify.warning(
+          "Configuração Necessária",
+          "Configure a API Key do Asaas antes de testar a conexão."
+        );
         return;
       }
 
@@ -873,7 +877,19 @@ ${testResult.status.toLowerCase() === 'success' ?
   '⚠️ Falha na conexão. Verifique sua API Key e configurações.'
 }`;
 
-      alert(configSummary);
+      // Display test result based on type
+      if (testResult.status.toLowerCase() === 'success') {
+        notify.success(
+          "Conexão Asaas",
+          "Conexão estabelecida com sucesso! O AsaasService está funcionando."
+        );
+      } else {
+        notify.error(
+          "Falha na Conexão",
+          testResult.message,
+          10000 // 10 segundos para erros
+        );
+      }
 
     } catch (error) {
       console.error("Error testing Asaas connection:", error);
@@ -891,7 +907,11 @@ Timestamp: ${new Date().toLocaleString()}
 
 📞 Entre em contato com o suporte do Asaas se o problema persistir.`;
 
-      alert(errorMessage);
+      notify.error(
+        "Erro no Teste de Conexão",
+        `${error instanceof Error ? error.message : 'Erro desconhecido'}`,
+        10000
+      );
     } finally {
       setIsLoadingPaymentSettings(false);
     }

@@ -24,6 +24,7 @@ import SalesSimulator from './components/sales/SalesSimulator';
 import ContractDetails from './components/sales/ContractDetails';
 import SignaturePage from './components/sales/SignaturePage';
 import ContractViewOnly from './components/sales/ContractViewOnly';
+import NotificationSystem from './components/ui/notification-system';
 
 function App() {
   return (
@@ -37,7 +38,10 @@ function App() {
         </div>
       }
     >
-      <Routes>
+      <Routes      >
+        {/* Sistema Global de Notificações */}
+        <NotificationSystem />
+        
         {/* Home - Login Seguro */}
         <Route path="/" element={<SecureHome />} />
 

@@ -87,10 +87,7 @@ class AsaasService {
   }
 
   private buildBaseUrl(): string {
-    if (this.config.baseUrl) {
-      return this.config.baseUrl;
-    }
-    
+    // Sempre usar URL baseada no ambiente, mesmo se baseUrl for configurado manualmente
     switch (this.config.environment) {
       case 'sandbox':
         return 'https://sandbox.asaas.com/api/v3';

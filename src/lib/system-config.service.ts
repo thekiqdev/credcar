@@ -157,10 +157,12 @@ class SystemConfigService {
     try {
       const configs = await this.getConfigsByCategory('asaas');
       
+      const environment = (configs.find(c => c.key === 'asaas.environment')?.value || 'sandbox') as 'sandbox' | 'production';
+      
       return {
         apiKey: configs.find(c => c.key === 'asaas.api.key')?.value || '',
-        environment: (configs.find(c => c.key === 'asaas.environment')?.value || 'sandbox') as 'sandbox' | 'production',
-        baseUrl: configs.find(c => c.key === 'asaas.base.url')?.value || 'https://www.asaas.com/api/v3',
+        environment: environment,
+        baseUrl: environment === 'sandbox' ? 'https://sandbox.asaas.com/api/v3' : 'https://www.asaas.com/api/v3',
         webhookSecret: configs.find(c => c.key === 'asaas.webhook.secret')?.value || '',
         webhookUrl: configs.find(c => c.key === 'asaas.webhook.url')?.value || '',
       };
