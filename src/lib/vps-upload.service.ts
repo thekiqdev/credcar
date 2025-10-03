@@ -46,17 +46,8 @@ class VPSUploadService {
   private baseUrl: string;
 
   constructor() {
-    // URL da API backend - configuração dinâmica para produção e desenvolvimento
-    this.baseUrl = this.getBaseUrl();
-  }
-
-  private getBaseUrl(): string {
-    // Em produção, usar URL HTTPS do servidor
-    if (window.location.hostname.includes('credcarmultimarcas.com.br')) {
-      return 'https://sistema.credcarmultimarcas.com.br/api';
-    }
-    // Em desenvolvimento local
-    return 'http://localhost:3001/api';
+    // URL da sua API backend - usar URL fixa para evitar problemas com process.env
+    this.baseUrl = 'http://localhost:3001/api';
   }
 
   /**

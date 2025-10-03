@@ -336,7 +336,8 @@ const RepresentativeProfile: React.FC<RepresentativeProfileProps> = () => {
             <div className="h-6 w-px bg-border" />
             <div className="flex items-center space-x-3">
               <Avatar className="h-12 w-12">
-                        {/* Removido AvatarImage com ilustração aleatória */}
+                <AvatarImage
+                  src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${representative.name}`}
                 />
                 <AvatarFallback>
                   {representative.name

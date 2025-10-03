@@ -38,17 +38,8 @@ class UploadService {
   private baseUrl: string;
 
   constructor() {
-    // URL do servidor de upload - Usamos configuração dinâmnica para produção
-    this.baseUrl = this.getBaseUrl();
-  }
-
-  private getBaseUrl(): string {
-    // Em produção, usar URL HTTPS do servidor
-    if (window.location.hostname.includes('credcarmultimarcas.com.br')) {
-      return 'https://sistema.credcarmultimarcas.com.br/api';
-    }
-    // Em desenvolvimento local
-    return 'http://localhost:3001/api';
+    // URL do servidor de upload
+    this.baseUrl = 'https://sistema.credcarmultimarcas.com.br/api';
   }
 
   /**

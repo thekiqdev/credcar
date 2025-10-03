@@ -136,33 +136,40 @@ class AsaasHttpClient {
   }
 
   async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-    const url = `${this.baseUrl}${endpoint}`;
-    
-    const config: RequestInit = {
-      ...options,
-      headers: {
-        ...this.getHeaders(),
-        ...options.headers,
-      },
-    };
-
-    console.log(`Asaas API Request: ${config.method || 'GET'} ${url}`);
-
+    // Usar proxy local para evitar CORS
     try {
-      const response = await fetch(url, config);
-      const data = await response.json();
+      const response = await fetch('http://localhost:3001/api/proxy/asaas', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          url: endpoint.startsWith('/') ? endpoint.slice(1) : endpoint,
+          key: this.apiKey,
+          env: this.environment,
+          method: options.method || 'GET',
+          body: options.body ? JSON.parse(options.body as string) : undefined
+        }),
+      });
 
-      if (!response.ok) {
+      const proxyResult = await response.json();
+
+      if (!proxyResult.ok) {
         console.error('Asaas API Error:', {
-          status: response.status,
-          statusText: response.statusText,
-          data: data,
+          status: proxyResult.status,
+          statusText: proxyResult.statusText,
+          data: proxyResult.data,
         });
-        throw new Error(`Asaas API Error: ${response.status} ${response.statusText}`);
+        
+        // Extract error message from ASAAS response
+        let errorMessage = `${proxyResult.status} ${proxyResult.statusText}`;
+        if (proxyResult.data && proxyResult.data.errors && proxyResult.data.errors.length > 0) {
+          errorMessage = proxyResult.data.errors[0].description;
+        }
+        
+        throw new Error(errorMessage);
       }
 
-      console.log('Asaas API Response:', data);
-      return data;
+      console.log('Asaas API Proxy Response:', proxyResult.data);
+      return proxyResult.data;
     } catch (error) {
       console.error('Asaas HTTP Request Error:', error);
       throw error;

@@ -437,7 +437,10 @@ const RepresentativeDashboard: React.FC<RepresentativeDashboardProps> = ({
             </Button>
             <div className="flex items-center gap-2">
               <Avatar>
-                {/* Removido AvatarImage com ilustração aleatória */}
+                <AvatarImage
+                  src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${displayName}`}
+                  alt={displayName}
+                />
                 <AvatarFallback>
                   {displayName
                     .split(" ")

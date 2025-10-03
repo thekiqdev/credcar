@@ -6,6 +6,7 @@ import morgan from 'morgan';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import fetch from 'node-fetch';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -14,19 +15,8 @@ const app = express();
 const PORT = 3001;
 
 // Middleware
-app.use(cors({
-  origin: [
-    'https://sistema.credcarmultimarcas.com.br',
-    'https://credcarmultimarcas.com.br', 
-    'http://localhost:5173',
-    'http://localhost:3000'
-  ],
-  credentials: true
-}));
-app.use(helmet({
-  crossOriginEmbedderPolicy: false,
-  contentSecurityPolicy: false
-}));
+app.use(cors());
+app.use(helmet());
 app.use(morgan('combined'));
 app.use(express.json());
 
@@ -82,6 +72,67 @@ app.get('/api/health', (req, res) => {
     timestamp: new Date().toISOString(),
     port: PORT 
   });
+});
+
+// ASAAS Proxy Route (sem CORS)
+app.post('/api/proxy/asaas', express.json({ limit: '10mb' }), async (req, res) => {
+  try {
+    const { url, key, env, body, ...restParams } = req.body;
+
+    if (!url || !key || !env) {
+      return res.status(400).json({ 
+        ok: false, 
+        error: 'Missing required parameters: url, key, env' 
+      });
+    }
+
+    let baseUrl = env === 'sandbox' ? 'https://sandbox.asaas.com/api/v3' : 'https://www.asaas.com/api/v3';
+    const fullUrl = `${baseUrl}/${url}`;
+
+    console.log(`🌐 ASAAS Proxy Request: ${req.body.method || 'GET'} ${fullUrl}`);
+    console.log(`🔑 Key: ${key.substring(0, 10)}...`);
+    console.log(`🌍 Environment: ${env}`);
+
+    const fetchOptions = {
+      method: req.body.method || 'GET',
+      headers: { 
+        'access_token': key, 
+        'Content-Type': 'application/json' 
+      }
+    };
+
+    // Add body for POST/PUT requests
+    if ((req.body.method === 'POST' || req.body.method === 'PUT') && body) {
+      fetchOptions.body = JSON.stringify(body);
+    }
+
+    const response = await fetch(fullUrl, fetchOptions);
+    const responseText = await response.text();
+
+    console.log(`📤 ASAAS Response: ${response.status} ${response.statusText}`);
+
+    // Try to parse as JSON, fallback to plain text
+    let responseData;
+    try {
+      responseData = JSON.parse(responseText);
+    } catch {
+      responseData = responseText;
+    }
+
+    res.status(response.ok ? 200 : response.status).json({ 
+      ok: response.ok, 
+      status: response.status, 
+      statusText: response.statusText,
+      data: responseData 
+    });
+  } catch (err) {
+    console.error('❌ ASAAS Proxy Error:', err);
+    res.status(500).json({ 
+      ok: false, 
+      error: String(err),
+      message: 'Proxy server error'
+    });
+  }
 });
 
 // Rota para criar estrutura de pastas
@@ -321,6 +372,7 @@ app.listen(PORT, () => {
   console.log(`🚀 Servidor de upload rodando na porta ${PORT}`);
   console.log(`📁 Diretório de documentos: ${path.join(__dirname, 'documentos')}`);
   console.log(`🔗 Health check: http://localhost:${PORT}/api/health`);
+  console.log(`🌐 ASAAS Proxy: http://localhost:${PORT}/api/proxy/asaas`);
   console.log(`📤 Upload endpoint: http://localhost:${PORT}/api/upload-document`);
   console.log(`📋 List files: http://localhost:${PORT}/api/list-files`);
   console.log(`⬇️ Download: http://localhost:${PORT}/api/download-file`);

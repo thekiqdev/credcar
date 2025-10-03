@@ -509,6 +509,15 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     message: '',
     timestamp: null,
   });
+  const [testStatus, setTestStatus] = useState<{
+    status: 'success' | 'error' | null;
+    message: string;
+    timestamp: number | null;
+  }>({
+    status: null,
+    message: '',
+    timestamp: null,
+  });
 
   // Email settings state
   const [emailSettings, setEmailSettings] = useState({
@@ -931,23 +940,44 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const testAsaasOperation = async () => {
     try {
       setIsLoadingPaymentSettings(true);
+      setTestStatus({ status: null, message: '', timestamp: null });
       
       // Update Asaas service configuration
       await asaasService.updateConfig();
       
       // Test connection to Asaas
-      const result = await asaasService.testConnection();
+      const result = await asaasService.testConnection();      
       
       console.log("Teste de conexão Asaas:", result);
       
       if (result.success) {
         console.log(`✅ Conexão com Asaas estabelecida com sucesso!\nAmbiente: ${result.environment}`);
+        setTestStatus({
+          status: 'success',
+          message: `Conexão estabelecida com sucesso! Ambiente: ${result.environment}`,
+          timestamp: Date.now()
+        });
+        
+        // Auto-hide success message after 5 seconds
+        setTimeout(() => {
+          setTestStatus(prev => ({ ...prev, status: null }));
+        }, 5000);
       } else {
         console.log(`❌ Falha na conexão com Asaas: ${result.message}\nAmbiente: ${result.environment}\nAPI Key configurada: ${result.apiKeyConfigured ? 'Sim' : 'Não'}`);
-      }
+        setTestStatus({
+          status: 'error',
+          message: result.message || 'Erro ao testar conexão',
+          timestamp: Date.now()
+        });
+      } 
 
     } catch (error) {
       console.error("Error testing Asaas connection:", error);
+      setTestStatus({
+        status: 'error',
+        message: 'Erro de conexão com o servidor',
+        timestamp: Date.now()
+      });
     } finally {
       setIsLoadingPaymentSettings(false);
     }
@@ -5638,9 +5668,34 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                             onClick={testAsaasOperation}
                             disabled={isLoadingPaymentSettings}
                           >
-                            <span className="mr-2">🔗</span>Testar
+                            <span className="mr-2">🔗</span>
+                            {isLoadingPaymentSettings ? 'Testando...' : 'Testar'}
                           </Button>
                         </div>
+                        
+                        {/* Status do Teste */}
+                        {testStatus.status && (
+                          <div className={`mt-4 p-3 rounded-md border ${
+                            testStatus.status === 'success' 
+                              ? 'bg-green-50 border-green-200' 
+                              : 'bg-red-50 border-red-200'
+                          }`}>
+                            <div className="flex items-center">
+                              <span className={`mr-2 text-lg ${
+                                testStatus.status === 'success' ? '✅' : '❌'
+                              }`}>
+                              </span>
+                              <span className={`text-sm font-medium ${
+                                testStatus.status === 'success' 
+                                  ? 'text-green-800' 
+                                  : 'text-red-800'
+                              }`}>
+                                {testStatus.message}
+                              </span>
+                            </div>
+                          </div>
+                        )}
+                        
                       </CardContent>
                     </Card>
 
