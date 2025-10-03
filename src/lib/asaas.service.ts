@@ -230,33 +230,56 @@ class AsaasService {
         };
       }
 
-      // Simular teste de conexão (evita problemas de CORS em desenvolvimento)
-      // Em produção, isso seria substituído por uma chamada real à API
-      console.log(`🧪 Simulando teste de conexão Asaas...`);
+      // Real API test via backend proxy to avoid CORS issues
+      console.log(`🔗 Testando conexão real com Asaas...`);
       console.log(`📋 Configuração:`);
       console.log(`   Environment: ${config.environment}`);
       console.log(`   Base URL: ${config.baseUrl}`);
       console.log(`   API Key: ${config.apiKey ? '✅ Configurada' : '❌ Não configurada'}`);
       console.log(`   Webhook URL: ${config.webhookUrl || 'Não configurado'}`);
 
-      // Simular delay de resposta da API
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      try {
+        // Real API call via backend proxy
+        const response = await fetch('/api/test-asaas', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            apiKey: config.apiKey,
+            environment: config.environment,
+            baseUrl: config.baseUrl
+          }),
+        });
 
-      // Simular validação baseada no formato da API Key
-      const apiKeyPattern = /^\$[a-z]+\_[a-z]+\_[A-Za-z0-9]+$/;
-      const isValidKeyFormat = apiKeyPattern.test(config.apiKey);
-      
-      if (isValidKeyFormat) {
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const result = await response.json();
+        
         return {
-          success: true,
-          message: `✅ Conexão simulada bem-sucedida!\n\n📊 Configuração validada:\n• Environment: ${config.environment}\n• API Key: Format válido\n• URL: ${config.baseUrl}\n• Endpoint de teste: /myAccount\n\n⚠️ Nota: Este é um teste simulado. Em produção, será feita uma chamada real à API.`,
+          success: result.success,
+          message: result.message,
           environment: config.environment,
           apiKeyConfigured: true,
         };
-      } else {
+
+      } catch (error: any) {
+        console.error('Error calling Asaas API:', error);
+        
+        if (error.message.includes('404')) {
+          return {
+            success: false,
+            message: `⚠️ Proxy backend não encontrado!\n\n💡 Para testes reais em produção:\n• Certifique-se que o backend proxy está funcionando\n• A rota /api/test-asaas deve estar disponível\n• Em desenvolvimento, configure um proxy no vite.config.ts\n\n📝 Erro técnico: ${error.message}`,
+            environment: config.environment,
+            apiKeyConfigured: true,
+          };
+        }
+        
         return {
           success: false,
-          message: `❌ Formato da API Key inválido!\n\n🔍 Formato esperado: $act_test_xxxxxxxxxx\n📝 Sua chave: ${config.apiKey}\n\n💡 Verifique se está usando a chave correta do ${config.environment === 'sandbox' ? 'ambiente sandbox' : 'ambiente de produção'}.`,
+          message: `❌ Erro ao conectar com Asaas!\n\n🔍 Detalhes do erro:\n${error.message}\n\n📋 Configuração usada:\n• Ambiente: ${config.environment}\n• URL: ${config.baseUrl}\n• API Key: ${config.apiKey ? 'Configurada' : 'Não configurada'}`,
           environment: config.environment,
           apiKeyConfigured: true,
         };

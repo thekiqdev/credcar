@@ -1,318 +1,317 @@
-import express from 'express';
-import multer from 'multer';
-import cors from 'cors';
-import helmet from 'helmet';
-import morgan from 'morgan';
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
+// ================================
+// UPLOAD SERVER + ASAAS PROXY API
+// ================================
+const express = require('express');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
+const cors = require('cors');
+const fetch = require('node-fetch'); // For Asaas API calls
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// Importando o módulo do multer diretamente
+const { v4: uuidv4 } = require('crypto');
 
 const app = express();
-const PORT = 3001;
+const PORT = process.env.PORT || 3001;
 
-// Middleware
+// Middlewares
 app.use(cors());
-app.use(helmet());
-app.use(morgan('combined'));
 app.use(express.json());
+app.use(express.static('uploads'));
 
-// Middleware de tratamento de erros
-app.use((error, req, res, next) => {
-  console.error('❌ Erro no servidor:', error);
-  res.status(500).json({ 
-    error: error.message || 'Erro interno do servidor',
-    details: error.stack 
-  });
-});
-
-// Configuração do multer para upload
+// ================================
+// MULTER CONFIGURATION
+// ================================
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    // Para uploads multipart/form-data, os dados vêm do req.body
-    // mas precisamos aguardar o multer processar primeiro
-    const baseDir = path.join(__dirname, 'documentos');
-    const tempPath = path.join(baseDir, 'temp');
-    
-    // Criar diretório temporário se não existir
-    fs.mkdirSync(tempPath, { recursive: true });
-    
-    cb(null, tempPath);
+    const uploadPath = 'uploads/temp/';
+    cb(null, uploadPath);
   },
   filename: (req, file, cb) => {
-    const timestamp = Date.now();
-    const extension = path.extname(file.originalname);
-    const filename = `PRO_${String(timestamp).padStart(10, '0')}_${timestamp}${extension}`;
-    cb(null, filename);
+    const uniqueName = `${Date.now()}-${Math.round(Math.random() * 1E9)}-${file.originalname}`;
+    cb(null, uniqueName);
   }
 });
 
-const upload = multer({ 
-  storage: storage,
-  limits: {
-    fileSize: 10 * 1024 * 1024 // 10MB
-  },
-  fileFilter: (req, file, cb) => {
-    const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'];
-    if (allowedTypes.includes(file.mimetype)) {
-      cb(null, true);
-    } else {
-      cb(new Error('Tipo de arquivo não permitido. Apenas PDF e imagens são aceitos.'), false);
-    }
-  }
-});
+const upload = multer({ storage: storage });
 
-// Rota de health check
-app.get('/api/health', (req, res) => {
-  res.json({ 
-    status: 'online', 
-    timestamp: new Date().toISOString(),
-    port: PORT 
-  });
-});
+// Document type mapping for proper folder structure
+const documentTypeMap = {
+  'Certidão Civil': 'certidao_civil',
+  'Certidão Criminal (PF)': 'certidao_criminal_pf',
+  'Cartão do CNPJ': 'cartao_cnpj',
+  'Comprovante Residência': 'comprovante_residencia',
+};
 
-// Rota para criar estrutura de pastas
-app.post('/api/create-folder', (req, res) => {
+// ================================
+// UPLOAD ROUTES
+// ================================
+
+// Rota de upload de documentos
+app.post('/api/documents/upload/:documentType', upload.single('file'), async (req, res) => {
   try {
-    const { cpfCnpj } = req.body;
-    
-    if (!cpfCnpj) {
-      return res.status(400).json({ error: 'CPF/CNPJ é obrigatório para criar pasta' });
-    }
-
-    const baseDir = path.join(__dirname, 'documentos');
-    const sanitizedCpfCnpj = cpfCnpj.replace(/[^a-zA-Z0-9]/g, '');
-    const folderPath = path.join(baseDir, sanitizedCpfCnpj);
-
-    // Criar estrutura de pastas para todos os tipos de documento
-    const documentTypes = [
-      'certidao_negativa_civil',
-      'comprovante_endereco', 
-      'cartao_cnpj_cpf',
-      'certidao_antecedente_criminal'
-    ];
-
-    documentTypes.forEach(docType => {
-      const docPath = path.join(folderPath, docType);
-      fs.mkdirSync(docPath, { recursive: true });
-    });
-
-    res.json({ 
-      success: true, 
-      message: 'Estrutura de pastas criada com sucesso',
-      path: folderPath 
-    });
-  } catch (error) {
-    console.error('Erro ao criar pasta:', error);
-    res.status(500).json({ error: 'Erro interno do servidor' });
-  }
-});
-
-// Rota para upload de documentos
-app.post('/api/upload-document', upload.single('file'), (req, res) => {
-  try {
-    console.log('📤 Recebendo upload...');
-    console.log('📋 Body:', req.body);
-    console.log('📁 File:', req.file);
+    const documentType = req.params.documentType || req.body.documentType || 'Outros';
     
     if (!req.file) {
-      console.log('❌ Nenhum arquivo recebido');
-      return res.status(400).json({ error: 'Nenhum arquivo foi enviado' });
+      return res.status(400).json({
+        success: false,
+        message: 'Nenhum arquivo enviado'
+      });
     }
 
-    const { cpfCnpj, documentType } = req.body;
-    
-    if (!cpfCnpj || !documentType) {
-      console.log('❌ Dados obrigatórios faltando:', { cpfCnpj, documentType });
-      return res.status(400).json({ error: 'CPF/CNPJ e tipo de documento são obrigatórios' });
+    // Criar estrutura de diretórios se não existir
+    const documentFolder = documentTypeMap[documentType] || 'outros';
+    const finalDir = path.join('uploads', documentFolder);
+    const directory = path.resolve(finalDir);
+
+    if (!fs.existsSync(directory)) {
+      fs.mkdirSync(directory, { recursive: true });
     }
 
-    // Criar estrutura de pastas correta
-    const baseDir = path.join(__dirname, 'documentos');
-    const sanitizedCpfCnpj = cpfCnpj.replace(/[^a-zA-Z0-9]/g, '');
+    // Mover arquivo do diretório temporário para o diretório final
+    const tempFilePath = req.file.path;
+    const fileName = req.file.filename;
+    const finalFilePath = path.join(directory, fileName);
     
-    // Mapear tipos de documento para nomes corretos
-    const documentTypeMap = {
-      'certidão negativa civil': 'certidao_negativa_civil',
-      'comprovante de endereço': 'comprovante_endereco',
-      'cartão do cnpj/cpf': 'cartao_cnpj_cpf',
-      'certidão de antecedente criminal': 'certidao_antecedente_criminal'
-    };
+    // Mover arquivo
+    fs.renameSync(tempFilePath, finalFilePath);
     
-    const sanitizedDocType = documentTypeMap[documentType.toLowerCase()] || 
-      documentType.toLowerCase().replace(/[^a-z0-9]/g, '_');
+    // Criar URL do arquivo
+    const fileUrl = `uploads/${documentFolder}/${fileName}`;
+    const relativePath = path.relative(process.cwd(), finalFilePath);
     
-    const finalPath = path.join(baseDir, sanitizedCpfCnpj, sanitizedDocType);
-    
-    // Criar diretório final se não existir
-    fs.mkdirSync(finalPath, { recursive: true });
-    
-    // Mover arquivo do temp para o local final
-    const finalFilePath = path.join(finalPath, req.file.filename);
-    fs.renameSync(req.file.path, finalFilePath);
-
-    const fileInfo = {
-      originalName: req.file.originalname,
-      filename: req.file.filename,
-      path: finalFilePath,
-      size: req.file.size,
-      mimetype: req.file.mimetype,
-      documentType: documentType,
-      cpfCnpj: cpfCnpj,
-      uploadedAt: new Date().toISOString()
-    };
-
-    console.log('✅ Arquivo enviado com sucesso:', fileInfo);
+    console.log('📁 Document uploaded:', {
+      type: documentType,
+      folder: documentFolder,
+      fileName: fileName,
+      url: fileUrl
+    });
 
     res.json({
       success: true,
       message: 'Arquivo enviado com sucesso',
-      data: fileInfo
-    });
-  } catch (error) {
-    console.error('❌ Erro no upload:', error);
-    res.status(500).json({ error: error.message || 'Erro interno do servidor' });
-  }
-});
-
-// Rota para listar arquivos
-app.get('/api/list-files', (req, res) => {
-  try {
-    const { cpfCnpj } = req.query;
-    
-    if (!cpfCnpj) {
-      return res.status(400).json({ error: 'CPF/CNPJ é obrigatório' });
-    }
-
-    const baseDir = path.join(__dirname, 'documentos');
-    const sanitizedCpfCnpj = cpfCnpj.replace(/[^a-zA-Z0-9]/g, '');
-    const folderPath = path.join(baseDir, sanitizedCpfCnpj);
-
-    if (!fs.existsSync(folderPath)) {
-      return res.json({ files: [] });
-    }
-
-    const files = [];
-    const documentTypes = ['certidao_negativa_civil', 'comprovante_endereco', 'cartao_cnpj_cpf', 'certidao_antecedente_criminal'];
-
-    documentTypes.forEach(docType => {
-      const docPath = path.join(folderPath, docType);
-      if (fs.existsSync(docPath)) {
-        const docFiles = fs.readdirSync(docPath);
-        docFiles.forEach(file => {
-          files.push({
-            name: file,
-            type: docType,
-            path: path.join(docPath, file),
-            size: fs.statSync(path.join(docPath, file)).size,
-            modified: fs.statSync(path.join(docPath, file)).mtime
-          });
-        });
+      fileData: {
+        fileName: fileName,
+        fileSize: req.file.size,
+        fileType: req.file.mimetype,
+        path: relativePath,
+        url: fileUrl,
+        documentType: documentType,
+        directory: documentFolder,
+        timestamp: new Date().toISOString(),
       }
     });
 
-    res.json({ files });
   } catch (error) {
-    console.error('Erro ao listar arquivos:', error);
-    res.status(500).json({ error: 'Erro interno do servidor' });
+    console.error('❌ Upload error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erro interno do servidor',
+      details: error.message
+    });
   }
 });
 
-// Rota para download de arquivos
-app.get('/api/download-file', (req, res) => {
+// ================================
+// ASAAS PROXY API ROUTES
+// ================================
+
+// Test Asaas connection
+app.post('/api/test-asaas', async (req, res) => {
   try {
-    const { path: filePath } = req.query;
+    const { apiKey, environment, baseUrl } = req.body;
     
-    if (!filePath) {
-      return res.status(400).json({ error: 'Caminho do arquivo é obrigatório' });
+    console.log('🧪 Testing Asaas connection:', {
+      environment,
+      apiKey: apiKey ? `${apiKey.substring(0, 10)}...` : 'not provided',
+      baseUrl
+    });
+
+    if (!apiKey) {
+      return res.status(400).json({
+        success: false,
+        message: 'API Key não fornecida'
+      });
     }
 
-    const fullPath = path.resolve(filePath);
+    // Prepare headers for Asaas API
+    const headers = {
+      'access_token': apiKey,
+      'Content-Type': 'application/json',
+      'accept': 'application/json'
+    };
+
+    // Test with myAccount endpoint (real authentication test)
+    const testUrl = `${baseUrl}/myAccount`;
     
-    // Verificar se o arquivo existe
-    if (!fs.existsSync(fullPath)) {
-      return res.status(404).json({ error: 'Arquivo não encontrado' });
-    }
-
-    // Verificar se o arquivo está dentro do diretório de documentos
-    const documentsDir = path.resolve(__dirname, 'documentos');
-    if (!fullPath.startsWith(documentsDir)) {
-      return res.status(403).json({ error: 'Acesso negado' });
-    }
-
-    res.download(fullPath);
-  } catch (error) {
-    console.error('Erro no download:', error);
-    res.status(500).json({ error: 'Erro interno do servidor' });
-  }
-});
-
-// Rota para deletar arquivo
-app.delete('/api/delete-file', (req, res) => {
-  try {
-    const { path: filePath } = req.body;
+    console.log(`🔗 Calling Asaas API: ${testUrl}`);
     
-    if (!filePath) {
-      return res.status(400).json({ error: 'Caminho do arquivo é obrigatório' });
-    }
+    const response = await fetch(testUrl, {
+      method: 'GET',
+      headers: headers,
+      timeout: 10000 // 10 second timeout
+    });
 
-    const fullPath = path.resolve(filePath);
-    
-    // Verificar se o arquivo existe
-    if (!fs.existsSync(fullPath)) {
-      return res.status(404).json({ error: 'Arquivo não encontrado' });
-    }
+    const responseData = await response.text();
+    console.log(`📊 Asaas API Response Status: ${response.status}`);
+    console.log(`📊 Asaas API Response:`, responseData?.substring(0, 200) + (responseData?.length > 200 ? '...' : ''));
 
-    // Verificar se o arquivo está dentro do diretório de documentos
-    const documentsDir = path.resolve(__dirname, 'documentos');
-    if (!fullPath.startsWith(documentsDir)) {
-      return res.status(403).json({ error: 'Acesso negado' });
-    }
-
-    fs.unlinkSync(fullPath);
-    
-    res.json({ success: true, message: 'Arquivo deletado com sucesso' });
-  } catch (error) {
-    console.error('Erro ao deletar arquivo:', error);
-    res.status(500).json({ error: 'Erro interno do servidor' });
-  }
-});
-
-// Rota para deletar pasta de representante
-app.delete('/api/delete-representative-folder', (req, res) => {
-  try {
-    const { cpfCnpj } = req.body;
-    
-    if (!cpfCnpj) {
-      return res.status(400).json({ error: 'CPF/CNPJ é obrigatório' });
-    }
-
-    const baseDir = path.join(__dirname, 'documentos');
-    const sanitizedCpfCnpj = cpfCnpj.replace(/[^a-zA-Z0-9]/g, '');
-    const folderPath = path.join(baseDir, sanitizedCpfCnpj);
-
-    if (fs.existsSync(folderPath)) {
-      fs.rmSync(folderPath, { recursive: true, force: true });
-      res.json({ success: true, message: 'Pasta do representante deletada com sucesso' });
+    if (response.ok) {
+      try {
+        const data = JSON.parse(responseData);
+        return res.json({
+          success: true,
+          message: `✅ Conexão com Asaas bem-sucedida!\n\n📊 Dados da conta:\n• Nome: ${data.name || 'N/A'}\n• Email: ${data.email || 'N/A'}\n• CPF/CNPJ: ${data.cpfCnpj || 'N/A'}\n• Tipo: ${data.personType || 'N/A'}\n\n🔧 Configuração:\n• Ambiente: ${environment}\n• URL: ${baseUrl}\n• API Key: Válida`
+        });
+      } catch (parseError) {
+        return res.json({
+          success: true,
+          message: `✅ Conexão com Asaas bem-sucedida!\n\n📊 Resposta recebida do servidor\n🔧 Configuração:\n• Ambiente: ${environment}\n• URL: ${baseUrl}\n• API Key: Válida\n\n⚠️ Nota: Resposta não é JSON válido mas conexão foi estabelecida`
+        });
+      }
+    } else if (response.status === 401) {
+      return res.status(401).json({
+        success: false,
+        message: `❌ API Key inválida ou expirada!\n\n🔍 Status HTTP: ${response.status}\n📝 Resposta: ${responseData}\n\n💡 Verifique se:\n• A chave está correta\n• Não expirou\n• Tem permissões necessárias\n• Está no ambiente correto (${environment})`
+      });
+    } else if (response.status === 403) {
+      return res.status(403).json({
+        success: false,
+        message: `❌ Acesso negado!\n\n🔍 Status HTTP: ${response.status}\n📝 Resposta: ${responseData}\n\n💡 Verifique se:\n• A conta tem permissões\n• API Key tem permissões necessárias\n• Não está bloqueada`
+      });
     } else {
-      res.json({ success: true, message: 'Pasta não encontrada' });
+      return res.status(response.status).json({
+        success: false,
+        message: `❌ Erro na API Asaas!\n\n🔍 Status HTTP: ${response.status}\n📝 Resposta: ${responseData}\n\n💡 Possíveis causas:\n• Servidor temporariamente indisponível\n• Configuração incorreta\n• Problema de rede`
+      });
     }
+
   } catch (error) {
-    console.error('Erro ao deletar pasta:', error);
-    res.status(500).json({ error: 'Erro interno do servidor' });
+    console.error('❌ Asaas proxy error:', error);
+    
+    if (error.name === 'FetchError' && error.message.includes('timeout')) {
+      return res.status(408).json({
+        success: false,
+        message: `⏱️ Timeout na conexão!\n\n📝 O servidor Asaas demorou muito para responder\n💡 Tente novamente ou verifique sua conexão`
+      });
+    }
+    
+    return res.status(500).json({
+      success: false,
+      message: `❌ Erro interno do proxy!\n\n📝 Detalhes: ${error.message}\n\n💡 Verifique se:\n• Conectividade com internet\n• URL da API está correta\n• Formato da configuração`
+    });
   }
 });
 
-// Iniciar servidor
+// Create customer proxy
+app.post('/api/asaas/customer', async (req, res) => {
+  try {
+    const { apiKey, environment, baseUrl, customerData } = req.body;
+    
+    if (!apiKey || !customerData) {
+      return res.status(400).json({
+        success: false,
+        message: 'API Key e dados do cliente são obrigatórios'
+      });
+    }
+
+    const headers = {
+      'access_token': apiKey,
+      'Content-Type': 'application/json'
+    };
+
+    const response = await fetch(`${baseUrl}/customers`, {
+      method: 'POST',
+      headers: headers,
+      body: JSON.stringify(customerData)
+    });
+
+    const responseData = await response.text();
+    
+    if (response.ok) {
+      return res.json({
+        success: true,
+        data: JSON.parse(responseData)
+      });
+    } else {
+      return res.status(response.status).json({
+        success: false,
+        message: `Erro ao criar cliente: ${responseData}`
+      });
+    }
+
+  } catch (error) {
+    console.error('Customer creation error:', error);
+    return res.status(500).json({
+      success: false,
+      message: `Erro interno: ${error.message}`
+    });
+  }
+});
+
+// Create payment proxy
+app.post('/api/asaas/payment', async (req, res) => {
+  try {
+    const { apiKey, environment, baseUrl, paymentData } = req.body;
+    
+    if (!apiKey || !paymentData) {
+      return res.status(400).json({
+        success: false,
+        message: 'API Key e dados do pagamento são obrigatórios'
+      });
+    }
+
+    const headers = {
+      'access_token': apiKey,
+      'Content-Type': 'application/json'
+    };
+
+    const response = await fetch(`${baseUrl}/payments`, {
+      method: 'POST',
+      headers: headers,
+      body: JSON.stringify(paymentData)
+    });
+
+    const responseData = await response.text();
+    
+    if (response.ok) {
+      return res.json({
+        success: true,
+        data: JSON.parse(responseData)
+      });
+    } else {
+      return res.status(response.status).json({
+        success: false,
+        message: `Erro ao criar pagamento: ${responseData}`
+      });
+    }
+
+  } catch (error) {
+    console.error('Payment creation error:', error);
+    return res.status(500).json({
+      success: false,
+      message: `Erro interno: ${error.message}`
+    });
+  }
+});
+
+// Health check
+app.get('/api/health', (req, res) => {
+  res.json({
+    success: true,
+    message: 'API Running',
+    timestamp: new Date().toISOString(),
+    services: {
+      upload: 'active',
+      asaas_proxy: 'active'
+    }
+  });
+});
+
+// Start server
 app.listen(PORT, () => {
-  console.log(`🚀 Servidor de upload rodando na porta ${PORT}`);
-  console.log(`📁 Diretório de documentos: ${path.join(__dirname, 'documentos')}`);
-  console.log(`🔗 Health check: http://localhost:${PORT}/api/health`);
-  console.log(`📤 Upload endpoint: http://localhost:${PORT}/api/upload-document`);
-  console.log(`📋 List files: http://localhost:${PORT}/api/list-files`);
-  console.log(`⬇️ Download: http://localhost:${PORT}/api/download-file`);
-  console.log(`🗑️ Delete file: http://localhost:${PORT}/api/delete-file`);
-  console.log(`🗂️ Delete folder: http://localhost:${PORT}/api/delete-representative-folder`);
+  console.log(`🚀 Upload Server + Asaas Proxy running on port ${PORT}`);
+  console.log(`📁 Upload endpoint: http://localhost:${PORT}/api/documents/upload/:documentType`);
+  console.log(`🔗 Asaas test endpoint: http://localhost:${PORT}/api/test-asaas`);
+  console.log(`❤️ Health check: http://localhost:${PORT}/api/health`);
 });
