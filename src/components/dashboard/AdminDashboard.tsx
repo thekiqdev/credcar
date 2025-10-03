@@ -518,18 +518,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     message: '',
     timestamp: null,
   });
-  
-  const [clientTestStatus, setClientTestStatus] = useState<{
-    status: 'success' | 'error' | null;
-    message: string;
-    asaasId?: string;
-    timestamp: number | null;
-  }>({
-    status: null,
-    message: '',
-    asaasId: undefined,
-    timestamp: null,
-  });
 
   // Email settings state
   const [emailSettings, setEmailSettings] = useState({
@@ -997,56 +985,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   };
 
-  const testClientCreation = async () => {
-    try {
-      setIsLoadingPaymentSettings(true);
-      setClientTestStatus({ status: null, message: '', asaasId: undefined, timestamp: null });
-      
-      // Update Asaas service configuration
-      await asaasService.updateConfig();
-      
-      // Dados do teste com cliente real
-      const testClientData = {
-        name: 'Kaique Santos',
-        email: 'thekiq@icloud.com',
-        cpfCnpj: '428.131.088-63',
-        phone: '11981169950',
-        mobilePhone: '11981169950',
-        postalCode: '00000-000',
-        address: 'Endereço de Teste',
-        city: 'São Paulo',
-        state: 'SP',
-        externalReference: 'credcar-test-client-001'
-      };
-
-      // Criar ou buscar cliente no ASAAS
-      const customer = await asaasService.createOrFindCustomer(testClientData);
-      
-      console.log("Cliente criado/buscado:", customer);
-      
-      setClientTestStatus({
-        status: 'success',
-        message: `Cliente ${customer.name} ${customer.id ? 'já existe' : 'criado'} no ASAAS!`,
-        asaasId: customer.id || 'N/A',
-        timestamp: Date.now()
-      });
-      
-      // Auto-hide success message after 5 seconds
-      setTimeout(() => {
-        setClientTestStatus(prev => ({ ...prev, status: null }));
-      }, 8000);
-      
-    } catch (error) {
-      console.error("Erro ao criar/buscar cliente:", error);
-      setClientTestStatus({
-        status: 'error',
-        message: `Erro: ${error.message || 'Erro desconhecido'}`,
-        timestamp: Date.now()
-      });
-    } finally {
-      setIsLoadingPaymentSettings(false);
-    }
-  };
 
   const loadCommissionPlans = async () => {
     try {
@@ -5761,53 +5699,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
               </div>
             )}
 
-                        {/* Teste de Cliente - Criação em ASAAS */}
-                        <div className="flex items-center justify-between p-4 bg-blue-50 rounded-lg">
-                          <div>
-                            <h4 className="font-medium">Testar Cliente</h4>
-                            <p className="text-sm text-muted-foreground">
-                              Criar cliente Kaique Santos no ASAAS para teste
-                            </p>
-                          </div>
-                          <Button 
-                            variant="outline" 
-                            onClick={testClientCreation}
-                            disabled={isLoadingPaymentSettings}
-                          >
-                            <span className="mr-2">👤</span>
-                            {isLoadingPaymentSettings ? 'Criando...' : 'Criar Cliente'}
-                          </Button>
-                        </div>
 
-                        {/* Status do Teste de Cliente */}
-                        {clientTestStatus.status && (
-                          <div className={`mt-4 p-4 rounded-md border ${
-                            clientTestStatus.status === 'success' 
-                              ? 'bg-green-50 border-green-200' 
-                              : 'bg-red-50 border-red-200'
-                          }`}>
-                            <div className="flex items-start">
-                              <span className={`mr-2 text-lg mt-1 ${
-                                clientTestStatus.status === 'success' ? '✅' : '❌'
-                              }`}>
-                              </span>
-                              <div className="flex-1">
-                                <span className={`text-sm font-medium ${
-                                  clientTestStatus.status === 'success' 
-                                    ? 'text-green-800' 
-                                    : 'text-red-800'
-                                }`}>
-                                  {clientTestStatus.message}
-                                </span>
-                                {clientTestStatus.asaasId && (
-                                  <div className="mt-2 text-xs text-gray-600">
-                                    <strong>ID ASAAS:</strong> {clientTestStatus.asaasId}
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        )}
                         
                       </CardContent>
                     </Card>

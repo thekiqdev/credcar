@@ -38,8 +38,12 @@ class UploadService {
   private baseUrl: string;
 
   constructor() {
-    // URL do servidor de upload
-    this.baseUrl = 'https://sistema.credcarmultimarcas.com.br/api';
+    // URL do servidor de upload - usar localhost em desenvolvimento
+    if (import.meta.env.DEV) {
+      this.baseUrl = 'http://localhost:3001/api';
+    } else {
+      this.baseUrl = 'https://sistema.credcarmultimarcas.com.br/api';
+    }
   }
 
   /**
