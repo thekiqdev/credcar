@@ -38,12 +38,13 @@ function App() {
         </div>
       }
     >
-      <Routes      >
+      <>
         {/* Sistema Global de Notificações */}
         <NotificationSystem />
         
-        {/* Home - Login Seguro */}
-        <Route path="/" element={<SecureHome />} />
+        <Routes>
+          {/* Home - Login Seguro */}
+          <Route path="/" element={<SecureHome />} />
 
         {/* Rotas Protegidas para Administradores */}
         <Route
@@ -107,7 +108,8 @@ function App() {
         <Route path="/sign/:id" element={<SignaturePage />} />
         <Route path="/sign/:id/:signatureId" element={<SignaturePage />} />
         <Route path="/view/:id" element={<ContractViewOnly />} />
-      </Routes>
+        </Routes>
+      </>
     </Suspense>
   );
 }
