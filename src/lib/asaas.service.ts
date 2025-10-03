@@ -230,48 +230,27 @@ class AsaasService {
         };
       }
 
-      // Validate config without making actual API call (CORS limitation)
-      // Instead, validate the configuration format and simulate success
+      // Try to fetch resource to test connection
+      // Use a simple endpoint that doesn't expect data
       try {
-        // Validate API key format
-        if (!config.apiKey || config.apiKey.length < 10) {
-          return {
-            success: false,
-            message: 'API Key inválida: muito curta ou vazia',
-            environment: config.environment,
-            apiKeyConfigured: false,
-          };
-        }
-
-        // Validate environment
-        if (!['sandbox', 'production'].includes(config.environment)) {
-          return {
-            success: false,
-            message: 'Ambiente inválido: deve ser "sandbox" ou "production"',
-            environment: config.environment,
-            apiKeyConfigured: false,
-          };
-        }
-
-        // Simulate successful config validation (CORS prevents real API call)
+        // Test with 'myAccount' endpoint which is perfect for authentication test
+        await this.client.get('/myAccount');
         return {
           success: true,
-          message: `✅ Configuração válida! Ambiente: ${config.environment.toUpperCase()}.
-          
-📝 IMPORTANTE: Teste real da API requer proxy devido ao CORS.
-
-📮 Teste completo disponível apenas em produção com proxy backend.`,
+          message: 'Conexão com Asaas bem-sucedida',
           environment: config.environment,
           apiKeyConfigured: true,
         };
-        
       } catch (error: any) {
-        return {
-          success: false,
-          message: `Erro na validação: ${error.message}`,
-          environment: config.environment,
-          apiKeyConfigured: true,
-        };
+        if (error.message.includes('401') || error.message.includes('403')) {
+          return {
+            success: false,
+            message: 'API Key inválida ou sem permissão',
+            environment: config.environment,
+            apiKeyConfigured: true,
+          };
+        }
+        throw error;
       }
     } catch (error) {
       console.error('Error testing Asaas connection:', error);

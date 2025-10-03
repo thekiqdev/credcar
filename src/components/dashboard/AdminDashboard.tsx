@@ -941,40 +941,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       console.log("Teste de conexão Asaas:", result);
       
       if (result.success) {
-        console.log(`✅ Configuração Asaas válida!\nAmbiente: ${result.environment}`);
-        
-        // Show success feedback in UI
-        setSaveStatus({
-          type: 'success',
-          message: `✅ Configuração válida!\n\nAmbiente: ${result.environment.toUpperCase()}\nAPI Key: ${result.apiKeyConfigured ? 'Válida' : 'Inválida'}`
-        });
-        
-        // Clear status after 3 seconds
-        setTimeout(() => setSaveStatus(null), 3000);
-        
+        console.log(`✅ Conexão com Asaas estabelecida com sucesso!\nAmbiente: ${result.environment}`);
       } else {
-        console.log(`❌ Problema na configuração: ${result.message}\nAmbiente: ${result.environment}\nAPI Key configurada: ${result.apiKeyConfigured ? 'Sim' : 'Não'}`);
-        
-        // Show error feedback in UI
-        setSaveStatus({
-          type: 'error',
-          message: `❌ Problema na configuração:\n\n${result.message}`
-        });
-        
-        // Clear status after 5 seconds
-        setTimeout(() => setSaveStatus(null), 5000);
+        console.log(`❌ Falha na conexão com Asaas: ${result.message}\nAmbiente: ${result.environment}\nAPI Key configurada: ${result.apiKeyConfigured ? 'Sim' : 'Não'}`);
       }
 
     } catch (error) {
       console.error("Error testing Asaas connection:", error);
-      
-      setSaveStatus({
-        type: 'error',
-        message: `❌ Erro inesperado:\n\n${error}`
-      });
-      
-      setTimeout(() => setSaveStatus(null), 5000);
-      
     } finally {
       setIsLoadingPaymentSettings(false);
     }

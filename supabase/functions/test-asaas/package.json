@@ -1,8 +1,0 @@
-{
-  "name": "test-asaas",
-  "main": "index.js",
-  "dependencies": {
-    "cors": "^2.8.5",
-    "@supabase/supabase-js": "^2.39.0"
-  }
-}

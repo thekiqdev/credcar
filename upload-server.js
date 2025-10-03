@@ -14,8 +14,19 @@ const app = express();
 const PORT = 3001;
 
 // Middleware
-app.use(cors());
-app.use(helmet());
+app.use(cors({
+  origin: [
+    'https://sistema.credcarmultimarcas.com.br',
+    'https://credcarmultimarcas.com.br', 
+    'http://localhost:5173',
+    'http://localhost:3000'
+  ],
+  credentials: true
+}));
+app.use(helmet({
+  crossOriginEmbedderPolicy: false,
+  contentSecurityPolicy: false
+}));
 app.use(morgan('combined'));
 app.use(express.json());
 
