@@ -892,6 +892,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       const allSaved = results.every(result => result);
       
       if (allSaved) {
+        // Clear cache to force fresh data
+        systemConfigService.clearCache();
+        
         // Update Asaas service with new configuration
         await asaasService.updateConfig();
         
@@ -901,11 +904,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
         // Set success status
         setSaveStatus({
           status: 'success',
-          message: 'Configurações salvas corretamente no banco de dados',
+          message: 'Configurações salvas e URLs atualizadas automaticamente',
           timestamp: Date.now(),
         });
 
-        console.log("Payment settings saved successfully to database");
+        console.log("Payment settings saved successfully to database with automatic URL update");
       } else {
         // Set error status
         setSaveStatus({
@@ -937,9 +940,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       console.log("Teste de conexão Asaas:", result);
       
       if (result.success) {
-        console.log(`✅ ${result.message}\nAmbiente: ${result.environment}\nAPI Key: ${result.apiKeyPrefix || '[N/A]'}`);
+        console.log(`✅ Conexão com Asaas estabelecida com sucesso!\nAmbiente: ${result.environment}`);
       } else {
-        console.log(`❌ ${result.message}\nAmbiente: ${result.environment}\nAPI Key configurada: ${result.apiKeyConfigured ? 'Sim' : 'Não'}\nAPI Key: ${result.apiKeyPrefix || '[N/A]'}`);
+        console.log(`❌ Falha na conexão com Asaas: ${result.message}\nAmbiente: ${result.environment}\nAPI Key configurada: ${result.apiKeyConfigured ? 'Sim' : 'Não'}`);
       }
 
     } catch (error) {

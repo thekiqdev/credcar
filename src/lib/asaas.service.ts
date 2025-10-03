@@ -112,8 +112,20 @@ class AsaasHttpClient {
     try {
       const config = await systemConfigService.getAsaasConfig();
       this.apiKey = config.apiKey;
-      this.baseUrl = config.baseUrl;
       this.environment = config.environment;
+      
+      // Atualizar URL baseada no ambiente automaticamente
+      if (config.environment === 'sandbox') {
+        this.baseUrl = 'https://sandbox.asaas.com/api/v3';
+      } else {
+        this.baseUrl = 'https://www.asaas.com/api/v3';
+      }
+      
+      console.log('AsaasHttpClient configurado:', {
+        environment: this.environment,
+        baseUrl: this.baseUrl,
+        apiKeyConfigured: !!this.apiKey
+      });
     } catch (error) {
       console.error('Error updating AsaasHttpClient config:', error);
     }
@@ -207,7 +219,6 @@ class AsaasService {
     message: string;
     environment: string;
     apiKeyConfigured: boolean;
-    apiKeyPrefix?: string;
   }> {
     try {
       await this.updateConfig();
@@ -223,54 +234,32 @@ class AsaasService {
         };
       }
 
-      // Validar formato da API Key
-      const apiKeyPrefix = config.apiKey.substring(0, 20) + '...';
-      
-      if (config.environment === 'sandbox') {
-        // Para sandbox, validamos se a API Key tem o formato correto
-        if (config.apiKey.startsWith('$sandbox_') || config.apiKey.length > 50) {
-          return {
-            success: true,
-            message: 'Configuração válida (Sandbox) - API Key com formato correto',
-            environment: config.environment,
-            apiKeyConfigured: true,
-            apiKeyPrefix,
-          };
-        } else {
+      // Try to fetch resource to test connection
+      // Asaas typically returns customer list if auth is valid
+      try {
+        await this.client.get('/customers?limit=1');
+        return {
+          success: true,
+          message: 'Conexão com Asaas bem-sucedida',
+          environment: config.environment,
+          apiKeyConfigured: true,
+        };
+      } catch (error: any) {
+        if (error.message.includes('401') || error.message.includes('403')) {
           return {
             success: false,
-            message: 'API Key não tem formato válido para Sandbox',
+            message: 'API Key inválida ou sem permissão',
             environment: config.environment,
             apiKeyConfigured: true,
-            apiKeyPrefix,
           };
         }
-      } else {
-        // Para production, validamos se a API Key tem o formato correto 
-        if (config.apiKey.startsWith('$prod_') || config.apiKey.length > 50) {
-          return {
-            success: true,
-            message: 'Configuração válida (Produção) - API Key com formato correto',
-            environment: config.environment,
-            apiKeyConfigured: true,
-            apiKeyPrefix,
-          };
-        } else {
-          return {
-            success: false,
-            message: 'API Key não tem formato válido para Produção',
-            environment: config.environment,
-            apiKeyConfigured: true,
-            apiKeyPrefix,
-          };
-        }
+        throw error;
       }
-      
     } catch (error) {
       console.error('Error testing Asaas connection:', error);
       return {
         success: false,
-        message: `Erro de configuração: ${error.message}`,
+        message: `Erro de conexão: ${error.message}`,
         environment: 'unknown',
         apiKeyConfigured: false,
       };
