@@ -41,18 +41,68 @@ export interface NotificationConfig {
   daysBeforeDue: number;
 }
 
-export interface SystemInfo {
-  name: string;
-  version: string;
-  maintenance: boolean;
+// Cache for configurations
+class ConfigCache {
+  private cache: Map<string, SystemConfig> = new Map();
+  private lastUpdate: Date | null = null;
+  private readonly CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+  set(key: string, config: SystemConfig): void {
+    this.cache.set(key, config);
+    this.lastUpdate = new Date();
+  }
+
+  get(key: string): SystemConfig | null {
+    if (this.lastUpdate && (Date.now() - this.lastUpdate.getTime()) > this.CACHE_TTL) {
+      this.clear();
+      return null;
+    }
+    return this.cache.get(key) || null;
+  }
+
+  setBatch(configs: SystemConfig[]): void {
+    this.cache.clear();
+    configs.forEach(config => this.cache.set(config.key, config));
+    this.lastUpdate = new Date();
+  }
+
+  getBatch(): SystemConfig[] {
+    if (this.lastUpdate && (Date.now() - this.lastUpdate.getTime()) > this.CACHE_TTL) {
+      this.clear();
+      return [];
+    }
+    return Array.from(this.cache.values());
+  }
+
+  clear(): void {
+    this.cache.clear();
+    this.lastUpdate = null;
+  }
+
+  has(key: string): boolean {
+    if (this.lastUpdate && (Date.now() - this.lastUpdate.getTime()) > this.CACHE_TTL) {
+      this.clear();
+      return false;
+    }
+    return this.cache.has(key);
+  }
 }
 
 class SystemConfigService {
+  private cache = new ConfigCache();
+
   /**
    * Get a single configuration by key
    */
   async getConfig(key: string): Promise<string | null> {
     try {
+      // Check cache first
+      const cached = this.cache.get(key);
+      if (cached) {
+        return cached.value;
+      }
+
+      // Fetch from database
       const { data, error } = await supabase
         .from('system_config')
         .select('*')
@@ -65,7 +115,12 @@ class SystemConfigService {
         return null;
       }
 
-      return data?.value || null;
+      if (data) {
+        this.cache.set(key, data);
+        return data.value;
+      }
+
+      return null;
     } catch (error) {
       console.error(`Exception in getConfig for ${key}:`, error);
       return null;
@@ -96,6 +151,11 @@ class SystemConfigService {
         return false;
       }
 
+      // Update cache
+      if (data) {
+        this.cache.set(key, data);
+      }
+
       return true;
     } catch (error) {
       console.error(`Exception in setConfig for ${key}:`, error);
@@ -120,6 +180,9 @@ class SystemConfigService {
         return [];
       }
 
+      // Update cache for these configs
+      data?.forEach(config => this.cache.set(config.key, config));
+
       return data || [];
     } catch (error) {
       console.error(`Exception in getConfigsByCategory for ${category}:`, error);
@@ -127,28 +190,7 @@ class SystemConfigService {
     }
   }
 
-  /**
-   * Get all configurations
-   */
-  async getAllConfigs(): Promise<SystemConfig[]> {
-    try {
-      const { data: data, error } = await supabase
-        .from('system_config')
-        .select('*')
-        .eq('is_active', true)
-        .order('category, key');
-
-      if (error) {
-        console.error('Error fetching all configs:', error);
-        return [];
-      }
-
-      return data || [];
-    } catch (error) {
-      console.error('Exception in getAllConfigs:', error);
-      return [];
-    }
-  }
+  // Type-safe configuration getters
 
   /**
    * Get Asaas configuration
@@ -157,12 +199,10 @@ class SystemConfigService {
     try {
       const configs = await this.getConfigsByCategory('asaas');
       
-      const environment = (configs.find(c => c.key === 'asaas.environment')?.value || 'sandbox') as 'sandbox' | 'production';
-      
       return {
         apiKey: configs.find(c => c.key === 'asaas.api.key')?.value || '',
-        environment: environment,
-        baseUrl: environment === 'sandbox' ? 'https://sandbox.asaas.com/api/v3' : 'https://www.asaas.com/api/v3',
+        environment: (configs.find(c => c.key === 'asaas.environment')?.value || 'sandbox') as 'sandbox' | 'production',
+        baseUrl: configs.find(c => c.key === 'asaas.base.url')?.value || 'https://www.asaas.com/api/v3',
         webhookSecret: configs.find(c => c.key === 'asaas.webhook.secret')?.value || '',
         webhookUrl: configs.find(c => c.key === 'asaas.webhook.url')?.value || '',
       };
@@ -324,66 +364,15 @@ class SystemConfigService {
   }
 
   /**
-   * Get System information
+   * Clear configuration cache
    */
-  async getSystemInfo(): Promise<SystemInfo> {
-    try {
-      const configs = await this.getConfigsByCategory('system');
-      
-      return {
-        name: configs.find(c => c.key === 'system.name')?.value || 'CredCar Finance',
-        version: configs.find(c => c.key === 'system.version')?.value || '1.1.0',
-        maintenance: configs.find(c => c.key === 'system.maintenance')?.value === 'true',
-      };
-    } catch (error) {
-      console.error('Error getting System info:', error);
-      return {
-        name: 'CredCar Finance',
-        version: '1.1.0',
-        maintenance: false,
-      };
-    }
-  }
-
-  /**
-   * Delete a configuration
-   */
-  async deleteConfig(key: string): Promise<boolean> {
-    try {
-      const { error } = await supabase
-        .from('system_config')
-        .delete()
-        .eq('key', key);
-
-      if (error) {
-        console.error(`Error deleting config ${key}:`, error);
-        return false;
-      }
-
-      return true;
-    } catch (error) {
-      console.error(`Exception in deleteConfig for ${key}:`, error);
-      return false;
-    }
+  clearCache(): void {
+    this.cache.clear();
   }
 }
 
 // Export singleton instance
 export const systemConfigService = new SystemConfigService();
-
-// Export utility functions
-export const getConfig = (key: string) => systemConfigService.getConfig(key);
-export const setConfig = (key: string, value: string, description?: string, category?: string) => 
-  systemConfigService.setConfig(key, value, description, category);
-
-// Export specialized getters
-export const getAsaasConfig = () => systemConfigService.getAsaasConfig();
-export const setAsaasConfig = (config: Partial<AsaasConfig>) => systemConfigService.setAsaasConfig(config);
-export const getPaymentConfig = () => systemConfigService.getPaymentConfig();
-export const setPaymentConfig = (config: Partial<PaymentConfig>) => systemConfigService.setPaymentConfig(config);
-export const getNotificationConfig = () => systemConfigService.getNotificationConfig();
-export const setNotificationConfig = (config: Partial<NotificationConfig>) => systemConfigService.setNotificationConfig(config);
-export const getSystemInfo = () => systemConfigService.getSystemInfo();
 
 // Default export
 export default systemConfigService;

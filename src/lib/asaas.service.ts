@@ -1,17 +1,12 @@
 /**
- * AsaasService - Service for integration with Asaas API
- * Handles customer creation, invoices and payments
+ * AsaasService - Service for integrating with Asaas payment gateway
+ * Handles API communication, customer management, and payment processing
  */
 
-interface AsaasConfig {
-  apiKey: string;
-  environment: 'sandbox' | 'production';
-  baseUrl: string;
-  webhookSecret: string;
-  webhookUrl: string;
-}
+import { systemConfigService } from './system-config.service';
 
-interface AsaasCustomer {
+// Type definitions for Asaas API
+export interface AsaasCustomer {
   id?: string;
   name: string;
   email: string;
@@ -25,250 +20,460 @@ interface AsaasCustomer {
   province?: string;
   city?: string;
   state?: string;
-  country?: string;
   externalReference?: string;
   notificationDisabled?: boolean;
+  additionalEmails?: string;
 }
 
-interface AsaasInvoice {
-  id?: string;
-  customer: string;
-  billingType: 'BOLETO' | 'CREDIT_CARD' | 'PIX' | 'UNDEFINED';
+export interface AsaasPaymentLink {
+  id: string;
+  url: string;
+  billingType: string;
   dueDate: string;
   value: number;
-  description?: string;
-  externalReference?: string;
+  description: string;
+  customer: string;
+  status: string;
+  pixTransaction?: {
+    qrCode: string;
+    payload: string;
+    copyAndPaste: string;
+  };
+  bankSlipUrl?: string;
+}
+
+export interface AsaasInvoice {
+  id: string;
+  customer: string;
+  paymentLink: string;
+  dueDate: string;
+  value: number;
+  description: string;
+  status: string;
+  billingType: string;
+  pixTransaction?: {
+    qrCode: string;
+    payload: string;
+    copyAndPaste: string;
+  };
+  bankSlipUrl?: string;
+}
+
+export interface AsaasPayment {
+  id: string;
+  customer: string;
+  paymentLink: string;
+  dueDate: string;
+  value: number;
+  description: string;
+  status: string;
+  billingType: string;
+  paymentDate?: string;
+  originalDueDate: string;
+  clientPaymentDate?: string;
+  installmentNumber?: number;
   invoiceUrl?: string;
   bankSlipUrl?: string;
-  pixTransaction?: string;
-  pixQrCodeId?: string;
-  status?: 'PENDING' | 'RECEIVED' | 'RECEIved_IN_CASH' | 'OVERDUE' | 'REFUNDED' | 'CONFIRMED';
-}
-
-interface AsaasWebhook {
-  event: string;
-  payment?: {
-    id: string;
-    status: string;
+  invoiceNumber?: string;
+  discount?: {
     value: number;
-    dueDate: string;
-    description?: string;
-    externalReference?: string;
+    dueDateLimitDays: number;
+    type: string;
   };
-  customer?: {
-    id: string;
-    name: string;
-    email: string;
+  fine?: {
+    value: number;
+    type: string;
+  };
+  interest?: {
+    value: number;
+    type: string;
   };
 }
 
-interface AsaasApiResponse<T> {
-  object: string;
-  hasMore?: boolean;
-  totalCount?: number;
-  data?: T[];
-  [key: string]: any;
+export interface AsaasConfig {
+  apiKey: string;
+  environment: 'sandbox' | 'production';
+  baseUrl: string;
+  webhookSecret: string;
+  webhookUrl: string;
 }
 
-interface AsaasError {
-  errors: Array<{
-    code: string;
-    description: string;
-  }>;
-}
+// HTTP Client class
+class AsaasHttpClient {
+  private apiKey: string = '';
+  private baseUrl: string = 'https://www.asaas.com/api/v3';
+  private environment: 'sandbox' | 'production' = 'sandbox';
 
-class AsaasService {
-  private config: AsaasConfig;
-  private baseUrl: string;
-
-  constructor(config: AsaasConfig) {
-    this.config = config;
-    this.baseUrl = this.buildBaseUrl();
+  constructor() {
+    this.updateConfig();
   }
 
-  private buildBaseUrl(): string {
-    // Sempre usar URL baseada no ambiente, mesmo se baseUrl for configurado manualmente
-    switch (this.config.environment) {
-      case 'sandbox':
-        return 'https://sandbox.asaas.com/api/v3';
-      case 'production':
-        return 'https://www.asaas.com/api/v3';
-      default:
-        return 'https://sandbox.asaas.com/api/v3';
+  async updateConfig(): Promise<void> {
+    try {
+      const config = await systemConfigService.getAsaasConfig();
+      this.apiKey = config.apiKey;
+      this.baseUrl = config.baseUrl;
+      this.environment = config.environment;
+    } catch (error) {
+      console.error('Error updating AsaasHttpClient config:', error);
     }
   }
 
-  private async makeRequest<T>(
-    endpoint: string,
-    method: 'GET' | 'POST' | 'PUT' | 'DELETE' = 'GET',
-    data?: any
-  ): Promise<T> {
-    const url = `${this.baseUrl}/${endpoint}`;
-    
-    const headers: Record<string, string> = {
+  private getHeaders(): HeadersInit {
+    return {
+      'access_token': this.apiKey,
       'Content-Type': 'application/json',
-      'access_token': this.config.apiKey,
+      'Accept': 'application/json',
+    };
+  }
+
+  async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+    const url = `${this.baseUrl}${endpoint}`;
+    
+    const config: RequestInit = {
+      ...options,
+      headers: {
+        ...this.getHeaders(),
+        ...options.headers,
+      },
     };
 
-    const options: RequestInit = {
-      method,
-      headers,
-    };
-
-    if (data && method !== 'GET') {
-      options.body = JSON.stringify(data);
-    }
+    console.log(`Asaas API Request: ${config.method || 'GET'} ${url}`);
 
     try {
-      console.log(`[AsaasService] ${method} ${url}`, data ? { data } : '');
-      
-      const response = await fetch(url, options);
-      const jsonResponse = await response.json();
+      const response = await fetch(url, config);
+      const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${JSON.stringify(jsonResponse)}`);
+        console.error('Asaas API Error:', {
+          status: response.status,
+          statusText: response.statusText,
+          data: data,
+        });
+        throw new Error(`Asaas API Error: ${response.status} ${response.statusText}`);
       }
 
-      console.log(`[AsaasService] Response:`, jsonResponse);
-      return jsonResponse;
+      console.log('Asaas API Response:', data);
+      return data;
     } catch (error) {
-      console.error(`[AsaasService] Error on ${method} ${url}:`, error);
+      console.error('Asaas HTTP Request Error:', error);
       throw error;
     }
   }
 
-  // CLIENT MANAGEMENT
-  async createCustomer(customer: AsaasCustomer): Promise<AsaasCustomer> {
-    return this.makeRequest<AsaasCustomer>('customers', 'POST', customer);
+  async get<T>(endpoint: string): Promise<T> {
+    return this.request<T>(endpoint, { method: 'GET' });
   }
 
-  async getCustomer(customerId: string): Promise<AsaasCustomer> {
-    return this.makeRequest<AsaasCustomer>(`customers/${customerId}`);
+  async post<T>(endpoint: string, data: any): Promise<T> {
+    return this.request<T>(endpoint, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
   }
 
-  async updateCustomer(customerId: string, updateData: Partial<AsaasCustomer>): Promise<AsaasCustomer> {
-    return this.makeRequest<AsaasCustomer>(`customers/${customerId}`, 'PUT', updateData);
+  async put<T>(endpoint: string, data: any): Promise<T> {
+    return this.request<T>(endpoint, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
   }
 
-  async deleteCustomer(customerId: string): Promise<void> {
-    await this.makeRequest(`customers/${customerId}`, 'DELETE');
+  async delete<T>(endpoint: string): Promise<T> {
+    return this.request<T>(endpoint, { method: 'DELETE' });
+  }
+}
+
+// Main AsaasService class
+class AsaasService {
+  private client: AsaasHttpClient;
+
+  constructor() {
+    this.client = new AsaasHttpClient();
   }
 
-  async listCustomers(): Promise<AsaasApiResponse<AsaasCustomer>> {
-    return this.makeRequest<AsaasApiResponse<AsaasCustomer>>('customers');
+  /**
+   * Update configuration from database
+   */
+  async updateConfig(): Promise<void> {
+    await this.client.updateConfig();
   }
 
-  // INVOICE MANAGEMENT
-  async createInvoice(invoice: AsaasInvoice): Promise<AsaasInvoice> {
-    return this.makeRequest<AsaasInvoice>('payments', 'POST', invoice);
-  }
-
-  async getInvoice(invoiceId: string): Promise<AsaasInvoice> {
-    return this.makeRequest<AsaasInvoice>(`payments/${invoiceId}`);
-  }
-
-  async updateInvoice(invoiceId: string, updateData: Partial<AsaasInvoice>): Promise<AsaasInvoice> {
-    return this.makeRequest<AsaasInvoice>(`payments/${invoiceId}`, 'PUT', updateData);
-  }
-
-  async cancelInvoice(invoiceId: string): Promise<AsaasInvoice> {
-    return this.makeRequest<AsaasInvoice>(`payments/${invoiceId}/refunding`, 'POST');
-  }
-
-  async listInvoices(): Promise<AsaasApiResponse<AsaasInvoice>> {
-    return this.makeRequest<AsaasApiResponse<AsaasInvoice>>('payments');
-  }
-
-  // PIX MANAGEMENT
-  async getPixQrCode(invoiceId: string): Promise<{ payload: string; qrCode: string }> {
-    return this.makeRequest<{ payload: string; qrCode: string }>(`payments/${invoiceId}/pixQrCode`);
-  }
-
-  // WEBHOOK MANAGEMENT
-  async createWebhook(): Promise<{ webhookUrl: string; webhookId: string }> {
-    const webhookData = {
-      url: this.config.webhookUrl,
-      email: 'notifications@credcar.com.br',
-      enabled: true,
-      apiVersion: 3,
-      events: [
-        'PAYMENT_CREATED',
-        'PAYMENT_PAYMENT_CASH',
-        'PAYMENT_CONFIRMED',
-        'PAYMENT_RECEIVED_IN_CASH',
-        'PAYMENT_OVERDUE',
-        'PAYMENT_DELETED',
-        'PAYMENT_SUBSCRIPTION_RESTARTED',
-        'PAYMENT_SUBSCRIPTION_CHARGEBACK',
-        'PAYMENT_SUBSCRIPTION_CHARGEBACK_LOST',
-        'PAYMENT_SUBSCRIPTION_CHARGEBACK_RECEIVED',
-        'PAYMENT_SUBSCRIPTION_REFUNDED',
-        'PAYMENT_SUBSCRIPTION_UPDATED',
-        'PAYMENT_SUBSCRIPTION_UPDATED_STATUS',
-        'PAYMENT_SUBSCRIPTION_WILL_UPDATE_STATUS',
-        'PAYMENT_UPDATE_STATUS',
-      ]
-    };
-
-    return this.makeRequest<{ webhookUrl: string; webhookId: string }>('webhooks', 'POST', webhookData);
-  }
-
-  // HEALTH CHECK / CONNECTION TEST
-  async testConnection(): Promise<{ status: string; message: string; environment: string }> {
+  /**
+   * Test connection to Asaas API
+   */
+  async testConnection(): Promise<{
+    success: boolean;
+    message: string;
+    environment: string;
+    apiKeyConfigured: boolean;
+  }> {
     try {
-      // Tentar buscar uma lista básica para testar conexão
-      const response = await this.makeRequest<AsaasApiResponse<any>>('customers?limit=1');
+      await this.updateConfig();
       
-      return {
-        status: 'success',
-        message: 'Conexão com Asaas estabelecida com sucesso',
-        environment: this.config.environment,
-      };
+      const config = await systemConfigService.getAsaasConfig();
+      
+      if (!config.apiKey) {
+        return {
+          success: false,
+          message: 'API Key não configurada',
+          environment: config.environment,
+          apiKeyConfigured: false,
+        };
+      }
+
+      // Try to fetch resource to test connection
+      // Asaas typically returns customer list if auth is valid
+      try {
+        await this.client.get('/customers?limit=1');
+        return {
+          success: true,
+          message: 'Conexão com Asaas bem-sucedida',
+          environment: config.environment,
+          apiKeyConfigured: true,
+        };
+      } catch (error: any) {
+        if (error.message.includes('401') || error.message.includes('403')) {
+          return {
+            success: false,
+            message: 'API Key inválida ou sem permissão',
+            environment: config.environment,
+            apiKeyConfigured: true,
+          };
+        }
+        throw error;
+      }
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
-      
+      console.error('Error testing Asaas connection:', error);
       return {
-        status: 'error',
-        message: `Falha na conexão: ${errorMessage}`,
-        environment: this.config.environment,
+        success: false,
+        message: `Erro de conexão: ${error.message}`,
+        environment: 'unknown',
+        apiKeyConfigured: false,
       };
     }
   }
 
-  // REPORTS AND ANALYTICS
-  async getReports(startDate: string, endDate: string): Promise<any> {
-    return this.makeRequest(`billings?startDate=${startDate}&endDate=${endDate}`);
+  /**
+   * Create or update customer
+   */
+  async createCustomer(customerData: Partial<AsaasCustomer>): Promise<AsaasCustomer> {
+    await this.updateConfig();
+    
+    try {
+      const customer = await this.client.post<AsaasCustomer>('/customers', customerData);
+      console.log('Customer created/updated successfully:', customer);
+      return customer;
+    } catch (error) {
+      console.error('Error creating/updating customer:', error);
+      throw error;
+    }
   }
 
-  // CONFIGURATION MANAGEMENT
-  getConfig(): AsaasConfig {
-    return { ...this.config };
+  /**
+   * Get customer by ID or CPF/CNPJ
+   */
+  async getCustomer(identifier: string): Promise<AsaasCustomer | null> {
+    await this.updateConfig();
+    
+    try {
+      const customer = await this.client.get<AsaasCustomer | null>(`/customers?${identifier}`);
+      return customer;
+    } catch (error) {
+      console.error('Error getting customer:', error);
+      return null;
+    }
   }
 
-  updateConfig(newConfig: Partial<AsaasConfig>): void {
-    this.config = { ...this.config, ...newConfig };
-    this.baseUrl = this.buildBaseUrl();
+  /**
+   * Update customer
+   */
+  async updateCustomer(customerId: string, customerData: Partial<AsaasCustomer>): Promise<AsaasCustomer> {
+    await this.updateConfig();
+    
+    try {
+      const customer = await this.client.put<AsaasCustomer>(`/customers/${customerId}`, customerData);
+      console.log('Customer updated successfully:', customer);
+      return customer;
+    } catch (error) {
+      console.error('Error updating customer:', error);
+      throw error;
+    }
   }
 
-  getBaseUrl(): string {
-    return this.baseUrl;
+  /**
+   * Delete customer
+   */
+  async deleteCustomer(customerId: string): Promise<boolean> {
+    await this.updateConfig();
+    
+    try {
+      await this.client.delete(`/customers/${customerId}`);
+      console.log('Customer deleted successfully');
+      return true;
+    } catch (error) {
+      console.error('Error deleting customer:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Create payment link
+   */
+  async createPaymentLink(paymentData: {
+    customer: string;
+    billingType: 'PIX' | 'BOLETO' | 'CREDIT_CARD';
+    dueDate: string;
+    value: number;
+    description: string;
+    externalReference?: string;
+  }): Promise<AsaasPaymentLink> {
+    await this.updateConfig();
+    
+    try {
+      const paymentLink = await this.client.post<AsaasPaymentLink>('/payments', paymentData);
+      console.log('Payment link created successfully:', paymentLink);
+      return paymentLink;
+    } catch (error) {
+      console.error('Error creating payment link:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Create invoice with multiple installments
+   */
+  async createInvoice(invoiceData: {
+    customer: string;
+    billingType: 'PIX' | 'BOLETO';
+    dueDate: string;
+    value: number;
+    description: string;
+    installments?: number;
+    installmentValue?: number;
+    externalReference?: string;
+  }): Promise<AsaasInvoice[]> {
+    await this.updateConfig();
+    
+    try {
+      if (invoiceData.installments && invoiceData.installments > 1) {
+        // Create multiple installments
+        const invoices: AsaasInvoice[] = [];
+        
+        for (let i = 1; i <= invoiceData.installments; i++) {
+          const dueDate = new Date(invoiceData.dueDate);
+          dueDate.setMonth(dueDate.getMonth() + (i - 1));
+          
+          const installmentData = {
+            ...invoiceData,
+            installmentNumber: i,
+            installmentValue: invoiceData.installmentValue || (invoiceData.value / invoiceData.installments),
+            dueDate: dueDate.toISOString().split('T')[0],
+            description: `${invoiceData.description} - Parcela ${i}/${invoiceData.installments}`,
+          };
+          
+          const invoice = await this.client.post<AsaasInvoice>('/payments', installmentData);
+          invoices.push(invoice);
+        }
+        
+        console.log(`Created ${invoices.length} installments successfully`);
+        return invoices;
+      } else {
+        // Create single payment
+        const invoice = await this.client.post<AsaasInvoice>('/payments', invoiceData);
+        console.log('Single invoice created successfully:', invoice);
+        return [invoice];
+      }
+    } catch (error) {
+      console.error('Error creating invoice:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get payment by ID
+   */
+  async getPayment(paymentId: string): Promise<AsaasPayment | null> {
+    await this.updateConfig();
+    
+    try {
+      const payment = await this.client.get<AsaasPayment>(`/payments/${paymentId}`);
+      return payment;
+    } catch (error) {
+      console.error('Error getting payment:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Get payments by customer
+   */
+  async getCustomerPayments(customerId: string): Promise<AsaasPayment[]> {
+    await this.updateConfig();
+    
+    try {
+      const payments = await this.client.get<{ data: AsaasPayment[] }>(`/payments?customerId=${customerId}&limit=100`);
+      return payments.data || [];
+    } catch (error) {
+      console.error('Error getting customer payments:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Update payment
+   */
+  async updatePayment(paymentId: string, paymentData: Partial<AsaasPayment>): Promise<AsaasPayment> {
+    await this.updateConfig();
+    
+    try {
+      const payment = await this.client.put<AsaasPayment>(`/payments/${paymentId}`, paymentData);
+      console.log('Payment updated successfully:', payment);
+      return payment;
+    } catch (error) {
+      console.error('Error updating payment:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Delete payment
+   */
+  async deletePayment(paymentId: string): Promise<boolean> {
+    await this.updateConfig();
+    
+    try {
+      await this.client.delete(`/payments/${paymentId}`);
+      console.log('Payment deleted successfully');
+      return true;
+    } catch (error) {
+      console.error('Error deleting payment:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Process webhook notification
+   */
+  async processWebhook(webhookData: any, signature: string): Promise<boolean> {
+    try {
+      // TODO: Implement webhook signature validation
+      // For now, just log the webhook data
+      console.log('Webhook received:', webhookData);
+      
+      // Here you would validate the signature using the webhook secret
+      // and process the notification (payment confirmation, etc.)
+      
+      return true;
+    } catch (error) {
+      console.error('Error processing webhook:', error);
+      return false;
+    }
   }
 }
 
-// Factory function to create AsaasService instance
-export function createAsaasService(config: AsaasConfig): AsaasService {
-  return new AsaasService(config);
-}
+// Export singleton instance
+export const asaasService = new AsaasService();
 
 // Default export
-export default AsaasService;
-
-// Export all interfaces and types
-export {
-  AsaasConfig,
-  AsaasCustomer,
-  AsaasInvoice,
-  AsaasWebhook,
-  AsaasApiResponse,
-  AsaasError,
-};
+export default asaasService;

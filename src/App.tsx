@@ -24,7 +24,6 @@ import SalesSimulator from './components/sales/SalesSimulator';
 import ContractDetails from './components/sales/ContractDetails';
 import SignaturePage from './components/sales/SignaturePage';
 import ContractViewOnly from './components/sales/ContractViewOnly';
-import NotificationSystem from './components/ui/notification-system';
 
 function App() {
   return (
@@ -38,13 +37,9 @@ function App() {
         </div>
       }
     >
-      <>
-        {/* Sistema Global de Notificações */}
-        <NotificationSystem />
-        
-        <Routes>
-          {/* Home - Login Seguro */}
-          <Route path="/" element={<SecureHome />} />
+      <Routes>
+        {/* Home - Login Seguro */}
+        <Route path="/" element={<SecureHome />} />
 
         {/* Rotas Protegidas para Administradores */}
         <Route
@@ -108,8 +103,7 @@ function App() {
         <Route path="/sign/:id" element={<SignaturePage />} />
         <Route path="/sign/:id/:signatureId" element={<SignaturePage />} />
         <Route path="/view/:id" element={<ContractViewOnly />} />
-        </Routes>
-      </>
+      </Routes>
     </Suspense>
   );
 }

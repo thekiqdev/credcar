@@ -12,8 +12,8 @@ import {
   commissionPlansService,
   administratorService,
 } from "../../lib/supabase";
-import { asaasIntegrationService } from "../../lib/asaas-integration.service";
-import { notify } from "../ui/notification-system";
+import { systemConfigService } from "../../lib/system-config.service";
+import { asaasService } from "../../lib/asaas.service";
 
 // Função para gerar UUID compatível com todos os ambientes
 function generateUUID(): string {
@@ -500,6 +500,15 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   });
 
   const [isLoadingPaymentSettings, setIsLoadingPaymentSettings] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<{
+    status: 'success' | 'error' | null;
+    message: string;
+    timestamp: number | null;
+  }>({
+    status: null,
+    message: '',
+    timestamp: null,
+  });
 
   // Email settings state
   const [emailSettings, setEmailSettings] = useState({
@@ -791,13 +800,39 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     }
   };
 
-  // Payment Settings Functions - Temporarily disabled for build
+  // Payment Settings Functions - Full Integration
   const loadPaymentSettings = async () => {
     try {
-      console.log("Loading payment settings... (placeholder)");
+      console.log("Loading payment settings from database...");
       setIsLoadingPaymentSettings(true);
+
+      const [asaasConfig, paymentConfig, notificationConfig] = await Promise.all([
+        systemConfigService.getAsaasConfig(),
+        systemConfigService.getPaymentConfig(),
+        systemConfigService.getNotificationConfig(),
+      ]);
+
+      setPaymentSettings({
+        asaasApiKey: asaasConfig.apiKey || "",
+        asaasEnvironment: asaasConfig.environment || "sandbox",
+        webhookSecret: asaasConfig.webhookSecret || "",
+        webhookUrl: asaasConfig.webhookUrl || "",
+        enablePix: paymentConfig.enablePix !== undefined ? paymentConfig.enablePix : true,
+        enableBoleto: paymentConfig.enableBoleto !== undefined ? paymentConfig.enableBoleto : true,
+        enableCreditCard: paymentConfig.enableCreditCard !== undefined ? paymentConfig.enableCreditCard : false,
+        autoGenerateBoletos: paymentConfig.autoGenerateBoletos !== undefined ? paymentConfig.autoGenerateBoletos : true,
+        defaultDueDays: paymentConfig.defaultDueDays || 30,
+        maxInstallments: paymentConfig.maxInstallments || 12,
+        sendPaymentNotifications: notificationConfig.sendPaymentConfirmed !== undefined ? notificationConfig.sendPaymentConfirmed : true,
+        sendOverdueNotifications: notificationConfig.sendOverdue !== undefined ? notificationConfig.sendOverdue : true,
+        notificationDaysBeforeDue: notificationConfig.daysBeforeDue || 7,
+      });
+
+      console.log("Payment settings loaded successfully from database");
+    } catch (error) {
+      console.error("Error loading payment settings:", error);
       
-      // Using default values for now
+      // Fallback to default values
       setPaymentSettings({
         asaasApiKey: "",
         asaasEnvironment: "sandbox",
@@ -813,10 +848,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
         sendOverdueNotifications: true,
         notificationDaysBeforeDue: 7,
       });
-
-      console.log("Payment settings loaded with default values");
-    } catch (error) {
-      console.error("Error loading payment settings:", error);
     } finally {
       setIsLoadingPaymentSettings(false);
     }
@@ -824,94 +855,95 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   const savePaymentSettings = async () => {
     try {
-      console.log("Saving payment settings...");
+      console.log("Saving payment settings to database...");
       setIsLoadingPaymentSettings(true);
 
-      // Placeholder for saving configurations
-      alert("✅ Configurações de pagamento salvas com sucesso!\n\n(Por enquanto usando valores padrão)\n\nA integração completa com banco de dados será implementada em breve.");
-      console.log("Payment settings saved successfully (placeholder)");
+      // Prepare configurations
+      const asaasConfig = {
+        apiKey: paymentSettings.asaasApiKey,
+        environment: paymentSettings.asaasEnvironment,
+        webhookSecret: paymentSettings.webhookSecret,
+        webhookUrl: paymentSettings.webhookUrl,
+      };
+
+      const paymentConfig = {
+        defaultMethod: 'PIX', // Determine based on enabled methods
+        enablePix: paymentSettings.enablePix,
+        enableBoleto: paymentSettings.enableBoleto,
+        enableCreditCard: paymentSettings.enableCreditCard,
+        defaultDueDays: paymentSettings.defaultDueDays,
+        maxInstallments: paymentSettings.maxInstallments,
+        autoGenerateBoletos: paymentSettings.autoGenerateBoletos,
+      };
+
+      const notificationConfig = {
+        sendPaymentConfirmed: paymentSettings.sendPaymentNotifications,
+        sendOverdue: paymentSettings.sendOverdueNotifications,
+        daysBeforeDue: paymentSettings.notificationDaysBeforeDue,
+      };
+
+      // Save configurations
+      const results = await Promise.all([
+        systemConfigService.setAsaasConfig(asaasConfig),
+        systemConfigService.setPaymentConfig(paymentConfig),
+        systemConfigService.setNotificationConfig(notificationConfig),
+      ]);
+
+      const allSaved = results.every(result => result);
+      
+      if (allSaved) {
+        // Update Asaas service with new configuration
+        await asaasService.updateConfig();
+        
+        // Reload settings to confirm they were saved
+        await loadPaymentSettings();
+        
+        // Set success status
+        setSaveStatus({
+          status: 'success',
+          message: 'Configurações salvas corretamente no banco de dados',
+          timestamp: Date.now(),
+        });
+
+        console.log("Payment settings saved successfully to database");
+      } else {
+        // Set error status
+        setSaveStatus({
+          status: 'error',
+          message: 'Erro ao salvar algumas configurações no banco',
+          timestamp: Date.now(),
+        });
+        
+        console.error("Some payment settings failed to save");
+      }
 
     } catch (error) {
       console.error("Error saving payment settings:", error);
-      alert("❌ Erro ao salvar configurações: " + error.message);
     } finally {
       setIsLoadingPaymentSettings(false);
     }
   };
 
-  const testAsaasConnection = async () => {
+  const testAsaasOperation = async () => {
     try {
       setIsLoadingPaymentSettings(true);
       
-      // Get current configuration
-      const currentConfig = paymentSettings;
+      // Update Asaas service configuration
+      await asaasService.updateConfig();
       
-      if (!currentConfig.asaasApiKey) {
-        notify.warning(
-          "Configuração Necessária",
-          "Configure a API Key do Asaas antes de testar a conexão."
-        );
-        return;
-      }
-
-      // Initialize and test Asaas connection
-      await asaasIntegrationService.initialize();
-      const testResult = await asaasIntegrationService.testConnection();
+      // Test connection to Asaas
+      const result = await asaasService.testConnection();
       
-      const configSummary = `
-🧪 Teste de Conexão com Asaas
-
-📋 Configuração atual:
-- API Key: ${currentConfig.asaasApiKey.length > 0 ? '✓ Configurada' : '✗ Vazia'}
-- Ambiente: ${currentConfig.asaasEnvironment.toUpperCase()}
-- Webhook: ${currentConfig.webhookUrl ? '✓ Configurado' : '✗ Não configurado'}
-
-🔗 Resultado do teste:
-Status: ${testResult.status.toLowerCase() === 'success' ? '✅ SUCESSO' : '❌ FALHA'}
-Mensagem: ${testResult.message}
-Ambiente: ${currentConfig.asaasEnvironment}
-Timestamp: ${testResult.timestamp.toLocaleString()}
-
-${testResult.status.toLowerCase() === 'success' ? 
-  '🎉 Conexão estabelecida com sucesso! O AsaasService está funcionando.' :
-  '⚠️ Falha na conexão. Verifique sua API Key e configurações.'
-}`;
-
-      // Display test result based on type
-      if (testResult.status.toLowerCase() === 'success') {
-        notify.success(
-          "Conexão Asaas",
-          "Conexão estabelecida com sucesso! O AsaasService está funcionando."
-        );
+      console.log("Teste de conexão Asaas:", result);
+      
+      if (result.success) {
+        console.log(`✅ Conexão com Asaas estabelecida com sucesso!\nAmbiente: ${result.environment}`);
       } else {
-        notify.error(
-          "Falha na Conexão",
-          testResult.message,
-          10000 // 10 segundos para erros
-        );
+        console.log(`❌ Falha na conexão com Asaas: ${result.message}\nAmbiente: ${result.environment}\nAPI Key configurada: ${result.apiKeyConfigured ? 'Sim' : 'Não'}`);
       }
 
     } catch (error) {
       console.error("Error testing Asaas connection:", error);
-      
-      const errorMessage = `❌ Erro no teste de conexão:
-
-Detalhes: ${error instanceof Error ? error.message : 'Erro desconhecido'}
-Timestamp: ${new Date().toLocaleString()}
-
-🔍 Possíveis causas:
-- API Key inválida ou expirada
-- Problemas de rede/conectividade  
-- API Key sem permissões necessárias
-- Ambiente incorreto (sandbox/produção)
-
-📞 Entre em contato com o suporte do Asaas se o problema persistir.`;
-
-      notify.error(
-        "Erro no Teste de Conexão",
-        `${error instanceof Error ? error.message : 'Erro desconhecido'}`,
-        10000
-      );
     } finally {
       setIsLoadingPaymentSettings(false);
     }
@@ -5594,7 +5626,7 @@ Timestamp: ${new Date().toLocaleString()}
                           </div>
                           <Button 
                             variant="outline" 
-                            onClick={testAsaasConnection}
+                            onClick={testAsaasOperation}
                             disabled={isLoadingPaymentSettings}
                           >
                             <span className="mr-2">🔗</span>Testar
@@ -5812,6 +5844,32 @@ Timestamp: ${new Date().toLocaleString()}
                         </div>
                       </CardContent>
                     </Card>
+
+                    {/* Status de Salvamento */}
+                    {saveStatus.status && (
+                      <div className={`p-4 rounded-lg border-l-4 ${
+                        saveStatus.status === 'success' 
+                          ? 'bg-green-50 border-green-400 text-green-800' 
+                          : 'bg-red-50 border-red-400 text-red-800'
+                      }`}>
+                        <div className="flex items-center">
+                          {saveStatus.status === 'success' ? (
+                            <span className="mr-2">✅</span>
+                          ) : (
+                            <span className="mr-2">❌</span>
+                          )}
+                          <span className="text-sm font-medium">
+                            {saveStatus.status === 'success' ? 'Salvo com sucesso!' : 'Erro ao salvar'}
+                          </span>
+                        </div>
+                        <p className="text-sm mt-1">
+                          {saveStatus.message}
+                        </p>
+                        <p className="text-xs mt-1 opacity-75">
+                          {saveStatus.timestamp ? new Date(saveStatus.timestamp).toLocaleTimeString('pt-BR') : ''}
+                        </p>
+                      </div>
+                    )}
 
                     {/* Botão de Salvar */}
                     <div className="flex justify-end">
