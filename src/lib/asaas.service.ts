@@ -1,94 +1,21 @@
 /**
- * AsaasService - Service for integrating with Asaas payment gateway
- * Handles all API communication, client management, and payment processing
- * Compatible with sandbox and production environments
+ * AsaasService - Service for integration with Asaas API
+ * Handles customer creation, invoices and payments
  */
 
-// Types for Asaas API responses and requests
-export interface AsaasClient {
-  id: string;
+interface AsaasConfig {
+  apiKey: string;
+  environment: 'sandbox' | 'production';
+  baseUrl: string;
+  webhookSecret: string;
+  webhookUrl: string;
+}
+
+interface AsaasCustomer {
+  id?: string;
   name: string;
   email: string;
-  cpfCnpj: string;
-  phone: string;
-  mobilePhone?: string;
-  postalCode: string;
-  address: string;
-  addressNumber: string;
-  complement?: string;
-  province: string;
-  city: string;
-  state: string;
-  country: string;
-  observations?: string;
-  externalReference?: string;
-  notificationDisabled?: boolean;
-  additionalEmails?: string;
-  municipalInscription?: string;
-  stateInscription?: string;
-  canDelete?: boolean;
-  canNotBeAgeless?: boolean;
-  personType: 'FISICA' | 'JURIDICA';
-  deleted?: boolean;
-  dateCreated: string;
-}
-
-export interface AsaasInvoice {
-  id: string;
-  dateCreated: string;
-  customer: string;
-  installment: string;
-  paymentLink?: string;
-  paymentLinkExpiryDate?: string;
-  value: number;
-  netValue?: number;
-  originalValue?: number;
-  interestValue?: number;
-  description: string;
-  billingType: 'BOLETO' | 'CREDIT_CARD' | 'DEBIT_CARD' | 'PIX' | 'UNDEFINED';
-  pixTransaction?: string;
-  pixQRCode?: string;
-  pixQRCodeImage?: string;
-  canBePaidAfterExpirationDate?: boolean;
-  canDelete?: boolean;
-  cannotCancelAfterPayment?: boolean;
-  canEditValue?: boolean;
-  postalService?: boolean;
-  status: 'PENDING' | 'CONFIRMED' | 'RECEIVED' | 'RECEIVED_IN_CASH' | 'OVERDUE' | 'REFUNDED' | 'RECEIVED_PARTIAL' | 'REFUND_REQUESTED' | 'CHARGEBACK_REQUESTED' | 'CHARGEBACK_DISPUTE' | 'AWAITING_CHARGEBACK_REVERSAL' | 'DUNNING_REQUESTED' | 'DUNNING_RECEIVED' | 'AWAITING_RISK_ANALYSIS' | 'CANCELLED' | 'UNKNOWN';
-  discount?: {
-    value: number;
-    dueDateLimitDays: number;
-    type: 'FIXED' | 'PERCENTAGE';
-  };
-  fine?: {
-    value: number;
-    type: 'FIXED' | 'PERCENTAGE';
-  };
-  interest?: {
-    value: number;
-    type: 'PERCENTAGE';
-  };
-  deleted: boolean;
-  dueDate: string;
-  paymentDate?: string;
-  originalDueDate: string;
-  paymentMethod?: string;
-  clientPaymentDate?: string;
-}
-
-export interface AsaasPIXPayment {
-  transactionReceiptUrl: string;
-  pixQrCodeId: string;
-  encodedImage: string;
-  payload: string;
-  expirationDate: string;
-  linkGroupCode?: string;
-}
-
-export interface CreateClientRequest {
-  name: string;
-  email: string;
-  phone: string;
+  phone?: string;
   mobilePhone?: string;
   cpfCnpj: string;
   postalCode?: string;
@@ -99,482 +26,252 @@ export interface CreateClientRequest {
   city?: string;
   state?: string;
   country?: string;
-  observations?: string;
   externalReference?: string;
   notificationDisabled?: boolean;
-  additionalEmails?: string;
-  municipalInscription?: string;
-  stateInscription?: string;
-  personType?: 'FISICA' | 'JURIDICA';
 }
 
-export interface CreateInvoiceRequest {
+interface AsaasInvoice {
+  id?: string;
   customer: string;
-  billingType: 'BOLETO' | 'CREDIT_CARD' | 'DEBIT_CARD' | 'PIX' | 'UNDEFINED';
+  billingType: 'BOLETO' | 'CREDIT_CARD' | 'PIX' | 'UNDEFINED';
   dueDate: string;
   value: number;
   description?: string;
   externalReference?: string;
-  discount?: {
+  invoiceUrl?: string;
+  bankSlipUrl?: string;
+  pixTransaction?: string;
+  pixQrCodeId?: string;
+  status?: 'PENDING' | 'RECEIVED' | 'RECEIved_IN_CASH' | 'OVERDUE' | 'REFUNDED' | 'CONFIRMED';
+}
+
+interface AsaasWebhook {
+  event: string;
+  payment?: {
+    id: string;
+    status: string;
     value: number;
-    dueDateLimitDays?: number;
-    type: 'FIXED' | 'PERCENTAGE';
+    dueDate: string;
+    description?: string;
+    externalReference?: string;
   };
-  fine?: {
-    value: number;
-    type: 'FIXED' | 'PERCENTAGE';
+  customer?: {
+    id: string;
+    name: string;
+    email: string;
   };
-  interest?: {
-    value: number;
-    type: 'PERCENTAGE';
-  };
-  postalService?: boolean;
-  split?: Array<{
-    walletId: string;
-    fixedValue?: number;
-    percentualValue?: number;
-    totalValue?: number;
+}
+
+interface AsaasApiResponse<T> {
+  object: string;
+  hasMore?: boolean;
+  totalCount?: number;
+  data?: T[];
+  [key: string]: any;
+}
+
+interface AsaasError {
+  errors: Array<{
+    code: string;
+    description: string;
   }>;
 }
 
-export interface AsaasApiResponse<T> {
-  object: string;
-  hasMore: boolean;
-  totalCount: number;
-  limit: number;
-  offset: number;
-  data: T[];
-}
+class AsaasService {
+  private config: AsaasConfig;
+  private baseUrl: string;
 
-export interface AsaasApiConfig {
-  apiKey: string;
-  environment: 'sandbox' | 'production';
-  baseUrl: string;
-  webhookSecret?: string;
-  webhookUrl?: string;
-}
-
-/**
- * HTTP Client wrapper for Asaas API
- */
-class AsaasClient {
-  private config: AsaasApiConfig;
-
-  constructor(config: AsaasApiConfig) {
+  constructor(config: AsaasConfig) {
     this.config = config;
+    this.baseUrl = this.buildBaseUrl();
   }
 
-  /**
-   * Make HTTP request to Asaas API
-   */
+  private buildBaseUrl(): string {
+    if (this.config.baseUrl) {
+      return this.config.baseUrl;
+    }
+    
+    switch (this.config.environment) {
+      case 'sandbox':
+        return 'https://sandbox.asaas.com/api/v3';
+      case 'production':
+        return 'https://www.asaas.com/api/v3';
+      default:
+        return 'https://sandbox.asaas.com/api/v3';
+    }
+  }
+
   private async makeRequest<T>(
     endpoint: string,
     method: 'GET' | 'POST' | 'PUT' | 'DELETE' = 'GET',
-    body?: any
+    data?: any
   ): Promise<T> {
-    const url = `${this.config.baseUrl}/${endpoint}`;
+    const url = `${this.baseUrl}/${endpoint}`;
     
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       'access_token': this.config.apiKey,
     };
 
+    const options: RequestInit = {
+      method,
+      headers,
+    };
+
+    if (data && method !== 'GET') {
+      options.body = JSON.stringify(data);
+    }
+
     try {
-      console.log(`🚀 Asaas API Request [${method}]: ${url}`);
+      console.log(`[AsaasService] ${method} ${url}`, data ? { data } : '');
       
-      const response = await fetch(url, {
-        method,
-        headers,
-        body: body ? JSON.stringify(body) : undefined,
-      });
+      const response = await fetch(url, options);
+      const jsonResponse = await response.json();
 
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error(`❌ Asaas API Error [${response.status}]: ${errorText}`);
-        throw new Error(`Asaas API Error: ${response.status} - ${errorText}`);
+        throw new Error(`HTTP ${response.status}: ${JSON.stringify(jsonResponse)}`);
       }
 
-      const data = await response.json();
-      console.log(`✅ Asaas API Response [${method}]: ${JSON.stringify(data, null, 2)}`);
-      
-      return	data;
+      console.log(`[AsaasService] Response:`, jsonResponse);
+      return jsonResponse;
     } catch (error) {
-      console.error(`💥 Asaas API Exception: ${error}`);
+      console.error(`[AsaasService] Error on ${method} ${url}:`, error);
       throw error;
     }
   }
 
-  /**
-   * Test API connection
-   */
-  async testConnection(): Promise<boolean> {
+  // CLIENT MANAGEMENT
+  async createCustomer(customer: AsaasCustomer): Promise<AsaasCustomer> {
+    return this.makeRequest<AsaasCustomer>('customers', 'POST', customer);
+  }
+
+  async getCustomer(customerId: string): Promise<AsaasCustomer> {
+    return this.makeRequest<AsaasCustomer>(`customers/${customerId}`);
+  }
+
+  async updateCustomer(customerId: string, updateData: Partial<AsaasCustomer>): Promise<AsaasCustomer> {
+    return this.makeRequest<AsaasCustomer>(`customers/${customerId}`, 'PUT', updateData);
+  }
+
+  async deleteCustomer(customerId: string): Promise<void> {
+    await this.makeRequest(`customers/${customerId}`, 'DELETE');
+  }
+
+  async listCustomers(): Promise<AsaasApiResponse<AsaasCustomer>> {
+    return this.makeRequest<AsaasApiResponse<AsaasCustomer>>('customers');
+  }
+
+  // INVOICE MANAGEMENT
+  async createInvoice(invoice: AsaasInvoice): Promise<AsaasInvoice> {
+    return this.makeRequest<AsaasInvoice>('payments', 'POST', invoice);
+  }
+
+  async getInvoice(invoiceId: string): Promise<AsaasInvoice> {
+    return this.makeRequest<AsaasInvoice>(`payments/${invoiceId}`);
+  }
+
+  async updateInvoice(invoiceId: string, updateData: Partial<AsaasInvoice>): Promise<AsaasInvoice> {
+    return this.makeRequest<AsaasInvoice>(`payments/${invoiceId}`, 'PUT', updateData);
+  }
+
+  async cancelInvoice(invoiceId: string): Promise<AsaasInvoice> {
+    return this.makeRequest<AsaasInvoice>(`payments/${invoiceId}/refunding`, 'POST');
+  }
+
+  async listInvoices(): Promise<AsaasApiResponse<AsaasInvoice>> {
+    return this.makeRequest<AsaasApiResponse<AsaasInvoice>>('payments');
+  }
+
+  // PIX MANAGEMENT
+  async getPixQrCode(invoiceId: string): Promise<{ payload: string; qrCode: string }> {
+    return this.makeRequest<{ payload: string; qrCode: string }>(`payments/${invoiceId}/pixQrCode`);
+  }
+
+  // WEBHOOK MANAGEMENT
+  async createWebhook(): Promise<{ webhookUrl: string; webhookId: string }> {
+    const webhookData = {
+      url: this.config.webhookUrl,
+      email: 'notifications@credcar.com.br',
+      enabled: true,
+      apiVersion: 3,
+      events: [
+        'PAYMENT_CREATED',
+        'PAYMENT_PAYMENT_CASH',
+        'PAYMENT_CONFIRMED',
+        'PAYMENT_RECEIVED_IN_CASH',
+        'PAYMENT_OVERDUE',
+        'PAYMENT_DELETED',
+        'PAYMENT_SUBSCRIPTION_RESTARTED',
+        'PAYMENT_SUBSCRIPTION_CHARGEBACK',
+        'PAYMENT_SUBSCRIPTION_CHARGEBACK_LOST',
+        'PAYMENT_SUBSCRIPTION_CHARGEBACK_RECEIVED',
+        'PAYMENT_SUBSCRIPTION_REFUNDED',
+        'PAYMENT_SUBSCRIPTION_UPDATED',
+        'PAYMENT_SUBSCRIPTION_UPDATED_STATUS',
+        'PAYMENT_SUBSCRIPTION_WILL_UPDATE_STATUS',
+        'PAYMENT_UPDATE_STATUS',
+      ]
+    };
+
+    return this.makeRequest<{ webhookUrl: string; webhookId: string }>('webhooks', 'POST', webhookData);
+  }
+
+  // HEALTH CHECK / CONNECTION TEST
+  async testConnection(): Promise<{ status: string; message: string; environment: string }> {
     try {
-      const response = await this.makeRequest<any>('customers?limit=1');
-      return !!response && Array.isArray(response.data);
+      // Tentar buscar uma lista básica para testar conexão
+      const response = await this.makeRequest<AsaasApiResponse<any>>('customers?limit=1');
+      
+      return {
+        status: 'success',
+        message: 'Conexão com Asaas estabelecida com sucesso',
+        environment: this.config.environment,
+      };
     } catch (error) {
-      console.error('Connection test failed:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
       
-      // Check if it's a CORS error - which means the API is working but browser blocks it
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      
-      if (errorMessage.includes('CORS') || errorMessage.includes('blocked by CORS policy') || errorMessage.includes('Access-Control-Allow-Origin')) {
-        console.log("🔄 CORS error detected - API is likely working, but browser blocks direct calls");
-        // Return true for CORS errors since the API exists
-        return true;
-      }
-      
-      return false;
+      return {
+        status: 'error',
+        message: `Falha na conexão: ${errorMessage}`,
+        environment: this.config.environment,
+      };
     }
   }
 
-  /**
-   * Create a new customer
-   */
-  async createCustomer(customerData: CreateClientRequest): Promise<AsaasClient> {
-    return this.makeRequest<AsaasClient>('customers', 'POST', customerData);
+  // REPORTS AND ANALYTICS
+  async getReports(startDate: string, endDate: string): Promise<any> {
+    return this.makeRequest(`billings?startDate=${startDate}&endDate=${endDate}`);
   }
 
-  /**
-   * Get customer by ID
-   */
-  async getCustomer(customerId: string): Promise<AsaasClient> {
-    return this.makeRequest<AsaasClient>(`customers/${customerId}`);
+  // CONFIGURATION MANAGEMENT
+  getConfig(): AsaasConfig {
+    return { ...this.config };
   }
 
-  /**
-   * Update customer
-   */
-  async updateCustomer(customerId: string, customerData: Partial<CreateClientRequest>): Promise<AsaasClient> {
-    return this.makeRequest<AsaasClient>(`customers/${customerId}`, 'PUT', customerData);
+  updateConfig(newConfig: Partial<AsaasConfig>): void {
+    this.config = { ...this.config, ...newConfig };
+    this.baseUrl = this.buildBaseUrl();
   }
 
-  /**
-   * Delete customer
-   */
-  async deleteCustomer(customerId: string): Promise<{ deleted: boolean }> {
-    return this.makeRequest<{ deleted: boolean }>(`customers/${customerId}`, 'DELETE');
-  }
-
-  /**
-   * Search customers
-   */
-  async searchCustomers(params: {
-    name?: string;
-    email?: string;
-    cpfCnpj?: string;
-    limit?: number;
-    offset?: number;
-  } = {}): Promise<AsaasApiResponse<AsaasClient>> {
-    const queryParams = new URLSearchParams();
-    
-    if (params.name) queryParams.append('name', params.name);
-    if (params.email) queryParams.append('email', params.email);
-    if (params.cpfCnpj) queryParams.append('cpfCnpj', params.cpfCnpj);
-    if (params.limit) queryParams.append('limit', params.limit.toString());
-    if (params.offset) queryParams.append('offset', params.offset.toString());
-
-    const endpoint = queryParams.toString() ? `customers?${queryParams}` : 'customers';
-    return this.makeRequest<AsaasApiResponse<AsaasClient>>(endpoint);
-  }
-
-  /**
-   * Create invoice/payment
-   */
-  async createPayment(paymentData: CreateInvoiceRequest): Promise<AsaasInvoice> {
-    return this.makeRequest<AsaasInvoice>('payments', 'POST', paymentData);
-  }
-
-  /**
-   * Get payment by ID
-   */
-  async getPayment(paymentId: string): Promise<AsaasInvoice> {
-    return this.makeRequest<AsaasInvoice>(`payments/${paymentId}`);
-  }
-
-  /**
-   * Get PIX payment details
-   */
-  async getPIXPayment(paymentId: string): Promise<AsaasPIXPayment> {
-    return this.makeRequest<AsaasPIXPayment>(`payments/${paymentId}/pixQrCode`);
-  }
-
-  /**
-   * Cancel payment
-   */
-  async cancelPayment(paymentId: string): Promise<AsaasInvoice> {
-    return this.makeRequest<AsaasInvoice>(`payments/${paymentId}`, 'DELETE');
-  }
-
-  /**
-   * Refund payment
-   */
-  async refundPayment(paymentId: string, reason: string = 'Solicitação do usuário'): Promise<AsaasInvoice> {
-    return this.makeRequest<AsaasInvoice>(`payments/${paymentId}/refund`, 'POST', {
-      value: null,
-      reason,
-    });
+  getBaseUrl(): string {
+    return this.baseUrl;
   }
 }
 
-/**
- * Main AsaasService class
- */
-class AsaasService {
-  private client: AsaasClient | null = null;
-  private config: AsaasApiConfig | null = null;
-
-  /**
-   * Initialize service with Asaas config
-   */
-  async initialize(config: AsaasApiConfig): Promise<void> {
-    this.config = config;
-    this.client = new AsaasClient(config);
-    console.log('🔧 AsaasService initialized:', {
-      environment: config.environment,
-      baseUrl: config.baseUrl,
-      hasApiKey: !!config.apiKey,
-      hasWebhookSecret: !!config.webhookSecret,
-    });
-  }
-
-  /**
-   * Test connection to Asaas API
-   */
-  async testConnection(): Promise<{ success: boolean; message: string; details?: any }> {
-    try {
-      if (!this.client) {
-        return {
-          success: false,
-          message: 'AsaasService não foi inicializado. Execute initialize() primeiro.',
-        };
-      }
-
-      const startTime = Date.now();
-      const isConnected = await this.client.testConnection();
-      const responseTime = Date.now() - startTime;
-
-      return {
-        success: isConnected,
-        message: isConnected 
-          ? `✅ Conexão bem-sucedida! (${responseTime}ms)`
-          : '❌ Falha na conexão com a API do Asaas',
-        details: {
-          responseTime,
-          environment: this.config?.environment,
-          baseUrl: this.config?.baseUrl,
-        },
-      };
-    } catch (error) {
-      return {
-        success: false,
-        message: `❌ Erro na conexão: ${error.message}`,
-        details: { error: error.toString() },
-      };
-    }
-  }
-
-  /**
-   * Get current configuration
-   */
-  getConfig(): AsaasApiConfig | null {
-    return this.config;
-  }
-
-  /**
-   * Handle customer creation
-   */
-  async createCustomer(customerData: CreateClientRequest):
-  Promise<{ success: boolean; customer?: AsaasClient; error?: string }> {
-    try {
-      if (!this.client) {
-        throw new Error('AsaasClient não foi inicializado');
-      }
-
-      // Validate required fields
-      if (!customerData.name || !customerData.email || !customerData.cpfCnpj) {
-        throw new Error('Dados obrigatórios: name, email, cpfCnpj');
-      }
-
-      const asaasCustomer = await this.client.createCustomer(customerData);
-      
-      return {
-        success: true,
-        customer: asaasCustomer,
-      };
-    } catch (error) {
-      console.error('Error creating Asaas customer:', error);
-      return {
-        success: false,
-        error: error.message,
-      };
-    }
-  }
-
-  /**
-   * Handle customer search
-   */
-  async findCustomer(email?: string, cpfCnpj?: string, name?: string):
-  Promise<{ success: boolean; customers?: AsaasClient[]; error?: string }> {
-    try {
-      if (!this.client) {
-        throw new Error('AsaasClient não foi inicializado');
-      }
-
-      const response = await this.client.searchCustomers({ email, cpfCnpj, name });
-      
-      return {
-        success: true,
-        customers: response.data,
-      };
-    } catch (error) {
-      console.error('Error searching Asaas customers:', error);
-      return {
-        success: false,
-        error: error.message,
-      };
-    }
-  }
-
-  /**
-   * Handle payment creation
-   */
-  async createPayment(paymentData: CreateInvoiceRequest):
-  Promise<{ success: boolean; payment?: AsaasInvoice; error?: string }> {
-    try {
-      if (!this.client) {
-        throw new Error('AsaasClient não foi inicializado');
-      }
-
-      const payment = await this.client.createPayment(paymentData);
-      
-      return {
-        success: true,
-        payment,
-      };
-    } catch (error) {
-      console.error('Error creating Asaas payment:', error);
-      return {
-        success: false,
-        error: error.message,
-      };
-    }
-  }
-
-  /**
-   * Handle PIX payment creation
-   */
-  async createPIXPayment(paymentData: CreateInvoiceRequest):
-  Promise<{ success: boolean; payment?: AsaasInvoice; pix?: AsaasPIXPayment; error?: string }> {
-    try {
-      const result = await this.createPayment({
-        ...paymentData,
-        billingType: 'PIX',
-      });
-
-      if (!result.success || !result.payment) {
-        return result;
-      }
-
-      // Get PIX details
-      const pixDetails = await this.client!.getPIXPayment(result.payment.id);
-
-      return {
-        success: true,
-        payment: result.payment,
-        pix: pixDetails,
-      };
-    } catch (error) {
-      console.error('Error creating PIX payment:', error);
-      return {
-        success: false,
-        error: error.message,
-      };
-    }
-  }
-
-  /**
-   * Handle payment status check
-   */
-  async getPaymentStatus(paymentId: string):
-  Promise<{ success: boolean; payment?: AsaasInvoice; error?: string }> {
-    try {
-      if (!this.client) {
-        throw new Error('AsaasClient não foi inicializado');
-      }
-
-      const payment = await this.client.getPayment(paymentId);
-      
-      return {
-        success: true,
-        payment,
-      };
-    } catch (error) {
-      console.error('Error getting payment status:', error);
-      return {
-        success: false,
-        error: error.message,
-      };
-    }
-  }
-
-  /**
-   * Handle payment cancellation
-   */
-  async cancelPayment(paymentId: string):
-  Promise<{ success: boolean; payment?: AsaasInvoice; error?: string }> {
-    try {
-      if (!this.client) {
-        throw new Error('AsaasClient não foi inicializado');
-      }
-
-      const payment = await this.client.cancelPayment(paymentId);
-      
-      return {
-        success: true,
-        payment,
-      };
-    } catch (error) {
-      console.error('Error canceling payment:', error);
-      return {
-        success: false,
-        error: error.message,
-      };
-    }
-  }
-
-  /**
-   * Generate invoice code (format: F-YYYYMMDD-XXXX)
-   */
-  generateInvoiceCode(): string {
-    const now = new Date();
-    const dateStr = now.toISOString().split('T')[0].replace(/-/g, '');
-    const randomStr = Math.random().toString(36).substr(2, 4).toUpperCase();
-    return `F-${dateStr}-${randomStr}`;
-  }
-
-  /**
-   * Calculate due date based on configuration
-   */
-  calculateDueDate(daysToAdd: number = 30): string {
-    const dueDate = new Date();
-    dueDate.setDate(dueDate.getDate() + daysToAdd);
-    return dueDate.toISOString().split('T')[0];
-  }
+// Factory function to create AsaasService instance
+export function createAsaasService(config: AsaasConfig): AsaasService {
+  return new AsaasService(config);
 }
-
-// Export singleton instance
-export const asaasService = new AsaasService();
-
-// Utility functions for easy access
-export const initializeAsaasService = (config: AsaasApiConfig) => asaasService.initialize(config);
-export const testAsaasConnection = () => asaasService.testConnection();
-export const createAsaasCustomer = (customerData: CreateClientRequest) => asaasService.createCustomer(customerData);
-export const findAsaasCustomer = (email?: string, cpfCnpj?: string, name?: string) => 
-  asaasService.findCustomer(email, cpfCnpj, name);
-export const createAsaasPayment = (paymentData: CreateInvoiceRequest) => asaasService.createPayment(paymentData);
-export const createAsaasPIXPayment = (paymentData: CreateInvoiceRequest) => asaasService.createPIXPayment(paymentData);
-export const getAsaasPaymentStatus = (paymentId: string) => asaasService.getPaymentStatus(paymentId);
-export const cancelAsaasPayment = (paymentId: string) => asaasService.cancelPayment(paymentId);
 
 // Default export
-export default asaasService;
+export default AsaasService;
+
+// Export all interfaces and types
+export {
+  AsaasConfig,
+  AsaasCustomer,
+  AsaasInvoice,
+  AsaasWebhook,
+  AsaasApiResponse,
+  AsaasError,
+};
