@@ -271,48 +271,157 @@ class AsaasService {
   }
 
   /**
-   * Create or update customer
+   * Create new customer in ASAAS
    */
-  async createCustomer(customerData: Partial<AsaasCustomer>): Promise<AsaasCustomer> {
+  async createCustomer(customerData: {
+    name: string;
+    email: string;
+    cpfCnpj: string;
+    phone?: string;
+    mobilePhone?: string;
+    postalCode?: string;
+    address?: string;
+    addressNumber?: string;
+    complement?: string;
+    province?: string;
+    city?: string;
+    state?: string;
+    externalReference?: string;
+  }): Promise<AsaasCustomer> {
     await this.updateConfig();
     
     try {
+      console.log('Creating customer in ASAAS:', customerData);
+      
+      // Validate required fields
+      if (!customerData.name || !customerData.email || !customerData.cpfCnpj) {
+        throw new Error('Nome, email e CPF/CNPJ são obrigatórios');
+      }
+
       const customer = await this.client.post<AsaasCustomer>('/customers', customerData);
-      console.log('Customer created/updated successfully:', customer);
+      console.log('Customer created successfully:', customer);
       return customer;
     } catch (error) {
-      console.error('Error creating/updating customer:', error);
+      console.error('Error creating customer:', error);
       throw error;
     }
   }
 
   /**
-   * Get customer by ID or CPF/CNPJ
+   * Find customer by CPF/CNPJ
    */
-  async getCustomer(identifier: string): Promise<AsaasCustomer | null> {
+  async findCustomerByCpfCnpj(cpfCnpj: string): Promise<AsaasCustomer | null> {
     await this.updateConfig();
     
     try {
-      const customer = await this.client.get<AsaasCustomer | null>(`/customers?${identifier}`);
-      return customer;
+      console.log('Searching customer by CPF/CNPJ:', cpfCnpj);
+      
+      // Remove any non-numeric characters from CPF/CNPJ
+      const cleanCpfCnpj = cpfCnpj.replace(/\D/g, '');
+      
+      const customers = await this.client.get<{ data: AsaasCustomer[] }>(`/customers?cpfCnpj=${cleanCpfCnpj}`);
+      
+      if (customers?.data && customers.data.length > 0) {
+        console.log('Customer found:', customers.data[0]);
+        return customers.data[0];
+      }
+      
+      console.log('No customer found with CPF/CNPJ:', cleanCpfCnpj);
+      return null;
     } catch (error) {
-      console.error('Error getting customer:', error);
+      console.error('Error searching customer:', error);
       return null;
     }
   }
 
   /**
-   * Update customer
+   * Update existing customer
    */
   async updateCustomer(customerId: string, customerData: Partial<AsaasCustomer>): Promise<AsaasCustomer> {
     await this.updateConfig();
     
     try {
+      console.log('Updating customer:', customerId, customerData);
+      
       const customer = await this.client.put<AsaasCustomer>(`/customers/${customerId}`, customerData);
       console.log('Customer updated successfully:', customer);
       return customer;
     } catch (error) {
       console.error('Error updating customer:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Delete customer
+   */
+  async deleteCustomer(customerId: string): Promise<boolean> {
+    await this.updateConfig();
+    
+    try {
+      console.log('Deleting customer:', customerId);
+      
+      await this.client.delete(`/customers/${customerId}`);
+      console.log('Customer deleted successfully');
+      return true;
+    } catch (error) {
+      console.error('Error deleting customer:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get customer by ID
+   */
+  async getCustomerById(customerId: string): Promise<AsaasCustomer | null> {
+    await this.updateConfig();
+    
+    try {
+      console.log('Getting customer by ID:', customerId);
+      
+      const customer = await this.client.get<AsaasCustomer>(`/customers/${customerId}`);
+      console.log('Customer retrieved:', customer);
+      return customer;
+    } catch (error) {
+      console.error('Error getting customer by ID:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Create customer or return existing one if found by CPF/CNPJ
+   */
+  async createOrFindCustomer(customerData: {
+    name: string;
+    email: string;
+    cpfCnpj: string;
+    phone?: string;
+    mobilePhone?: string;
+    postalCode?: string;
+    address?: string;
+    addressNumber?: string;
+    complement?: string;
+    province?: string;
+    city?: string;
+    state?: string;
+    externalReference?: string;
+  }): Promise<AsaasCustomer> {
+    try {
+      // First, try to find existing customer
+      const existingCustomer = await this.findCustomerByCpfCnpj(customerData.cpfCnpj);
+      
+      if (existingCustomer) {
+        console.log('Customer already exists, returning existing:', existingCustomer.id);
+        return existingCustomer;
+      }
+      
+      // If not found, create new customer
+      console.log('Customer not found, creating new one...');
+      const newCustomer = await this.createCustomer(customerData);
+      return newCustomer;
+      
+    } catch (error) {
+      console.error('Error in createOrFindCustomer:', error);
       throw error;
     }
   }
