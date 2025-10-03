@@ -114,18 +114,14 @@ class AsaasHttpClient {
       this.apiKey = config.apiKey;
       this.environment = config.environment;
       
-      // Atualizar URL baseada no ambiente automaticamente
-      if (config.environment === 'sandbox') {
+      // Automatically set base URL based on environment
+      if (this.environment === 'sandbox') {
         this.baseUrl = 'https://sandbox.asaas.com/api/v3';
       } else {
         this.baseUrl = 'https://www.asaas.com/api/v3';
       }
       
-      console.log('AsaasHttpClient configurado:', {
-        environment: this.environment,
-        baseUrl: this.baseUrl,
-        apiKeyConfigured: !!this.apiKey
-      });
+      console.log(`AsaasHttpClient updated: Environment=${this.environment}, BaseUrl=${this.baseUrl}`);
     } catch (error) {
       console.error('Error updating AsaasHttpClient config:', error);
     }
@@ -235,9 +231,10 @@ class AsaasService {
       }
 
       // Try to fetch resource to test connection
-      // Asaas typically returns customer list if auth is valid
+      // Use a simple endpoint that doesn't expect data
       try {
-        await this.client.get('/customers?limit=1');
+        // Test with 'myAccount' endpoint which is perfect for authentication test
+        await this.client.get('/myAccount');
         return {
           success: true,
           message: 'Conexão com Asaas bem-sucedida',

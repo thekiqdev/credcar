@@ -199,10 +199,18 @@ class SystemConfigService {
     try {
       const configs = await this.getConfigsByCategory('asaas');
       
+      const environment = (configs.find(c => c.key === 'asaas.environment')?.value || 'sandbox') as 'sandbox' | 'production';
+      const baseUrlFromDB = configs.find(c => c.key === 'asaas.base.url')?.value;
+      
+      // If no URL in DB or environment changed, use correct URL based on environment
+      const baseUrl = baseUrlFromDB || (environment === 'sandbox' 
+        ? 'https://sandbox.asaas.com/api/v3' 
+        : 'https://www.asaas.com/api/v3');
+      
       return {
         apiKey: configs.find(c => c.key === 'asaas.api.key')?.value || '',
-        environment: (configs.find(c => c.key === 'asaas.environment')?.value || 'sandbox') as 'sandbox' | 'production',
-        baseUrl: configs.find(c => c.key === 'asaas.base.url')?.value || 'https://www.asaas.com/api/v3',
+        environment,
+        baseUrl,
         webhookSecret: configs.find(c => c.key === 'asaas.webhook.secret')?.value || '',
         webhookUrl: configs.find(c => c.key === 'asaas.webhook.url')?.value || '',
       };
@@ -211,7 +219,7 @@ class SystemConfigService {
       return {
         apiKey: '',
         environment: 'sandbox',
-        baseUrl: 'https://www.asaas.com/api/v3',
+        baseUrl: 'https://sandbox.asaas.com/api/v3',
         webhookSecret: '',
         webhookUrl: '',
       };
@@ -230,12 +238,6 @@ class SystemConfigService {
       }
       if (config.environment !== undefined) {
         promises.push(this.setConfig('asaas.environment', config.environment, 'Ambiente do Asaas', 'asaas'));
-        
-        // Atualizar URL automaticamente baseada no ambiente
-        const urlBasedOnEnvironment = config.environment === 'sandbox' 
-          ? 'https://sandbox.asaas.com/api/v3' 
-          : 'https://www.asaas.com/api/v3';
-        promises.push(this.setConfig('asaas.base.url', urlBasedOnEnvironment, 'URL base da API do Asaas', 'asaas'));
       }
       if (config.baseUrl !== undefined) {
         promises.push(this.setConfig('asaas.base.url', config.baseUrl, 'URL base da API do Asaas', 'asaas'));

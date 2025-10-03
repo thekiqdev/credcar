@@ -864,6 +864,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
         environment: paymentSettings.asaasEnvironment,
         webhookSecret: paymentSettings.webhookSecret,
         webhookUrl: paymentSettings.webhookUrl,
+        // Automatically set correct base URL based on environment
+        baseUrl: paymentSettings.asaasEnvironment === 'sandbox' 
+          ? 'https://sandbox.asaas.com/api/v3' 
+          : 'https://www.asaas.com/api/v3',
       };
 
       const paymentConfig = {
@@ -892,9 +896,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       const allSaved = results.every(result => result);
       
       if (allSaved) {
-        // Clear cache to force fresh data
-        systemConfigService.clearCache();
-        
         // Update Asaas service with new configuration
         await asaasService.updateConfig();
         
@@ -904,11 +905,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
         // Set success status
         setSaveStatus({
           status: 'success',
-          message: 'Configurações salvas e URLs atualizadas automaticamente',
+          message: 'Configurações salvas corretamente no banco de dados',
           timestamp: Date.now(),
         });
 
-        console.log("Payment settings saved successfully to database with automatic URL update");
+        console.log("Payment settings saved successfully to database");
       } else {
         // Set error status
         setSaveStatus({
@@ -5582,6 +5583,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                 <SelectItem value="production">Produção</SelectItem>
                               </SelectContent>
                             </Select>
+                            <p className="text-sm text-muted-foreground mt-1">
+                              URL atual: {paymentSettings.asaasEnvironment === 'sandbox' 
+                                ? 'https://sandbox.asaas.com/api/v3' 
+                                : 'https://www.asaas.com/api/v3'}
+                            </p>
                           </div>
 
                           <div>
