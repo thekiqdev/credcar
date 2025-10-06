@@ -38,10 +38,12 @@ class UploadService {
   private baseUrl: string;
 
   constructor() {
-    // URL do servidor de upload - usar localhost em desenvolvimento
-    if (import.meta.env.DEV) {
+    // URL do servidor de upload - detectar ambiente corretamente
+    if (import.meta.env.DEV && window.location.hostname === 'localhost') {
+      // Desenvolvimento local
       this.baseUrl = 'http://localhost:3001/api';
     } else {
+      // Produção ou VPS
       this.baseUrl = 'https://sistema.credcarmultimarcas.com.br/api';
     }
   }
