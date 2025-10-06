@@ -251,13 +251,14 @@ class ContractAnalysisService {
         errors.push('Faturas já existem para este contrato');
       }
 
-      // Validar cálculo matemático
+      // Validar se o cálculo está dentro de parâmetros razoáveis (sistema de empréstimo com juros)
       const expectedTotal = creditRange.valor_credito;
       const difference = Math.abs(totalValue - expectedTotal);
       const percentageDifference = (difference / expectedTotal) * 100;
 
-      if (percentageDifference > 0.01) {
-        errors.push(`Cálculo incorreto: esperado R$ ${expectedTotal.toLocaleString('pt-BR')}, calculado R$ ${totalValue.toLocaleString('pt-BR')} (diferença: ${percentageDifference.toFixed(2)}%)`);
+      // Para empréstimos, é normal ter juros de 20% a 60%
+      if (percentageDifference > 80) {
+        errors.push(`Cálculo suspeito: valor do crédito R$ ${expectedTotal.toLocaleString('pt-BR')}, total das parcelas R$ ${totalValue.toLocaleString('pt-BR')} (diferença: ${percentageDifference.toFixed(2)}%)`);
       }
 
       return {
