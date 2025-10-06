@@ -136,9 +136,16 @@ class AsaasHttpClient {
   }
 
   async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-    // Usar proxy local para evitar CORS
+    // Usar proxy local para evitar CORS - detectar ambiente baseado no hostname
+    const hostname = window.location.hostname;
+    const proxyUrl = hostname === 'localhost' || hostname === '127.0.0.1' 
+      ? 'http://localhost:3001/api/proxy/asaas'
+      : `${window.location.protocol}//${hostname}/api/proxy/asaas`;
+    
+    console.log(`AsaasHttpClient request: hostname=${hostname}, proxyUrl=${proxyUrl}`);
+    
     try {
-      const response = await fetch('http://localhost:3001/api/proxy/asaas', {
+      const response = await fetch(proxyUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
