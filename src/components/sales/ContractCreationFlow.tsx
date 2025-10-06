@@ -112,13 +112,34 @@ const ContractCreationFlow: React.FC<ContractCreationFlowProps> = ({
         throw new Error("Dados do cliente não encontrados");
       }
 
-      // Get current user - try both auth methods
-      let currentUser = await authService.getCurrentUser();
-      if (!currentUser) {
-        // Try old auth service for representatives
-        const { authService: oldAuthService } = await import("../../lib/supabase");
-        currentUser = oldAuthService.getCurrentUser();
+      // Get current user - different logic for admin vs representative
+      let currentUser;
+      
+      if (isAdminMode) {
+        // For admin mode, get admin user info
+        currentUser = await authService.getCurrentUser();
+        if (!currentUser) {
+          // Try old auth service for admins
+          const { authService: oldAuthService } = await import("../../lib/supabase");
+          currentUser = oldAuthService.getCurrentUser();
+        }
+        
+        // If still no user, try to get from session
+        if (!currentUser) {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user) {
+            currentUser = { id: user.id, email: user.email };
+          }
+        }
+      } else {
+        // For representative mode, use existing logic
+        currentUser = await authService.getCurrentUser();
+        if (!currentUser) {
+          const { authService: oldAuthService } = await import("../../lib/supabase");
+          currentUser = oldAuthService.getCurrentUser();
+        }
       }
+      
       if (!currentUser) throw new Error("User not authenticated");
 
       // Determine the representative for the contract

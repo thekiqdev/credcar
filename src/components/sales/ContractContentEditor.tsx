@@ -549,7 +549,6 @@ const ContractContentEditor: React.FC<ContractContentEditorProps> = ({
                 "help",
                 "wordcount",
                 "emoticons",
-                "template",
                 "codesample",
               ],
               toolbar:
