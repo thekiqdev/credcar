@@ -38,14 +38,21 @@ class UploadService {
   private baseUrl: string;
 
   constructor() {
-    // URL do servidor de upload - detectar ambiente corretamente
-    if (import.meta.env.DEV && window.location.hostname === 'localhost') {
+    // URL do servidor de upload - detectar ambiente baseado no hostname
+    const hostname = window.location.hostname;
+    
+    if (hostname === 'localhost' || hostname === '127.0.0.1') {
       // Desenvolvimento local
       this.baseUrl = 'http://localhost:3001/api';
-    } else {
-      // Produção ou VPS
+    } else if (hostname === 'sistema.credcarmultimarcas.com.br') {
+      // Produção - usar mesma URL do frontend (Nginx fará proxy)
       this.baseUrl = 'https://sistema.credcarmultimarcas.com.br/api';
+    } else {
+      // Fallback para outros domínios
+      this.baseUrl = `${window.location.protocol}//${hostname}/api`;
     }
+    
+    console.log('UploadService initialized with baseUrl:', this.baseUrl);
   }
 
   /**
