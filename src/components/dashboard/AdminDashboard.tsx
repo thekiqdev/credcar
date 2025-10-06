@@ -1464,7 +1464,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   const handleGenerateInvoices = async (contractId: string) => {
     try {
-      setIsLoading(true);
+      setIsLoadingContracts(true);
       
       // Importar o serviço de geração de faturas
       const { invoiceGenerationService } = await import('../../lib/invoice-generation.service');
@@ -1483,7 +1483,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
         });
         
         // Recarregar contratos para mostrar as faturas
-        await loadContracts();
+        await loadAllContracts();
         
         // Auto-dismiss após 5 segundos
         setTimeout(() => {
@@ -1509,7 +1509,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
         timestamp: Date.now()
       });
     } finally {
-      setIsLoading(false);
+      setIsLoadingContracts(false);
     }
   };
 
