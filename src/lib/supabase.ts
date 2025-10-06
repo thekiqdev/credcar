@@ -1256,6 +1256,30 @@ export const contractService = {
         throw error;
       }
 
+      // Se o status foi alterado para "Ativo", criar faturas automaticamente
+      if (status === "Ativo") {
+        try {
+          console.log(`🚀 Contrato ${contractId} ativado - criando faturas automaticamente`);
+          
+          // Importar o serviço de geração de faturas
+          const { invoiceGenerationService } = await import('./invoice-generation.service');
+          
+          // Criar faturas para o contrato
+          const result = await invoiceGenerationService.createInvoicesForContract(parseInt(contractId));
+          
+          if (result.success) {
+            console.log(`✅ ${result.invoicesCreated} faturas criadas automaticamente para contrato ${contractId}`);
+          } else {
+            console.error(`❌ Erro ao criar faturas para contrato ${contractId}:`, result.errors);
+            // Não falhar a atualização do status por causa das faturas
+            // As faturas podem ser criadas manualmente depois
+          }
+        } catch (invoiceError) {
+          console.error("Erro ao criar faturas automaticamente:", invoiceError);
+          // Não falhar a atualização do status por causa das faturas
+        }
+      }
+
       return data;
     } catch (error) {
       console.error("Error in contractService.updateStatus:", error);

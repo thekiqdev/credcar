@@ -117,6 +117,7 @@ import {
   Group,
   Hash,
   UserCheck,
+  FileText as FileTextIcon,
   UserX,
   Calculator,
   User,
@@ -1459,6 +1460,57 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     setSelectedContractId(null);
     // Refresh contracts data when modal closes
     loadAllContracts();
+  };
+
+  const handleGenerateInvoices = async (contractId: string) => {
+    try {
+      setIsLoading(true);
+      
+      // Importar o serviço de geração de faturas
+      const { invoiceGenerationService } = await import('../../lib/invoice-generation.service');
+      
+      // Criar faturas para o contrato
+      const result = await invoiceGenerationService.createInvoicesForContract(parseInt(contractId));
+      
+      if (result.success) {
+        console.log(`✅ ${result.invoicesCreated} faturas criadas para contrato ${contractId}`);
+        
+        // Mostrar feedback visual de sucesso
+        setSaveStatus({
+          status: 'success',
+          message: `${result.invoicesCreated} faturas criadas com sucesso!`,
+          timestamp: Date.now()
+        });
+        
+        // Recarregar contratos para mostrar as faturas
+        await loadContracts();
+        
+        // Auto-dismiss após 5 segundos
+        setTimeout(() => {
+          setSaveStatus(prev => ({ ...prev, status: null }));
+        }, 5000);
+      } else {
+        console.error(`❌ Erro ao criar faturas para contrato ${contractId}:`, result.errors);
+        
+        // Mostrar feedback visual de erro
+        setSaveStatus({
+          status: 'error',
+          message: `Erro ao criar faturas: ${result.errors.join(', ')}`,
+          timestamp: Date.now()
+        });
+      }
+    } catch (error) {
+      console.error('Erro ao gerar faturas:', error);
+      
+      // Mostrar feedback visual de erro
+      setSaveStatus({
+        status: 'error',
+        message: 'Erro ao gerar faturas. Tente novamente.',
+        timestamp: Date.now()
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleDeleteContract = async (contractId: string) => {
@@ -4077,6 +4129,23 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                     }
                                   >
                                     <Edit className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    variant="secondary"
+                                    size="sm"
+                                    onClick={() =>
+                                      handleGenerateInvoices(contract.id.toString())
+                                    }
+                                    disabled={
+                                      contract.status !== "Ativo"
+                                    }
+                                    title={
+                                      contract.status !== "Ativo"
+                                        ? "Apenas contratos ativos podem ter faturas geradas"
+                                        : "Gerar faturas para este contrato"
+                                    }
+                                  >
+                                    <FileTextIcon className="h-4 w-4" />
                                   </Button>
                                   <Button
                                     variant="destructive"
