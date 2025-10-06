@@ -803,6 +803,7 @@ export const commissionPlansService = {
       descricao?: string;
       ativo?: boolean;
       visibility?: string;
+      comissao?: number;
     },
   ) {
     try {

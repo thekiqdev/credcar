@@ -2266,12 +2266,15 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
         return;
       }
 
-      await commissionPlansService.update(editingPlan.id, {
+      const updateData = {
         nome: editingPlan.nome,
         descricao: editingPlan.descricao,
         ativo: editingPlan.ativo,
         visibility: editingPlan.visibility,
-      });
+        comissao: editingPlan.comissao,
+      };
+      
+      await commissionPlansService.update(editingPlan.id, updateData as any);
 
       await loadCommissionPlans();
       setIsEditPlanDialogOpen(false);
@@ -7536,6 +7539,25 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       </SelectItem>
                     </SelectContent>
                   </Select>
+                </div>
+                <div>
+                  <Label htmlFor="edit-plan-commission">
+                    Pagamento da comissão
+                  </Label>
+                  <Input
+                    id="edit-plan-commission"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={editingPlan.comissao || 0}
+                    onChange={(e) =>
+                      setEditingPlan({
+                        ...editingPlan,
+                        comissao: parseFloat(e.target.value) || 0,
+                      })
+                    }
+                    placeholder="Ex: 150.00"
+                  />
                 </div>
                 <div className="flex items-center space-x-2">
                   <input
