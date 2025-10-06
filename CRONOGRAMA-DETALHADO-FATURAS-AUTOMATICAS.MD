@@ -76,9 +76,9 @@ Implementar sistema de criação automática de faturas baseado no plano de comi
 
 ### **📊 RESULTADOS DOS TESTES:**
 - ✅ **Teste 1.1:** Conseguiu buscar 5 planos, 10 faixas de crédito e 20 parcelas personalizadas
-- ✅ **Teste 1.2:** Cálculos corretos (sistema de empréstimo com juros - diferença de ~47% é normal)
+- ✅ **Teste 1.2:** Sistema aceita qualquer % de juros definido pelo cliente
 - ✅ **Teste 1.3:** Estrutura de dados correta, relações funcionam
-- ✅ **Teste 1.4:** Cálculos matemáticos corretos (empréstimo com juros)
+- ✅ **Teste 1.4:** Sistema livre para qualquer configuração de juros
 - ✅ **Teste 1.5:** Serviço de análise de contratos criado e testado com sucesso
 - ✅ **Teste 1.6:** Validações implementadas e funcionando
 
@@ -95,7 +95,7 @@ Implementar sistema de criação automática de faturas baseado no plano de comi
 #### **2.1 Implementar `invoiceGenerationService`** ⏳
 - [ ] **2.1.1** Função principal: `createInvoicesForContract(contractId)`
   - [ ] Buscar dados do contrato e plano de pagamento
-  - [ ] Calcular todas as parcelas (1ª + personalizadas + restantes)
+  - [ ] Criar faturas baseadas no plano (1ª + personalizadas + restantes)
   - [ ] Gerar datas de vencimento progressivas
   - [ ] Criar registros na tabela `invoices`
 - [ ] **2.1.2** Funções auxiliares
@@ -103,11 +103,11 @@ Implementar sistema de criação automática de faturas baseado no plano de comi
   - [ ] `generateCustomInstallments()` - Gerar parcelas personalizadas
   - [ ] `generateRemainingInstallments()` - Gerar parcelas restantes
   - [ ] `calculateDueDates()` - Calcular datas de vencimento
-- [ ] **2.1.3** Validações de negócio
+- [ ] **2.1.3** Validações básicas
   - [ ] Verificar se contrato está ativo
   - [ ] Verificar se já existem faturas
   - [ ] Validar dados do plano de pagamento
-  - [ ] Confirmar cálculos antes de salvar
+  - [ ] Criar faturas conforme configurado (sem validar juros)
 
 **Estimativa:** 6-7 horas  
 **Resultado Esperado:** Serviço completo de geração de faturas

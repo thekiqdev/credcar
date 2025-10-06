@@ -194,19 +194,19 @@ Parcelas Restantes: 77 × R$ 350,00
 - ✅ **SUCESSO:** Conseguiu buscar 20 parcelas personalizadas
 
 ### **Teste 1.2: Validar cálculo de parcelas com dados reais**
-- ✅ **SUCESSO:** Cálculos estão corretos (sistema de empréstimo com juros)
-- ✅ **LÓGICA:** Valor do crédito + juros = Total das parcelas
-- ✅ **EXEMPLO:** R$ 20.000 → Calculado: R$ 29.400 (juros: R$ 9.400 - 47%)
+- ✅ **SUCESSO:** Cálculos funcionam corretamente (sistema livre para qualquer % de juros)
+- ✅ **LÓGICA:** Sistema aceita qualquer configuração de juros definida pelo cliente
+- ✅ **FOCO:** Apenas criação automática de faturas, sem validação de juros
 
 ### **Teste 1.3: Confirmar que validações de negócio funcionam**
 - ✅ **SUCESSO:** Estrutura de dados está correta
 - ✅ **SUCESSO:** Relações entre tabelas funcionam
-- ✅ **SUCESSO:** Lógica de cálculo está correta (empréstimo com juros)
+- ✅ **SUCESSO:** Sistema aceita qualquer configuração de juros
 
 ### **Teste 1.4: Testar cenários edge cases**
 - ✅ **SUCESSO:** Sistema lida com múltiplos planos
 - ✅ **SUCESSO:** Sistema lida com parcelas personalizadas
-- ✅ **SUCESSO:** Cálculos matemáticos corretos (empréstimo com juros)
+- ✅ **SUCESSO:** Sistema livre para qualquer % de juros
 
 ---
 

@@ -251,15 +251,8 @@ class ContractAnalysisService {
         errors.push('Faturas já existem para este contrato');
       }
 
-      // Validar se o cálculo está dentro de parâmetros razoáveis (sistema de empréstimo com juros)
-      const expectedTotal = creditRange.valor_credito;
-      const difference = Math.abs(totalValue - expectedTotal);
-      const percentageDifference = (difference / expectedTotal) * 100;
-
-      // Para empréstimos, é normal ter juros de 20% a 60%
-      if (percentageDifference > 80) {
-        errors.push(`Cálculo suspeito: valor do crédito R$ ${expectedTotal.toLocaleString('pt-BR')}, total das parcelas R$ ${totalValue.toLocaleString('pt-BR')} (diferença: ${percentageDifference.toFixed(2)}%)`);
-      }
+      // Não validar juros - cliente pode definir qualquer % de juros
+      // O sistema apenas cria as faturas conforme configurado no plano
 
       return {
         contractId,
