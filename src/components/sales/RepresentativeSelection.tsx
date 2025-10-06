@@ -9,7 +9,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { ArrowRight, Users, UserCheck, SkipForward } from "lucide-react";
+import { ArrowRight, Users, UserCheck, SkipForward, User } from "lucide-react";
 import { representativeService } from "@/lib/supabase";
 
 interface Representative {
