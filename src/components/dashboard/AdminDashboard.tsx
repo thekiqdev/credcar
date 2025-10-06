@@ -284,6 +284,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     descricao: "",
     ativo: true,
     visibility: "publico",
+    comissao: 0,
   });
   const [editingPlan, setEditingPlan] = useState(null);
 
@@ -2227,12 +2228,15 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
         return;
       }
 
-      await commissionPlansService.create({
+      const planData = {
         nome: newPlan.nome,
         descricao: newPlan.descricao,
         ativo: newPlan.ativo,
         visibility: newPlan.visibility,
-      });
+        comissao: newPlan.comissao,
+      };
+      
+      await commissionPlansService.create(planData as any);
 
       await loadCommissionPlans();
       setIsNewPlanDialogOpen(false);
@@ -2241,6 +2245,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
         descricao: "",
         ativo: true,
         visibility: "publico",
+        comissao: 0,
       });
       alert("Plano criado com sucesso!");
     } catch (error) {
@@ -5106,6 +5111,25 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                   </SelectContent>
                                 </Select>
                               </div>
+                              <div>
+                                <Label htmlFor="plan-commission">
+                                  Pagamento da comissão
+                                </Label>
+                                <Input
+                                  id="plan-commission"
+                                  type="number"
+                                  min="0"
+                                  step="0.01"
+                                  value={newPlan.comissao}
+                                  onChange={(e) =>
+                                    setNewPlan({
+                                      ...newPlan,
+                                      comissao: parseFloat(e.target.value) || 0,
+                                    })
+                                  }
+                                  placeholder="Ex: 150.00"
+                                />
+                              </div>
 
                               <div className="flex items-center space-x-2">
                                 <input
@@ -5131,6 +5155,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                     nome: "",
                                     descricao: "",
                                     ativo: true,
+                                    visibility: "publico",
+                                    comissao: 0,
                                   });
                                 }}
                               >

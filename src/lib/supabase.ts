@@ -768,6 +768,7 @@ export const commissionPlansService = {
     descricao?: string;
     ativo?: boolean;
     visibility?: string;
+    comissao?: number;
   }) {
     try {
       const { data, error } = await supabase
@@ -777,6 +778,7 @@ export const commissionPlansService = {
           descricao: planData.descricao || null,
           ativo: planData.ativo !== undefined ? planData.ativo : true,
           visibility: planData.visibility || "publico",
+          comissao: planData.comissao || 0,
         })
         .select()
         .single();

@@ -1,61 +1,57 @@
 #!/bin/bash
 
 # Script para diagnosticar reinícios constantes do servidor
-echo "🔍 DIAGNÓSTICO DE REINÍCIOS CONSTANTES"
-echo "====================================="
+echo "🔍 DIAGNÓSTICO: SERVIDOR REINICIANDO CONSTANTEMENTE"
+echo "=================================================="
 
-# 1. Verificar status atual do PM2
-echo "📊 Status atual do PM2:"
-pm2 status
-
-echo ""
-echo "📋 Logs recentes do PM2:"
+# 1. Verificar logs do PM2
+echo "📊 Logs do PM2 (últimas 20 linhas):"
 pm2 logs --lines 20
 
 echo ""
-echo "📊 Estatísticas de reinícios:"
-pm2 show credcar-upload-server | grep -E "(restart time|unstable restarts|restarts)"
+echo "📊 Status detalhado do PM2:"
+pm2 status
+
+echo ""
+echo "📊 Informações de memória e CPU:"
+pm2 monit --no-interaction | head -20
 
 # 2. Verificar logs do sistema
 echo ""
-echo "🔍 Logs do sistema (últimas 20 linhas):"
-journalctl -u nginx --lines 20 --no-pager
+echo "📋 Logs do sistema (últimas 10 linhas):"
+journalctl -u nginx --no-pager -l | tail -10
 
-# 3. Verificar uso de memória
+# 3. Verificar uso de recursos
 echo ""
-echo "💾 Uso de memória:"
+echo "💾 Uso de recursos do sistema:"
 free -h
+df -h | grep -E "(Filesystem|/dev/)"
 
 # 4. Verificar processos Node.js
 echo ""
-echo "🟢 Processos Node.js:"
+echo "🟢 Processos Node.js ativos:"
 ps aux | grep node | grep -v grep
 
-# 5. Verificar portas em uso
-echo ""
-echo "🌐 Portas em uso:"
-netstat -tlnp | grep -E "(3001|443|80)"
-
-# 6. Verificar espaço em disco
-echo ""
-echo "💿 Espaço em disco:"
-df -h
-
-# 7. Verificar logs específicos do upload server
-echo ""
-echo "📋 Logs específicos do upload server:"
-pm2 logs credcar-upload-server --lines 10
-
-# 8. Verificar configuração do PM2
+# 5. Verificar configuração do PM2
 echo ""
 echo "⚙️ Configuração do PM2:"
 pm2 show credcar-upload-server
 
+# 6. Verificar se há erros nos logs do upload server
+echo ""
+echo "📝 Logs específicos do upload server:"
+pm2 logs credcar-upload-server --lines 10
+
+# 7. Verificar se há problemas de memória
+echo ""
+echo "🧠 Verificação de memória:"
+cat /proc/meminfo | grep -E "(MemTotal|MemAvailable|MemFree)"
+
 echo ""
 echo "🎯 POSSÍVEIS CAUSAS:"
-echo "1. Uso excessivo de memória"
-echo "2. Erro no código causando crash"
-echo "3. Conflito de portas"
-echo "4. Problema de permissões"
-echo "5. Espaço em disco insuficiente"
-echo "6. Configuração incorreta do PM2"
+echo "1. Erro de memória (OOM Killer)"
+echo "2. Erro no código do upload server"
+echo "3. Configuração incorreta do PM2"
+echo "4. Problema com dependências"
+echo "5. Conflito de portas"
+echo "6. Erro de sintaxe no código"
