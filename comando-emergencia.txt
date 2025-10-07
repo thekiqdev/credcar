@@ -1,0 +1,4 @@
+# COMANDO DE EMERGÊNCIA - EXECUTE NO SERVIDOR HOSTINGER
+# Copie e cole este comando completo no terminal do servidor:
+
+sudo cp /etc/nginx/sites-available/default /etc/nginx/sites-available/default.backup && sudo sed -i '/server {/a\    client_max_body_size 15M;\n    client_body_timeout 60s;\n    client_header_timeout 60s;' /etc/nginx/sites-available/default && sudo nginx -t && sudo systemctl reload nginx && sudo pm2 restart upload-server && echo "✅ CORREÇÃO APLICADA COM SUCESSO!"
