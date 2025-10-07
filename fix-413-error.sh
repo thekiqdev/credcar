@@ -1,79 +1,70 @@
 #!/bin/bash
 
-# Script para corrigir erro 413 Request Entity Too Large
-# Execute este script na Hostinger VPS
+# Script para corrigir configuração do Nginx para uploads maiores
+# Execute este script no servidor VPS
 
-echo "🔧 Corrigindo erro 413 Request Entity Too Large..."
+echo "🔧 Corrigindo configuração do Nginx para uploads maiores..."
 
-# 1. Parar o upload-server
-echo "📤 Parando upload-server..."
-sudo pm2 stop upload-server
+# Backup da configuração atual
+sudo cp /etc/nginx/sites-available/default /etc/nginx/sites-available/default.backup.$(date +%Y%m%d_%H%M%S)
 
-# 2. Atualizar código
-echo "📥 Atualizando código..."
-cd /var/www/CredCar-Finance
-git pull origin deploy-v1.5
+# Adicionar configurações de upload ao arquivo de configuração do Nginx
+sudo tee -a /etc/nginx/sites-available/default > /dev/null << 'EOF'
 
-# 3. Verificar configuração do Nginx
-echo "🔍 Verificando configuração do Nginx..."
-nginx_config="/etc/nginx/sites-available/credcar"
-if [ -f "$nginx_config" ]; then
-    echo "📋 Configuração atual do Nginx:"
-    grep -n "client_max_body_size\|proxy_read_timeout\|location.*api" "$nginx_config" || echo "Configurações não encontradas"
-else
-    echo "❌ Arquivo de configuração do Nginx não encontrado: $nginx_config"
-fi
-
-# 4. Aplicar correções no Nginx
-echo "🔧 Aplicando correções no Nginx..."
-sudo tee -a "$nginx_config" > /dev/null << 'EOF'
-
-# Configurações para upload de arquivos grandes
-client_max_body_size 50M;
+# Configurações para uploads maiores
+client_max_body_size 15M;
 client_body_timeout 60s;
 client_header_timeout 60s;
 
-# Configurações específicas para upload
+# Configurações específicas para rotas de upload
 location /api/upload-document {
+    client_max_body_size 15M;
+    client_body_timeout 60s;
+    proxy_connect_timeout 60s;
+    proxy_send_timeout 60s;
+    proxy_read_timeout 60s;
     proxy_pass http://localhost:3001;
     proxy_set_header Host $host;
     proxy_set_header X-Real-IP $remote_addr;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     proxy_set_header X-Forwarded-Proto $scheme;
-    
-    # Configurações específicas para upload
-    proxy_request_buffering off;
-    proxy_buffering off;
-    proxy_read_timeout 300s;
-    proxy_connect_timeout 300s;
-    proxy_send_timeout 300s;
+}
+
+location /api/create-folder {
+    client_max_body_size 15M;
+    proxy_pass http://localhost:3001;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
 }
 EOF
 
-# 5. Testar configuração do Nginx
+# Testar configuração do Nginx
 echo "🧪 Testando configuração do Nginx..."
 sudo nginx -t
 
 if [ $? -eq 0 ]; then
     echo "✅ Configuração do Nginx válida!"
     
-    # 6. Recarregar Nginx
+    # Recarregar Nginx
     echo "🔄 Recarregando Nginx..."
     sudo systemctl reload nginx
     
-    # 7. Reiniciar upload-server
-    echo "🚀 Reiniciando upload-server..."
-    sudo pm2 start upload-server.js --name "upload-server"
-    
-    # 8. Verificar status
-    echo "📊 Status dos serviços:"
-    sudo pm2 status
-    sudo systemctl status nginx --no-pager -l
-    
-    echo "✅ Correção aplicada com sucesso!"
-    echo "🧪 Teste o upload novamente no frontend"
-    
+    echo "✅ Nginx recarregado com sucesso!"
+    echo "📋 Configurações aplicadas:"
+    echo "   - client_max_body_size: 15M"
+    echo "   - client_body_timeout: 60s"
+    echo "   - client_header_timeout: 60s"
+    echo "   - Configurações específicas para /api/upload-document"
 else
     echo "❌ Erro na configuração do Nginx!"
-    echo "🔍 Verifique o arquivo de configuração manualmente"
+    echo "🔄 Restaurando backup..."
+    sudo cp /etc/nginx/sites-available/default.backup.$(date +%Y%m%d_%H%M%S) /etc/nginx/sites-available/default
+    exit 1
 fi
+
+echo "🎉 Correção aplicada com sucesso!"
+echo "📝 Próximos passos:"
+echo "   1. Reiniciar o upload-server: sudo pm2 restart upload-server"
+echo "   2. Testar upload de arquivo maior que 1MB"
