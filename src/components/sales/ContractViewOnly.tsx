@@ -143,10 +143,11 @@ const ContractViewOnly: React.FC = () => {
             cpf_cnpj,
             address
           ),
-          commission_tables!inner (
+          planos!inner (
             id,
-            name,
-            commission_percentage
+            nome,
+            descricao,
+            comissao
           ),
           profiles!inner (
             id,
@@ -188,10 +189,10 @@ const ContractViewOnly: React.FC = () => {
           address: data.clients?.address,
         },
         commission_table: {
-          id: data.commission_tables?.id || 0,
-          name: data.commission_tables?.name || "Tabela não encontrada",
+          id: data.planos?.id || 0,
+          name: data.planos?.nome || "Plano não encontrado",
           commission_percentage:
-            data.commission_tables?.commission_percentage || 0,
+            data.planos?.comissao || 0,
         },
         representative: {
           id: data.profiles?.id || "",

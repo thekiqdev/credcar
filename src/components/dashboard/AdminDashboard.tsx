@@ -1100,8 +1100,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
           credit_amount,
           status,
           created_at,
-          commission_tables!inner (
-            commission_percentage
+          planos!inner (
+            comissao
           )
         `);
 
@@ -1144,7 +1144,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
             contract.total_value || contract.credit_amount || "0",
           );
           const commissionRate =
-            contract.commission_tables?.commission_percentage || 4;
+            contract.planos?.comissao || 4;
           return sum + value * (commissionRate / 100);
         }, 0);
 

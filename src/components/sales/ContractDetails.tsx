@@ -432,12 +432,11 @@ const ContractDetails: React.FC<ContractDetailsProps> = ({
             cpf_cnpj,
             address
           ),
-          commission_tables!inner (
+          planos!inner (
             id,
-            name,
-            commission_percentage,
-            payment_details,
-            payment_installments
+            nome,
+            descricao,
+            comissao
           ),
           profiles!inner (
             id,
@@ -508,13 +507,12 @@ const ContractDetails: React.FC<ContractDetailsProps> = ({
           address: data.clients?.address,
         },
         commission_table: {
-          id: data.commission_tables?.id || 0,
-          name: data.commission_tables?.name || "Tabela não encontrada",
+          id: data.planos?.id || 0,
+          name: data.planos?.nome || "Plano não encontrado",
           commission_percentage:
-            data.commission_tables?.commission_percentage || 0,
-          payment_details: data.commission_tables?.payment_details,
-          payment_installments:
-            data.commission_tables?.payment_installments || 1,
+            data.planos?.comissao || 0,
+          payment_details: data.planos?.descricao || "",
+          payment_installments: 1, // Default value since planos doesn't have this field
         },
         representative: {
           id: data.profiles?.id || "",

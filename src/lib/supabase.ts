@@ -1188,12 +1188,11 @@ export const contractService = {
             address_state,
             address_zip
           ),
-          commission_tables!inner (
+          planos!inner (
             id,
-            name,
-            commission_percentage,
-            payment_details,
-            payment_installments
+            nome,
+            descricao,
+            comissao
           ),
           profiles!inner (
             id,
@@ -1499,7 +1498,7 @@ export const dashboardService = {
           `
           *,
           clients(full_name, name),
-          commission_tables(commission_percentage)
+          planos(nome, descricao, comissao)
         `,
         )
         .eq("representative_id", representativeId);
@@ -1528,7 +1527,7 @@ export const dashboardService = {
             `
             *,
             clients(full_name, name),
-            commission_tables(commission_percentage)
+            planos(nome, descricao, comissao)
           `,
           )
           .eq("representative_id", representativeId);
@@ -1566,7 +1565,7 @@ export const dashboardService = {
       const pendingCommission = validContracts.reduce((sum, contract) => {
         if (contract?.status === "Ativo" || contract?.status === "Concluído") {
           const commissionRate =
-            contract?.commission_tables?.commission_percentage || 4; // Default 4%
+            contract?.planos?.comissao || 4; // Default 4%
           const contractValue = parseFloat(contract?.total_value || "0") || 0;
           return sum + contractValue * (commissionRate / 100);
         }
@@ -1603,7 +1602,7 @@ export const dashboardService = {
             | "cancelled",
           commission:
             (parseFloat(contract?.total_value || "0") || 0) *
-            ((contract?.commission_tables?.commission_percentage || 4) / 100),
+            ((contract?.planos?.comissao || 4) / 100),
         };
       });
 
