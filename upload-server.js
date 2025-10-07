@@ -297,18 +297,18 @@ app.post('/api/upload-document', upload.single('file'), validateFile, (req, res)
       'cartão cnpj': 'empresa/cartao_cnpj',
       'contrato social e última alteração': 'empresa/contrato_social',
       'certificado de microempreendedor individual (mei)': 'empresa/certificado_mei',
-      'comprovante de endereço empresa': 'empresa/comprovante_endereco_empresa',
-      'declaração de endereço': 'empresa/declaracao_endereco',
-      'dados bancários': 'empresa/dados_bancarios',
+      'comprovante de endereço em nome da empresa': 'empresa/comprovante_endereco_empresa',
+      'declaração de endereço assinada': 'empresa/declaracao_endereco_assinada',
+      'dados bancários para recebimento das comissões': 'empresa/dados_bancarios_comissoes',
       
       // Documentos do Sócio
       'cartilha de credenciamento pf': 'socio/cartilha_credenciamento_pf',
-      'comprovante de endereço sócio': 'socio/comprovante_endereco_socio',
+      'comprovante de endereço em nome do sócio': 'socio/comprovante_endereco_socio',
       'certidão de antecedentes criminais': 'socio/certidao_antecedentes_criminais',
-      'certidão negativa cível 1º grau': 'socio/certidao_negativa_civel_1grau',
-      'certidão negativa criminal 1º grau': 'socio/certidao_negativa_criminal_1grau',
-      'foto identidade frente': 'socio/foto_identidade_frente',
-      'foto identidade verso': 'socio/foto_identidade_verso',
+      'certidão negativa cível de 1º grau': 'socio/certidao_negativa_civel_1grau',
+      'certidão negativa criminal de 1º grau': 'socio/certidao_negativa_criminal_1grau',
+      'foto de identidade ou cnh (frente)': 'socio/foto_identidade_frente',
+      'foto de identidade ou cnh (verso)': 'socio/foto_identidade_verso',
       
       // Compatibilidade com documentos antigos
       'certidão negativa civil': 'socio/certidao_negativa_civel_1grau',
@@ -317,17 +317,28 @@ app.post('/api/upload-document', upload.single('file'), validateFile, (req, res)
       'certidão de antecedente criminal': 'socio/certidao_antecedentes_criminais'
     };
     
+    console.log('🔍 Document Type Original:', documentType);
+    console.log('🔍 Document Type Lowercase:', documentType.toLowerCase());
+    console.log('🔍 Mapped Path:', documentTypeMap[documentType.toLowerCase()]);
+    
     const mappedPath = documentTypeMap[documentType.toLowerCase()] || 
       documentType.toLowerCase().replace(/[^a-z0-9]/g, '_');
     
+    console.log('🔍 Final Mapped Path:', mappedPath);
+    
     const finalPath = path.join(baseDir, sanitizedCpfCnpj, mappedPath);
+    console.log('🔍 Final Path:', finalPath);
     
     // Criar diretório final se não existir
     fs.mkdirSync(finalPath, { recursive: true });
     
     // Mover arquivo do temp para o local final
     const finalFilePath = path.join(finalPath, req.file.filename);
+    console.log('🔍 Temp File Path:', req.file.path);
+    console.log('🔍 Final File Path:', finalFilePath);
+    
     fs.renameSync(req.file.path, finalFilePath);
+    console.log('✅ Arquivo movido com sucesso!');
 
     const fileInfo = {
       originalName: req.file.originalname,
@@ -340,6 +351,8 @@ app.post('/api/upload-document', upload.single('file'), validateFile, (req, res)
       cpfCnpj: cpfCnpj,
       uploadedAt: new Date().toISOString()
     };
+
+    console.log('📊 File Info Completo:', fileInfo);
 
     console.log('✅ Arquivo enviado com sucesso!');
     console.log('📁 Final Path:', finalFilePath);
