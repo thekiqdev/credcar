@@ -98,16 +98,6 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
     },
     {
       id: 4,
-      name: "Certificado de Microempreendedor Individual (MEI)",
-      description: "Certificado MEI (alternativa ao contrato social)",
-      category: "empresa",
-      required: false,
-      status: "pending",
-      file: null,
-      rejectionReason: "",
-    },
-    {
-      id: 5,
       name: "Comprovante de endereço em nome da empresa",
       description: "Comprovante de endereço da empresa (atualizado, últimos 3 meses)",
       category: "empresa",
@@ -117,17 +107,7 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
       rejectionReason: "",
     },
     {
-      id: 6,
-      name: "Declaração de endereço assinada",
-      description: "Declaração de endereço com reconhecimento de firma por autenticidade",
-      category: "empresa",
-      required: true,
-      status: "pending",
-      file: null,
-      rejectionReason: "",
-    },
-    {
-      id: 7,
+      id: 5,
       name: "Dados bancários para recebimento das comissões",
       description: "Documento com dados bancários para pagamento de comissões",
       category: "empresa",
@@ -138,7 +118,7 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
     },
     // Documentos do Sócio
     {
-      id: 8,
+      id: 6,
       name: "Cartilha de credenciamento PF",
       description: "Cartilha de credenciamento pessoa física preenchida e assinada",
       category: "socio",
@@ -148,7 +128,7 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
       rejectionReason: "",
     },
     {
-      id: 9,
+      id: 7,
       name: "Comprovante de endereço em nome do sócio",
       description: "Comprovante de endereço do sócio (atualizado, últimos 3 meses)",
       category: "socio",
@@ -158,7 +138,7 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
       rejectionReason: "",
     },
     {
-      id: 10,
+      id: 8,
       name: "Certidão de antecedentes criminais",
       description: "Certidão negativa de antecedentes criminais do sócio",
       category: "socio",
@@ -168,7 +148,7 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
       rejectionReason: "",
     },
     {
-      id: 11,
+      id: 9,
       name: "Certidão negativa cível de 1º grau",
       description: "Certidão negativa cível de 1º grau do distribuidor estadual",
       category: "socio",
@@ -178,7 +158,7 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
       rejectionReason: "",
     },
     {
-      id: 12,
+      id: 10,
       name: "Certidão negativa criminal de 1º grau",
       description: "Certidão negativa criminal de 1º grau do distribuidor estadual",
       category: "socio",
@@ -188,7 +168,7 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
       rejectionReason: "",
     },
     {
-      id: 13,
+      id: 11,
       name: "Foto de identidade ou CNH (frente)",
       description: "Foto da frente da identidade ou CNH do sócio",
       category: "socio",
@@ -198,7 +178,7 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
       rejectionReason: "",
     },
     {
-      id: 14,
+      id: 12,
       name: "Foto de identidade ou CNH (verso)",
       description: "Foto do verso da identidade ou CNH do sócio",
       category: "socio",

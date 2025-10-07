@@ -27,15 +27,13 @@ const DocumentApproval: React.FC<DocumentApprovalProps> = ({
   const [isLoading, setIsLoading] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
 
-  // Documentos obrigatórios esperados - Nova estrutura com 15 tipos
+  // Documentos obrigatórios esperados - Nova estrutura com 13 tipos
   const expectedDocuments = [
     // Documentos da Empresa
     'cartilha de credenciamento preenchida',
     'cartão cnpj',
     'contrato social e última alteração',
-    'certificado de microempreendedor individual (mei)',
     'comprovante de endereço em nome da empresa',
-    'declaração de endereço assinada',
     'dados bancários para recebimento das comissões',
     // Documentos do Sócio
     'cartilha de credenciamento pf',

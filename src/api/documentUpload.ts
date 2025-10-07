@@ -15,9 +15,7 @@ const documentTypeMap = {
   'cartilha de credenciamento preenchida': 'empresa/cartilha_credenciamento_empresa',
   'cartão cnpj': 'empresa/cartao_cnpj',
   'contrato social e última alteração': 'empresa/contrato_social',
-  'certificado de microempreendedor individual (mei)': 'empresa/certificado_mei',
   'comprovante de endereço empresa': 'empresa/comprovante_endereco_empresa',
-  'declaração de endereço': 'empresa/declaracao_endereco',
   'dados bancários': 'empresa/dados_bancarios',
   
   // Documentos do Sócio
@@ -42,9 +40,7 @@ const documentValidations = {
   'cartilha de credenciamento preenchida': { maxSize: 5 * 1024 * 1024, requiredTypes: ['application/pdf'] },
   'cartão cnpj': { maxSize: 2 * 1024 * 1024, requiredTypes: ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'] },
   'contrato social e última alteração': { maxSize: 10 * 1024 * 1024, requiredTypes: ['application/pdf'] },
-  'certificado de microempreendedor individual (mei)': { maxSize: 3 * 1024 * 1024, requiredTypes: ['application/pdf'] },
   'comprovante de endereço empresa': { maxSize: 2 * 1024 * 1024, requiredTypes: ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'] },
-  'declaração de endereço': { maxSize: 2 * 1024 * 1024, requiredTypes: ['application/pdf'] },
   'dados bancários': { maxSize: 2 * 1024 * 1024, requiredTypes: ['application/pdf'] },
   
   // Documentos do Sócio

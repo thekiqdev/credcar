@@ -1766,9 +1766,7 @@ export const documentService = {
         "cartilha de credenciamento preenchida",
         "cartão cnpj",
         "contrato social e última alteração",
-        "certificado de microempreendedor individual (mei)",
         "comprovante de endereço em nome da empresa",
-        "declaração de endereço assinada",
         "dados bancários para recebimento das comissões",
         // Documentos do Sócio
         "cartilha de credenciamento pf",
@@ -1859,9 +1857,7 @@ export const documentService = {
         "cartilha de credenciamento preenchida",
         "cartão cnpj",
         "contrato social e última alteração",
-        "certificado de microempreendedor individual (mei)",
         "comprovante de endereço em nome da empresa",
-        "declaração de endereço assinada",
         "dados bancários para recebimento das comissões",
         // Documentos do Sócio
         "cartilha de credenciamento pf",

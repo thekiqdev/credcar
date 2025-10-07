@@ -296,9 +296,7 @@ app.post('/api/upload-document', upload.single('file'), validateFile, (req, res)
       'cartilha de credenciamento preenchida': 'empresa/cartilha_credenciamento_empresa',
       'cartão cnpj': 'empresa/cartao_cnpj',
       'contrato social e última alteração': 'empresa/contrato_social',
-      'certificado de microempreendedor individual (mei)': 'empresa/certificado_mei',
       'comprovante de endereço em nome da empresa': 'empresa/comprovante_endereco_empresa',
-      'declaração de endereço assinada': 'empresa/declaracao_endereco_assinada',
       'dados bancários para recebimento das comissões': 'empresa/dados_bancarios_comissoes',
       
       // Documentos do Sócio

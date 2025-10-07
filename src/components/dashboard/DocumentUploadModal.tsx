@@ -162,18 +162,16 @@ const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
     { id: '1', type: 'cartilha de credenciamento preenchida', file: null, status: 'pending', progress: 0 },
     { id: '2', type: 'cartão cnpj', file: null, status: 'pending', progress: 0 },
     { id: '3', type: 'contrato social e última alteração', file: null, status: 'pending', progress: 0 },
-    { id: '4', type: 'certificado de microempreendedor individual (mei)', file: null, status: 'pending', progress: 0 },
-    { id: '5', type: 'comprovante de endereço em nome da empresa', file: null, status: 'pending', progress: 0 },
-    { id: '6', type: 'declaração de endereço assinada', file: null, status: 'pending', progress: 0 },
-    { id: '7', type: 'dados bancários para recebimento das comissões', file: null, status: 'pending', progress: 0 },
+    { id: '4', type: 'comprovante de endereço em nome da empresa', file: null, status: 'pending', progress: 0 },
+    { id: '5', type: 'dados bancários para recebimento das comissões', file: null, status: 'pending', progress: 0 },
     // Documentos do Sócio
-    { id: '8', type: 'cartilha de credenciamento pf', file: null, status: 'pending', progress: 0 },
-    { id: '9', type: 'comprovante de endereço em nome do sócio', file: null, status: 'pending', progress: 0 },
-    { id: '10', type: 'certidão de antecedentes criminais', file: null, status: 'pending', progress: 0 },
-    { id: '11', type: 'certidão negativa cível de 1º grau', file: null, status: 'pending', progress: 0 },
-    { id: '12', type: 'certidão negativa criminal de 1º grau', file: null, status: 'pending', progress: 0 },
-    { id: '13', type: 'foto de identidade ou cnh (frente)', file: null, status: 'pending', progress: 0 },
-    { id: '14', type: 'foto de identidade ou cnh (verso)', file: null, status: 'pending', progress: 0 }
+    { id: '6', type: 'cartilha de credenciamento pf', file: null, status: 'pending', progress: 0 },
+    { id: '7', type: 'comprovante de endereço em nome do sócio', file: null, status: 'pending', progress: 0 },
+    { id: '8', type: 'certidão de antecedentes criminais', file: null, status: 'pending', progress: 0 },
+    { id: '9', type: 'certidão negativa cível de 1º grau', file: null, status: 'pending', progress: 0 },
+    { id: '10', type: 'certidão negativa criminal de 1º grau', file: null, status: 'pending', progress: 0 },
+    { id: '11', type: 'foto de identidade ou cnh (frente)', file: null, status: 'pending', progress: 0 },
+    { id: '12', type: 'foto de identidade ou cnh (verso)', file: null, status: 'pending', progress: 0 }
   ]);
 
   const [isUploading, setIsUploading] = useState(false);
