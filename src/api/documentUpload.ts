@@ -37,20 +37,20 @@ const documentTypeMap = {
 // Validações específicas por tipo de documento
 const documentValidations = {
   // Documentos da Empresa
-  'cartilha de credenciamento preenchida': { maxSize: 20 * 1024 * 1024, requiredTypes: ['application/pdf'] },
-  'cartão cnpj': { maxSize: 10 * 1024 * 1024, requiredTypes: ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'] },
-  'contrato social e última alteração': { maxSize: 30 * 1024 * 1024, requiredTypes: ['application/pdf'] },
-  'comprovante de endereço empresa': { maxSize: 10 * 1024 * 1024, requiredTypes: ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'] },
-  'dados bancários': { maxSize: 10 * 1024 * 1024, requiredTypes: ['application/pdf'] },
+  'cartilha de credenciamento preenchida': { maxSize: 5 * 1024 * 1024, requiredTypes: ['application/pdf'] },
+  'cartão cnpj': { maxSize: 2 * 1024 * 1024, requiredTypes: ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'] },
+  'contrato social e última alteração': { maxSize: 10 * 1024 * 1024, requiredTypes: ['application/pdf'] },
+  'comprovante de endereço empresa': { maxSize: 2 * 1024 * 1024, requiredTypes: ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'] },
+  'dados bancários': { maxSize: 2 * 1024 * 1024, requiredTypes: ['application/pdf'] },
   
   // Documentos do Sócio
-  'cartilha de credenciamento pf': { maxSize: 20 * 1024 * 1024, requiredTypes: ['application/pdf'] },
-  'comprovante de endereço sócio': { maxSize: 10 * 1024 * 1024, requiredTypes: ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'] },
-  'certidão de antecedentes criminais': { maxSize: 15 * 1024 * 1024, requiredTypes: ['application/pdf'] },
-  'certidão negativa cível 1º grau': { maxSize: 15 * 1024 * 1024, requiredTypes: ['application/pdf'] },
-  'certidão negativa criminal 1º grau': { maxSize: 15 * 1024 * 1024, requiredTypes: ['application/pdf'] },
-  'foto identidade frente': { maxSize: 5 * 1024 * 1024, requiredTypes: ['image/jpeg', 'image/png', 'image/jpg'] },
-  'foto identidade verso': { maxSize: 5 * 1024 * 1024, requiredTypes: ['image/jpeg', 'image/png', 'image/jpg'] }
+  'cartilha de credenciamento pf': { maxSize: 5 * 1024 * 1024, requiredTypes: ['application/pdf'] },
+  'comprovante de endereço sócio': { maxSize: 2 * 1024 * 1024, requiredTypes: ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'] },
+  'certidão de antecedentes criminais': { maxSize: 3 * 1024 * 1024, requiredTypes: ['application/pdf'] },
+  'certidão negativa cível 1º grau': { maxSize: 3 * 1024 * 1024, requiredTypes: ['application/pdf'] },
+  'certidão negativa criminal 1º grau': { maxSize: 3 * 1024 * 1024, requiredTypes: ['application/pdf'] },
+  'foto identidade frente': { maxSize: 1 * 1024 * 1024, requiredTypes: ['image/jpeg', 'image/png', 'image/jpg'] },
+  'foto identidade verso': { maxSize: 1 * 1024 * 1024, requiredTypes: ['image/jpeg', 'image/png', 'image/jpg'] }
 };
 
 // Configuração do multer para upload
