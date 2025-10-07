@@ -1,0 +1,20 @@
+# COMANDOS DIRETOS PARA APLICAR NO SERVIDOR VPS
+# Execute estes comandos um por vez no servidor:
+
+# 1. Fazer backup da configuração atual
+sudo cp /etc/nginx/sites-available/default /etc/nginx/sites-available/default.backup
+
+# 2. Adicionar configuração de upload maior
+echo "    client_max_body_size 15M;" | sudo tee -a /etc/nginx/sites-available/default
+
+# 3. Testar configuração
+sudo nginx -t
+
+# 4. Se teste passou, recarregar Nginx
+sudo systemctl reload nginx
+
+# 5. Reiniciar upload-server
+sudo pm2 restart upload-server
+
+# 6. Verificar status
+sudo pm2 status

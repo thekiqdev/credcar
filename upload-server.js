@@ -234,7 +234,7 @@ app.post('/api/upload-document', upload.single('file'), validateFile, (req, res)
     console.log('📤 Recebendo upload...');
     console.log('📋 Body:', req.body);
     console.log('📁 File:', req.file);
-    
+
     const { cpfCnpj, documentType } = req.body;
     
     console.log('🔍 Document Type:', documentType);
