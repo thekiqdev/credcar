@@ -1,55 +1,41 @@
 #!/bin/bash
 
-# VERIFICAR CONFIGURAÇÃO DO NGINX - HOSTINGER VPS
-# Execute este script para verificar se a configuração foi aplicada
+# VERIFICAR CONFIGURAÇÃO ATUAL DO NGINX
+# Execute este comando para ver o que está configurado
 
-echo "🔍 VERIFICANDO CONFIGURAÇÃO DO NGINX"
-echo "===================================="
+echo "🔍 VERIFICANDO CONFIGURAÇÃO ATUAL DO NGINX"
+echo "=========================================="
 
-# 1. Verificar se a configuração existe
-echo "📋 Verificando configuração de upload:"
+echo "📋 Configuração completa do arquivo:"
+echo "------------------------------------"
+sudo cat /etc/nginx/sites-available/default
+
+echo ""
+echo "📊 Apenas as linhas com 'api' e 'client_max_body_size':"
+echo "------------------------------------------------------"
+sudo grep -n "api\|client_max_body_size" /etc/nginx/sites-available/default
+
+echo ""
+echo "🎯 Verificando se a configuração específica existe:"
+echo "---------------------------------------------------"
 if sudo grep -q "location = /api/upload-document" /etc/nginx/sites-available/default; then
-    echo "✅ Rota /api/upload-document: CONFIGURADA"
+    echo "✅ location = /api/upload-document: ENCONTRADO"
     sudo grep -A15 "location = /api/upload-document" /etc/nginx/sites-available/default
 else
-    echo "❌ Rota /api/upload-document: NÃO CONFIGURADA"
+    echo "❌ location = /api/upload-document: NÃO ENCONTRADO"
 fi
 
-echo ""
-echo "📋 Verificando client_max_body_size:"
 if sudo grep -q "client_max_body_size 20M" /etc/nginx/sites-available/default; then
-    echo "✅ client_max_body_size 20M: CONFIGURADO"
-    sudo grep "client_max_body_size" /etc/nginx/sites-available/default
+    echo "✅ client_max_body_size 20M: ENCONTRADO"
 else
-    echo "❌ client_max_body_size 20M: NÃO CONFIGURADO"
+    echo "❌ client_max_body_size 20M: NÃO ENCONTRADO"
 fi
 
 echo ""
-echo "📋 Verificando proxy_buffering off:"
-if sudo grep -q "proxy_buffering off" /etc/nginx/sites-available/default; then
-    echo "✅ proxy_buffering off: CONFIGURADO"
-else
-    echo "❌ proxy_buffering off: NÃO CONFIGURADO"
-fi
-
-echo ""
-echo "📊 Status do Nginx:"
-sudo systemctl status nginx --no-pager -l | head -5
-
-echo ""
-echo "📊 Status do PM2:"
-sudo pm2 status
-
-echo ""
-echo "🎯 PRÓXIMOS PASSOS:"
+echo "📝 PRÓXIMOS PASSOS:"
 echo "-------------------"
-if sudo grep -q "location = /api/upload-document" /etc/nginx/sites-available/default; then
-    echo "✅ Configuração encontrada! Teste o upload agora."
-    echo "📝 Se ainda der erro 413, execute:"
-    echo "   sudo nginx -s reload"
-    echo "   sudo pm2 restart upload-server"
-else
-    echo "❌ Configuração não encontrada! Execute:"
-    echo "   chmod +x fix-413-hostinger-final.sh"
-    echo "   ./fix-413-hostinger-final.sh"
-fi
+echo "1. Se não encontrou as configurações, execute:"
+echo "   chmod +x fix-413-urgente.sh"
+echo "   ./fix-413-urgente.sh"
+echo ""
+echo "2. Se encontrou, teste o upload novamente"
