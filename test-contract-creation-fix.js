@@ -139,3 +139,5 @@ async function testContractCreationFix() {
 
 // Executar teste
 testContractCreationFix();
+
+

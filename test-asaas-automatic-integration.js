@@ -175,3 +175,5 @@ async function testAsaasAutomaticIntegration() {
 
 // Executar teste
 testAsaasAutomaticIntegration();
+
+

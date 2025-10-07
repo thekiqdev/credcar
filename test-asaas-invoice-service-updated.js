@@ -209,3 +209,5 @@ async function testAsaasInvoiceServiceUpdated() {
 
 // Executar teste
 testAsaasInvoiceServiceUpdated();
+
+

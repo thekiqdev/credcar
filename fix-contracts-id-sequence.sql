@@ -89,3 +89,5 @@ SELECT
     'Sequência corrigida com sucesso!' as status,
     (SELECT MAX(id) FROM public.contracts) as ultimo_id,
     (SELECT last_value FROM contracts_id_seq) as proximo_id;
+
+

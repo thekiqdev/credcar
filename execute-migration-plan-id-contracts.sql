@@ -17,3 +17,5 @@ FOREIGN KEY (plan_id) REFERENCES public.planos(id);
 UPDATE public.contracts
 SET plan_id = commission_table_id
 WHERE commission_table_id IS NOT NULL AND plan_id IS NULL;
+
+

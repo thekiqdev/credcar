@@ -16,3 +16,5 @@ SELECT column_name, data_type, is_nullable
 FROM information_schema.columns 
 WHERE table_name = 'clients' 
 AND column_name = 'asaas_customer_id';
+
+

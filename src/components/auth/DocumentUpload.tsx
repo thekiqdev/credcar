@@ -65,19 +65,22 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
     checkUserStatus();
   }, [navigate, isStatusPage]);
   const [documents, setDocuments] = useState([
+    // Documentos da Empresa
     {
       id: 1,
-      name: "Cartão do CNPJ",
-      description: "Documento oficial do CNPJ da empresa",
+      name: "Cartilha de credenciamento preenchida",
+      description: "Cartilha de credenciamento da empresa preenchida e assinada",
+      category: "empresa",
       required: true,
-      status: "pending", // pending, uploaded, approved, rejected
+      status: "pending",
       file: null,
       rejectionReason: "",
     },
     {
       id: 2,
-      name: "Comprovante de Endereço",
-      description: "Comprovante de endereço da empresa (máximo 3 meses)",
+      name: "Cartão CNPJ",
+      description: "Documento oficial do CNPJ da empresa",
+      category: "empresa",
       required: true,
       status: "pending",
       file: null,
@@ -85,8 +88,9 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
     },
     {
       id: 3,
-      name: "Certidão de Antecedente Criminal",
-      description: "Certidão negativa de antecedentes criminais do responsável",
+      name: "Contrato social e última alteração",
+      description: "Contrato social da empresa e última alteração contratual",
+      category: "empresa",
       required: true,
       status: "pending",
       file: null,
@@ -94,8 +98,110 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
     },
     {
       id: 4,
-      name: "Certidão Negativa Civil",
-      description: "Certidão negativa de débitos civis do responsável",
+      name: "Certificado de Microempreendedor Individual (MEI)",
+      description: "Certificado MEI (alternativa ao contrato social)",
+      category: "empresa",
+      required: false,
+      status: "pending",
+      file: null,
+      rejectionReason: "",
+    },
+    {
+      id: 5,
+      name: "Comprovante de endereço em nome da empresa",
+      description: "Comprovante de endereço da empresa (atualizado, últimos 3 meses)",
+      category: "empresa",
+      required: true,
+      status: "pending",
+      file: null,
+      rejectionReason: "",
+    },
+    {
+      id: 6,
+      name: "Declaração de endereço assinada",
+      description: "Declaração de endereço com reconhecimento de firma por autenticidade",
+      category: "empresa",
+      required: true,
+      status: "pending",
+      file: null,
+      rejectionReason: "",
+    },
+    {
+      id: 7,
+      name: "Dados bancários para recebimento das comissões",
+      description: "Documento com dados bancários para pagamento de comissões",
+      category: "empresa",
+      required: true,
+      status: "pending",
+      file: null,
+      rejectionReason: "",
+    },
+    // Documentos do Sócio
+    {
+      id: 8,
+      name: "Cartilha de credenciamento PF",
+      description: "Cartilha de credenciamento pessoa física preenchida e assinada",
+      category: "socio",
+      required: true,
+      status: "pending",
+      file: null,
+      rejectionReason: "",
+    },
+    {
+      id: 9,
+      name: "Comprovante de endereço em nome do sócio",
+      description: "Comprovante de endereço do sócio (atualizado, últimos 3 meses)",
+      category: "socio",
+      required: true,
+      status: "pending",
+      file: null,
+      rejectionReason: "",
+    },
+    {
+      id: 10,
+      name: "Certidão de antecedentes criminais",
+      description: "Certidão negativa de antecedentes criminais do sócio",
+      category: "socio",
+      required: true,
+      status: "pending",
+      file: null,
+      rejectionReason: "",
+    },
+    {
+      id: 11,
+      name: "Certidão negativa cível de 1º grau",
+      description: "Certidão negativa cível de 1º grau do distribuidor estadual",
+      category: "socio",
+      required: true,
+      status: "pending",
+      file: null,
+      rejectionReason: "",
+    },
+    {
+      id: 12,
+      name: "Certidão negativa criminal de 1º grau",
+      description: "Certidão negativa criminal de 1º grau do distribuidor estadual",
+      category: "socio",
+      required: true,
+      status: "pending",
+      file: null,
+      rejectionReason: "",
+    },
+    {
+      id: 13,
+      name: "Foto de identidade ou CNH (frente)",
+      description: "Foto da frente da identidade ou CNH do sócio",
+      category: "socio",
+      required: true,
+      status: "pending",
+      file: null,
+      rejectionReason: "",
+    },
+    {
+      id: 14,
+      name: "Foto de identidade ou CNH (verso)",
+      description: "Foto do verso da identidade ou CNH do sócio",
+      category: "socio",
       required: true,
       status: "pending",
       file: null,
@@ -298,7 +404,17 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
                 : "Documentos Obrigatórios"}
             </h3>
 
-            {documents.map((doc) => (
+            {/* Documentos da Empresa */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="h-1 w-8 bg-blue-600"></div>
+                <h4 className="text-lg font-semibold text-blue-800">Documentos da Empresa</h4>
+                <Badge variant="outline" className="bg-blue-50 text-blue-700">
+                  {documents.filter(d => d.category === "empresa").length} documentos
+                </Badge>
+              </div>
+              
+              {documents.filter(doc => doc.category === "empresa").map((doc) => (
               <Card
                 key={doc.id}
                 className="border-2 border-dashed border-gray-200"
@@ -438,7 +554,161 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
                   )}
                 </CardContent>
               </Card>
-            ))}
+              ))}
+            </div>
+
+            {/* Documentos do Sócio */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="h-1 w-8 bg-green-600"></div>
+                <h4 className="text-lg font-semibold text-green-800">Documentos do Sócio</h4>
+                <Badge variant="outline" className="bg-green-50 text-green-700">
+                  {documents.filter(d => d.category === "socio").length} documentos
+                </Badge>
+              </div>
+              
+              {documents.filter(doc => doc.category === "socio").map((doc) => (
+              <Card
+                key={doc.id}
+                className="border-2 border-dashed border-gray-200"
+              >
+                <CardContent className="p-6">
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <FileText className="h-5 w-5 text-gray-600" />
+                        <h4 className="font-semibold">{doc.name}</h4>
+                        {doc.required && (
+                          <Badge
+                            variant="outline"
+                            className={
+                              registrationStatus === "Pendente de Aprovação"
+                                ? "bg-blue-50 text-blue-700 text-xs"
+                                : "bg-red-50 text-red-700 text-xs"
+                            }
+                          >
+                            {registrationStatus === "Pendente de Aprovação"
+                              ? "Recomendado"
+                              : "Obrigatório"}
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="text-sm text-muted-foreground mb-3">
+                        {doc.description}
+                      </p>
+                      {getStatusBadge(doc.status)}
+                    </div>
+                  </div>
+
+                  {doc.status === "pending" && (
+                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                      <Upload className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                      <p className="text-sm text-gray-600 mb-4">
+                        Clique para selecionar o arquivo ou arraste e solte aqui
+                      </p>
+                      <input
+                        type="file"
+                        id={`file-${doc.id}`}
+                        className="hidden"
+                        accept=".pdf,.jpg,.jpeg,.png"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            handleFileUpload(doc.id, file);
+                          }
+                        }}
+                        disabled={isUploading}
+                      />
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          const fileInput = document.getElementById(
+                            `file-${doc.id}`,
+                          ) as HTMLInputElement;
+                          if (fileInput) {
+                            fileInput.click();
+                          }
+                        }}
+                        disabled={isUploading}
+                      >
+                        {isUploading ? "Enviando..." : "Selecionar Arquivo"}
+                      </Button>
+                      <p className="text-xs text-gray-500 mt-2">
+                        Formatos aceitos: PDF, JPG, PNG (máx. 5MB)
+                      </p>
+                    </div>
+                  )}
+
+                  {(doc.status === "uploaded" || doc.status === "approved") &&
+                    doc.file && (
+                      <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <CheckCircle className="h-5 w-5 text-green-600" />
+                            <span className="text-sm font-medium text-green-800">
+                              {doc.file.name}
+                            </span>
+                            <span className="text-xs text-green-600">
+                              ({(doc.file.size / 1024 / 1024).toFixed(2)} MB)
+                            </span>
+                          </div>
+                          {doc.status === "uploaded" && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleFileRemove(doc.id)}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                        {doc.status === "uploaded" && (
+                          <p className="text-xs text-green-600 mt-1">
+                            Documento enviado com sucesso! Aguardando aprovação.
+                          </p>
+                        )}
+                        {doc.status === "approved" && (
+                          <p className="text-xs text-green-600 mt-1">
+                            Documento aprovado!
+                          </p>
+                        )}
+                      </div>
+                    )}
+
+                  {doc.status === "rejected" && (
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <AlertCircle className="h-5 w-5 text-red-600" />
+                        <span className="text-sm font-medium text-red-800">
+                          Documento rejeitado
+                        </span>
+                      </div>
+                      <p className="text-sm text-red-700 mb-3">
+                        Motivo:{" "}
+                        {doc.rejectionReason ||
+                          "Documento não atende aos requisitos."}
+                      </p>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          setDocuments((prev) =>
+                            prev.map((document) =>
+                              document.id === doc.id
+                                ? { ...document, status: "pending", file: null }
+                                : document,
+                            ),
+                          );
+                        }}
+                      >
+                        Enviar Novamente
+                      </Button>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+              ))}
+            </div>
           </div>
 
           {/* Action Buttons */}

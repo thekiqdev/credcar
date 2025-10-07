@@ -22,3 +22,5 @@ COMMENT ON COLUMN public.contracts.id_faixa_de_credito IS 'ID da faixa de crédi
 SELECT column_name, data_type, is_nullable 
 FROM information_schema.columns 
 WHERE table_name = 'contracts' AND column_name = 'id_faixa_de_credito';
+
+

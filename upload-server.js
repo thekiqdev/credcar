@@ -56,12 +56,21 @@ const upload = multer({
     fileSize: 10 * 1024 * 1024 // 10MB
   },
   fileFilter: (req, file, cb) => {
-    const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'];
-    if (allowedTypes.includes(file.mimetype)) {
-      cb(null, true);
-    } else {
-      cb(new Error('Tipo de arquivo não permitido. Apenas PDF e imagens são aceitos.'), false);
+    const allowedTypes = [
+      'application/pdf',
+      'image/jpeg', 
+      'image/png', 
+      'image/jpg',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    ];
+    
+    if (!allowedTypes.includes(file.mimetype)) {
+      return cb(new Error('Tipo de arquivo não permitido. Formatos aceitos: PDF, JPG, PNG, DOC, DOCX.'), false);
     }
+    
+    // Validação de tamanho será feita após o upload
+    cb(null, true);
   }
 });
 
@@ -148,16 +157,42 @@ app.post('/api/create-folder', (req, res) => {
     const sanitizedCpfCnpj = cpfCnpj.replace(/[^a-zA-Z0-9]/g, '');
     const folderPath = path.join(baseDir, sanitizedCpfCnpj);
 
-    // Criar estrutura de pastas para todos os tipos de documento
-    const documentTypes = [
-      'certidao_negativa_civil',
-      'comprovante_endereco', 
-      'cartao_cnpj_cpf',
-      'certidao_antecedente_criminal'
+    // Criar estrutura de pastas para todos os tipos de documento (nova estrutura)
+    const empresaDocs = [
+      'cartilha_credenciamento_empresa',
+      'cartao_cnpj',
+      'contrato_social',
+      'certificado_mei',
+      'comprovante_endereco_empresa',
+      'declaracao_endereco',
+      'dados_bancarios'
     ];
 
-    documentTypes.forEach(docType => {
-      const docPath = path.join(folderPath, docType);
+    const socioDocs = [
+      'cartilha_credenciamento_pf',
+      'comprovante_endereco_socio',
+      'certidao_antecedentes_criminais',
+      'certidao_negativa_civel_1grau',
+      'certidao_negativa_criminal_1grau',
+      'foto_identidade_frente',
+      'foto_identidade_verso'
+    ];
+
+    // Criar pastas empresa e socio
+    const empresaPath = path.join(folderPath, 'empresa');
+    const socioPath = path.join(folderPath, 'socio');
+    fs.mkdirSync(empresaPath, { recursive: true });
+    fs.mkdirSync(socioPath, { recursive: true });
+
+    // Criar subpastas da empresa
+    empresaDocs.forEach(docType => {
+      const docPath = path.join(empresaPath, docType);
+      fs.mkdirSync(docPath, { recursive: true });
+    });
+
+    // Criar subpastas do sócio
+    socioDocs.forEach(docType => {
+      const docPath = path.join(socioPath, docType);
       fs.mkdirSync(docPath, { recursive: true });
     });
 
@@ -172,41 +207,120 @@ app.post('/api/create-folder', (req, res) => {
   }
 });
 
+// Middleware para validar arquivo antes do processamento
+const validateFile = (req, res, next) => {
+  if (!req.file) {
+    return res.status(400).json({ error: 'Nenhum arquivo foi enviado' });
+  }
+
+  // Validação adicional: verificar se o arquivo não está vazio
+  if (req.file.size === 0) {
+    console.error('❌ Arquivo vazio detectado no servidor:', req.file.originalname);
+    return res.status(400).json({ error: 'Arquivo vazio detectado. Selecione um arquivo válido.' });
+  }
+
+  // Validação adicional: verificar se o arquivo tem tamanho mínimo (1KB)
+  if (req.file.size < 1024) {
+    console.error(`❌ Arquivo muito pequeno detectado no servidor: ${req.file.originalname} (${req.file.size} bytes)`);
+    return res.status(400).json({ error: 'Arquivo muito pequeno. Verifique se o arquivo foi selecionado corretamente.' });
+  }
+
+  next();
+};
+
 // Rota para upload de documentos
-app.post('/api/upload-document', upload.single('file'), (req, res) => {
+app.post('/api/upload-document', upload.single('file'), validateFile, (req, res) => {
   try {
     console.log('📤 Recebendo upload...');
     console.log('📋 Body:', req.body);
     console.log('📁 File:', req.file);
     
-    if (!req.file) {
-      console.log('❌ Nenhum arquivo recebido');
-      return res.status(400).json({ error: 'Nenhum arquivo foi enviado' });
-    }
-
     const { cpfCnpj, documentType } = req.body;
+    
+    console.log('🔍 Document Type:', documentType);
+    console.log('👤 CPF/CNPJ:', cpfCnpj);
+    console.log('📏 File Size:', req.file.size, 'bytes');
+    console.log('📄 MIME Type:', req.file.mimetype);
     
     if (!cpfCnpj || !documentType) {
       console.log('❌ Dados obrigatórios faltando:', { cpfCnpj, documentType });
       return res.status(400).json({ error: 'CPF/CNPJ e tipo de documento são obrigatórios' });
     }
 
+    // Validações específicas por tipo de documento
+    const documentValidations = {
+      // Documentos da Empresa
+      'cartilha de credenciamento preenchida': { maxSize: 5 * 1024 * 1024, requiredTypes: ['application/pdf'] },
+      'cartão cnpj': { maxSize: 2 * 1024 * 1024, requiredTypes: ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'] },
+      'contrato social e última alteração': { maxSize: 10 * 1024 * 1024, requiredTypes: ['application/pdf'] },
+      'certificado de microempreendedor individual (mei)': { maxSize: 3 * 1024 * 1024, requiredTypes: ['application/pdf'] },
+      'comprovante de endereço empresa': { maxSize: 2 * 1024 * 1024, requiredTypes: ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'] },
+      'declaração de endereço': { maxSize: 2 * 1024 * 1024, requiredTypes: ['application/pdf'] },
+      'dados bancários': { maxSize: 2 * 1024 * 1024, requiredTypes: ['application/pdf'] },
+      
+      // Documentos do Sócio
+      'cartilha de credenciamento pf': { maxSize: 5 * 1024 * 1024, requiredTypes: ['application/pdf'] },
+      'comprovante de endereço sócio': { maxSize: 2 * 1024 * 1024, requiredTypes: ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'] },
+      'certidão de antecedentes criminais': { maxSize: 3 * 1024 * 1024, requiredTypes: ['application/pdf'] },
+      'certidão negativa cível 1º grau': { maxSize: 3 * 1024 * 1024, requiredTypes: ['application/pdf'] },
+      'certidão negativa criminal 1º grau': { maxSize: 3 * 1024 * 1024, requiredTypes: ['application/pdf'] },
+      'foto identidade frente': { maxSize: 1 * 1024 * 1024, requiredTypes: ['image/jpeg', 'image/png', 'image/jpg'] },
+      'foto identidade verso': { maxSize: 1 * 1024 * 1024, requiredTypes: ['image/jpeg', 'image/png', 'image/jpg'] }
+    };
+
+    const validation = documentValidations[documentType.toLowerCase()];
+    if (validation) {
+      // Verificar tamanho do arquivo
+      if (req.file.size > validation.maxSize) {
+        const maxSizeMB = validation.maxSize / (1024 * 1024);
+        return res.status(400).json({ 
+          error: `Arquivo muito grande. Tamanho máximo permitido: ${maxSizeMB}MB` 
+        });
+      }
+      
+      // Verificar tipo do arquivo
+      if (!validation.requiredTypes.includes(req.file.mimetype)) {
+        return res.status(400).json({ 
+          error: `Tipo de arquivo não permitido para ${documentType}. Tipos aceitos: ${validation.requiredTypes.join(', ')}` 
+        });
+      }
+    }
+
     // Criar estrutura de pastas correta
     const baseDir = path.join(__dirname, 'documentos');
     const sanitizedCpfCnpj = cpfCnpj.replace(/[^a-zA-Z0-9]/g, '');
     
-    // Mapear tipos de documento para nomes corretos
+    // Mapear tipos de documento para nomes corretos (nova estrutura)
     const documentTypeMap = {
-      'certidão negativa civil': 'certidao_negativa_civil',
-      'comprovante de endereço': 'comprovante_endereco',
-      'cartão do cnpj/cpf': 'cartao_cnpj_cpf',
-      'certidão de antecedente criminal': 'certidao_antecedente_criminal'
+      // Documentos da Empresa
+      'cartilha de credenciamento preenchida': 'empresa/cartilha_credenciamento_empresa',
+      'cartão cnpj': 'empresa/cartao_cnpj',
+      'contrato social e última alteração': 'empresa/contrato_social',
+      'certificado de microempreendedor individual (mei)': 'empresa/certificado_mei',
+      'comprovante de endereço empresa': 'empresa/comprovante_endereco_empresa',
+      'declaração de endereço': 'empresa/declaracao_endereco',
+      'dados bancários': 'empresa/dados_bancarios',
+      
+      // Documentos do Sócio
+      'cartilha de credenciamento pf': 'socio/cartilha_credenciamento_pf',
+      'comprovante de endereço sócio': 'socio/comprovante_endereco_socio',
+      'certidão de antecedentes criminais': 'socio/certidao_antecedentes_criminais',
+      'certidão negativa cível 1º grau': 'socio/certidao_negativa_civel_1grau',
+      'certidão negativa criminal 1º grau': 'socio/certidao_negativa_criminal_1grau',
+      'foto identidade frente': 'socio/foto_identidade_frente',
+      'foto identidade verso': 'socio/foto_identidade_verso',
+      
+      // Compatibilidade com documentos antigos
+      'certidão negativa civil': 'socio/certidao_negativa_civel_1grau',
+      'comprovante de endereço': 'empresa/comprovante_endereco_empresa',
+      'cartão do cnpj/cpf': 'empresa/cartao_cnpj',
+      'certidão de antecedente criminal': 'socio/certidao_antecedentes_criminais'
     };
     
-    const sanitizedDocType = documentTypeMap[documentType.toLowerCase()] || 
+    const mappedPath = documentTypeMap[documentType.toLowerCase()] || 
       documentType.toLowerCase().replace(/[^a-z0-9]/g, '_');
     
-    const finalPath = path.join(baseDir, sanitizedCpfCnpj, sanitizedDocType);
+    const finalPath = path.join(baseDir, sanitizedCpfCnpj, mappedPath);
     
     // Criar diretório final se não existir
     fs.mkdirSync(finalPath, { recursive: true });
@@ -218,7 +332,8 @@ app.post('/api/upload-document', upload.single('file'), (req, res) => {
     const fileInfo = {
       originalName: req.file.originalname,
       filename: req.file.filename,
-      path: finalFilePath,
+      filePath: finalFilePath,
+      directory: finalFilePath,
       size: req.file.size,
       mimetype: req.file.mimetype,
       documentType: documentType,
@@ -226,7 +341,16 @@ app.post('/api/upload-document', upload.single('file'), (req, res) => {
       uploadedAt: new Date().toISOString()
     };
 
-    console.log('✅ Arquivo enviado com sucesso:', fileInfo);
+    console.log('✅ Arquivo enviado com sucesso!');
+    console.log('📁 Final Path:', finalFilePath);
+    console.log('📊 File Info:', {
+      originalName: fileInfo.originalName,
+      filename: fileInfo.filename,
+      size: fileInfo.size,
+      mimetype: fileInfo.mimetype,
+      documentType: fileInfo.documentType,
+      cpfCnpj: fileInfo.cpfCnpj
+    });
 
     res.json({
       success: true,
@@ -257,9 +381,45 @@ app.get('/api/list-files', (req, res) => {
     }
 
     const files = [];
-    const documentTypes = ['certidao_negativa_civil', 'comprovante_endereco', 'cartao_cnpj_cpf', 'certidao_antecedente_criminal'];
-
-    documentTypes.forEach(docType => {
+    
+    // Listar arquivos da nova estrutura (empresa e socio)
+    const empresaPath = path.join(folderPath, 'empresa');
+    const socioPath = path.join(folderPath, 'socio');
+    
+    // Função para listar arquivos de uma categoria
+    const listFilesInCategory = (categoryPath, category) => {
+      if (fs.existsSync(categoryPath)) {
+        const subDirs = fs.readdirSync(categoryPath, { withFileTypes: true })
+          .filter(dirent => dirent.isDirectory())
+          .map(dirent => dirent.name);
+        
+        subDirs.forEach(subDir => {
+          const docPath = path.join(categoryPath, subDir);
+          if (fs.existsSync(docPath)) {
+            const docFiles = fs.readdirSync(docPath);
+            docFiles.forEach(file => {
+              files.push({
+                name: file,
+                type: `${category}/${subDir}`,
+                category: category,
+                subType: subDir,
+                path: path.join(docPath, file),
+                size: fs.statSync(path.join(docPath, file)).size,
+                modified: fs.statSync(path.join(docPath, file)).mtime
+              });
+            });
+          }
+        });
+      }
+    };
+    
+    // Listar arquivos da empresa e sócio
+    listFilesInCategory(empresaPath, 'empresa');
+    listFilesInCategory(socioPath, 'socio');
+    
+    // Compatibilidade: também listar arquivos da estrutura antiga
+    const oldDocumentTypes = ['certidao_negativa_civil', 'comprovante_endereco', 'cartao_cnpj_cpf', 'certidao_antecedente_criminal'];
+    oldDocumentTypes.forEach(docType => {
       const docPath = path.join(folderPath, docType);
       if (fs.existsSync(docPath)) {
         const docFiles = fs.readdirSync(docPath);
@@ -267,6 +427,8 @@ app.get('/api/list-files', (req, res) => {
           files.push({
             name: file,
             type: docType,
+            category: 'legacy',
+            subType: docType,
             path: path.join(docPath, file),
             size: fs.statSync(path.join(docPath, file)).size,
             modified: fs.statSync(path.join(docPath, file)).mtime

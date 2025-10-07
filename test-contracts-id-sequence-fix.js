@@ -116,3 +116,5 @@ async function testContractsIdSequenceFix() {
 
 // Executar teste
 testContractsIdSequenceFix();
+
+

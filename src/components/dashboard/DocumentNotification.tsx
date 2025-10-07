@@ -50,10 +50,9 @@ export const DocumentNotification: React.FC<DocumentNotificationProps> = ({
   useEffect(() => {
     loadDocumentStatus();
     
-    // Atualizar status a cada 30 segundos
-    const interval = setInterval(loadDocumentStatus, 30000);
-    
-    return () => clearInterval(interval);
+    // Removido polling automático para evitar piscar do modal
+    // const interval = setInterval(loadDocumentStatus, 30000);
+    // return () => clearInterval(interval);
   }, [representativeId]);
 
   const loadDocumentStatus = async () => {
@@ -144,14 +143,9 @@ export const DocumentNotification: React.FC<DocumentNotificationProps> = ({
   };
 
   const handleUploadComplete = () => {
-    // Recarregar status dos documentos imediatamente
+    // Recarregar status dos documentos apenas uma vez
     console.log('✅ Upload concluído - recarregando status dos documentos');
     loadDocumentStatus();
-    
-    // Recarregar novamente após um pequeno delay para garantir sincronização
-    setTimeout(() => {
-      loadDocumentStatus();
-    }, 1000);
   };
 
   const handleDismiss = () => {

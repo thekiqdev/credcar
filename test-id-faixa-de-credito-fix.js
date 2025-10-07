@@ -127,3 +127,5 @@ async function testIdFaixaDeCreditoFix() {
 
 // Executar teste
 testIdFaixaDeCreditoFix();
+
+

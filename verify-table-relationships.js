@@ -167,3 +167,5 @@ async function verifyTableRelationships() {
 
 // Executar verificação
 verifyTableRelationships();
+
+

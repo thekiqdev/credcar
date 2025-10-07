@@ -156,3 +156,5 @@ async function testCommissionTableMapping() {
 
 // Executar teste
 testCommissionTableMapping();
+
+

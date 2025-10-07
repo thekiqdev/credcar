@@ -156,3 +156,5 @@ async function testCorrectedPlanLogic() {
 
 // Executar teste
 testCorrectedPlanLogic();
+
+

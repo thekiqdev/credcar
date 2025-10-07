@@ -29,3 +29,5 @@ SELECT
 FROM public.contracts
 WHERE commission_table_id IS NOT NULL
 LIMIT 5;
+
+

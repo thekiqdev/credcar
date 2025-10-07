@@ -148,3 +148,5 @@ async function debugFaixaNaoEncontrada() {
 
 // Executar debug
 debugFaixaNaoEncontrada();
+
+

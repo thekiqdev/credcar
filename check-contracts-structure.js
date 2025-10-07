@@ -82,3 +82,5 @@ async function checkContractsStructure() {
 
 // Executar verificação
 checkContractsStructure();
+
+

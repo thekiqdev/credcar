@@ -132,3 +132,5 @@ async function testContractListingFix() {
 
 // Executar teste
 testContractListingFix();
+
+

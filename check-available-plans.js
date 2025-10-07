@@ -132,3 +132,5 @@ async function checkAvailablePlans() {
 
 // Executar verificação
 checkAvailablePlans();
+
+

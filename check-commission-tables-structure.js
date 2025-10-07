@@ -147,3 +147,5 @@ async function checkCommissionTablesStructure() {
 
 // Executar verificação
 checkCommissionTablesStructure();
+
+

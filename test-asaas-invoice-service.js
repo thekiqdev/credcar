@@ -183,3 +183,4 @@ async function testAsaasInvoiceService() {
 
 // Executar teste
 testAsaasInvoiceService();
+

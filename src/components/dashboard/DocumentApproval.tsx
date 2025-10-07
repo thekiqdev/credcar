@@ -27,12 +27,24 @@ const DocumentApproval: React.FC<DocumentApprovalProps> = ({
   const [isLoading, setIsLoading] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
 
-  // Documentos obrigatórios esperados
+  // Documentos obrigatórios esperados - Nova estrutura com 15 tipos
   const expectedDocuments = [
-    'Certidão Negativa Civil',
-    'Comprovante de Endereço', 
-    'Cartão do CNPJ/CPF',
-    'Certidão de Antecedente Criminal'
+    // Documentos da Empresa
+    'cartilha de credenciamento preenchida',
+    'cartão cnpj',
+    'contrato social e última alteração',
+    'certificado de microempreendedor individual (mei)',
+    'comprovante de endereço em nome da empresa',
+    'declaração de endereço assinada',
+    'dados bancários para recebimento das comissões',
+    // Documentos do Sócio
+    'cartilha de credenciamento pf',
+    'comprovante de endereço em nome do sócio',
+    'certidão de antecedentes criminais',
+    'certidão negativa cível de 1º grau',
+    'certidão negativa criminal de 1º grau',
+    'foto de identidade ou cnh (frente)',
+    'foto de identidade ou cnh (verso)'
   ];
 
   useEffect(() => {
@@ -315,82 +327,184 @@ const DocumentApproval: React.FC<DocumentApprovalProps> = ({
         </div>
       </CardHeader>
       <CardContent>
-        <div className="grid gap-4 md:grid-cols-2">
-          {documents.map((doc) => {
-            const uploadDate = doc.uploaded_at
-              ? new Date(doc.uploaded_at).toLocaleDateString("pt-BR")
-              : null;
+        <div className="space-y-6">
+          {/* Documentos da Empresa */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="h-1 w-8 bg-blue-600"></div>
+              <h4 className="text-lg font-semibold text-blue-800">Documentos da Empresa</h4>
+              <Badge variant="outline" className="bg-blue-50 text-blue-700">
+                {documents.filter(d => d.document_type.includes('empresa') || d.document_type.includes('cnpj') || d.document_type.includes('contrato') || d.document_type.includes('mei') || d.document_type.includes('bancários') || d.document_type.includes('declaração') || d.document_type.includes('cartilha de credenciamento preenchida')).length} documentos
+              </Badge>
+            </div>
+            
+            <div className="grid gap-4 md:grid-cols-2">
+              {documents.filter(doc => doc.document_type.includes('empresa') || doc.document_type.includes('cnpj') || doc.document_type.includes('contrato') || doc.document_type.includes('mei') || doc.document_type.includes('bancários') || doc.document_type.includes('declaração') || doc.document_type.includes('cartilha de credenciamento preenchida')).map((doc) => {
+                const uploadDate = doc.uploaded_at
+                  ? new Date(doc.uploaded_at).toLocaleDateString("pt-BR")
+                  : null;
 
-            return (
-              <div
-                key={doc.document_type}
-                className="flex items-center justify-between p-3 border rounded-lg"
-              >
-                <div className="flex items-center gap-3">
-                  {getStatusIcon(doc.status)}
-                  <div>
-                    <p className="text-sm font-medium">
-                      {doc.document_type}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {uploadDate ? `Enviado em ${uploadDate}` : 'Não enviado'}
-                    </p>
+                return (
+                  <div
+                    key={doc.document_type}
+                    className="flex items-center justify-between p-3 border rounded-lg"
+                  >
+                    <div className="flex items-center gap-3">
+                      {getStatusIcon(doc.status)}
+                      <div>
+                        <p className="text-sm font-medium">
+                          {doc.document_type}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {uploadDate ? `Enviado em ${uploadDate}` : 'Não enviado'}
+                        </p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-2">
+                      <Badge className={getStatusColor(doc.status)}>
+                        {doc.status}
+                      </Badge>
+                      
+                      {/* Ações apenas para documentos enviados */}
+                      {doc.id !== 0 && (
+                        <>
+                          {/* Download */}
+                          {doc.file_url && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDownloadDocument(doc.file_url, doc.document_type)}
+                              title="Baixar documento"
+                            >
+                              <Download className="h-4 w-4" />
+                            </Button>
+                          )}
+                          
+                          {/* Aprovar */}
+                          {doc.status === 'Pendente' && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleApproveDocument(doc.id)}
+                              disabled={isUpdating}
+                              className="text-green-600 hover:text-green-700"
+                              title="Aprovar documento"
+                            >
+                              <CheckCircle className="h-4 w-4" />
+                            </Button>
+                          )}
+                          
+                          {/* Deletar - apenas para documentos não aprovados */}
+                          {doc.status !== 'Aprovado' && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDeleteDocument(doc.id)}
+                              disabled={isUpdating}
+                              className="text-red-600 hover:text-red-700"
+                              title="Deletar documento"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </>
+                      )}
+                    </div>
                   </div>
-                </div>
-                
-                <div className="flex items-center gap-2">
-                  <Badge className={getStatusColor(doc.status)}>
-                    {doc.status}
-                  </Badge>
-                  
-                  {/* Ações apenas para documentos enviados */}
-                  {doc.id !== 0 && (
-                    <>
-                      {/* Download */}
-                      {doc.file_url && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDownloadDocument(doc.file_url, doc.document_type)}
-                          title="Baixar documento"
-                        >
-                          <Download className="h-4 w-4" />
-                        </Button>
-                      )}
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Documentos do Sócio */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="h-1 w-8 bg-green-600"></div>
+              <h4 className="text-lg font-semibold text-green-800">Documentos do Sócio</h4>
+              <Badge variant="outline" className="bg-green-50 text-green-700">
+                {documents.filter(d => d.document_type.includes('sócio') || d.document_type.includes('pf') || d.document_type.includes('certidão') || d.document_type.includes('foto') || d.document_type.includes('cnh') || d.document_type.includes('identidade')).length} documentos
+              </Badge>
+            </div>
+            
+            <div className="grid gap-4 md:grid-cols-2">
+              {documents.filter(doc => doc.document_type.includes('sócio') || doc.document_type.includes('pf') || doc.document_type.includes('certidão') || doc.document_type.includes('foto') || doc.document_type.includes('cnh') || doc.document_type.includes('identidade')).map((doc) => {
+                const uploadDate = doc.uploaded_at
+                  ? new Date(doc.uploaded_at).toLocaleDateString("pt-BR")
+                  : null;
+
+                return (
+                  <div
+                    key={doc.document_type}
+                    className="flex items-center justify-between p-3 border rounded-lg"
+                  >
+                    <div className="flex items-center gap-3">
+                      {getStatusIcon(doc.status)}
+                      <div>
+                        <p className="text-sm font-medium">
+                          {doc.document_type}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {uploadDate ? `Enviado em ${uploadDate}` : 'Não enviado'}
+                        </p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-2">
+                      <Badge className={getStatusColor(doc.status)}>
+                        {doc.status}
+                      </Badge>
                       
-                      {/* Aprovar */}
-                      {doc.status === 'Pendente' && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleApproveDocument(doc.id)}
-                          disabled={isUpdating}
-                          className="text-green-600 hover:text-green-700"
-                          title="Aprovar documento"
-                        >
-                          <CheckCircle className="h-4 w-4" />
-                        </Button>
+                      {/* Ações apenas para documentos enviados */}
+                      {doc.id !== 0 && (
+                        <>
+                          {/* Download */}
+                          {doc.file_url && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDownloadDocument(doc.file_url, doc.document_type)}
+                              title="Baixar documento"
+                            >
+                              <Download className="h-4 w-4" />
+                            </Button>
+                          )}
+                          
+                          {/* Aprovar */}
+                          {doc.status === 'Pendente' && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleApproveDocument(doc.id)}
+                              disabled={isUpdating}
+                              className="text-green-600 hover:text-green-700"
+                              title="Aprovar documento"
+                            >
+                              <CheckCircle className="h-4 w-4" />
+                            </Button>
+                          )}
+                          
+                          {/* Deletar - apenas para documentos não aprovados */}
+                          {doc.status !== 'Aprovado' && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDeleteDocument(doc.id)}
+                              disabled={isUpdating}
+                              className="text-red-600 hover:text-red-700"
+                              title="Deletar documento"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </>
                       )}
-                      
-                      {/* Deletar - apenas para documentos não aprovados */}
-                      {doc.status !== 'Aprovado' && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDeleteDocument(doc.id)}
-                          disabled={isUpdating}
-                          className="text-red-600 hover:text-red-700"
-                          title="Deletar documento"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      )}
-                    </>
-                  )}
-                </div>
-              </div>
-            );
-          })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         </div>
       </CardContent>
     </Card>

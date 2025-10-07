@@ -141,3 +141,5 @@ async function testSimplifiedApproach() {
 
 // Executar teste
 testSimplifiedApproach();
+
+

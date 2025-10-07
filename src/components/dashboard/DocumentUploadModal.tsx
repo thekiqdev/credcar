@@ -3,7 +3,7 @@
  * Funciona dentro do dashboard do representante
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -35,10 +35,120 @@ interface DocumentFile {
   id: string;
   type: string;
   file: File | null;
-  status: 'pending' | 'uploading' | 'uploaded' | 'error' | 'approved' | 'rejected';
+  status: 'pending' | 'uploaded' | 'error' | 'approved' | 'rejected';
   progress: number;
   error?: string;
 }
+
+// Componente otimizado para cada documento
+const DocumentCard = React.memo(({ doc, onFileSelect, onStatusChange }: {
+  doc: DocumentFile;
+  onFileSelect: (id: string, file: File) => void;
+  onStatusChange: (id: string, updates: Partial<DocumentFile>) => void;
+}) => {
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'approved':
+        return <CheckCircle className="h-4 w-4 text-green-600" />;
+      case 'uploaded':
+        return <Clock className="h-4 w-4 text-yellow-600" />;
+      case 'rejected':
+        return <AlertCircle className="h-4 w-4 text-red-600" />;
+      case 'error':
+        return <AlertCircle className="h-4 w-4 text-red-600" />;
+      default:
+        return <FileText className="h-4 w-4 text-gray-600" />;
+    }
+  };
+
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case 'approved':
+        return 'Aprovado';
+      case 'uploaded':
+        return 'Pendente de Aprovação';
+      case 'rejected':
+        return 'Rejeitado';
+      case 'error':
+        return 'Erro';
+      default:
+        return 'Pendente';
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'approved':
+        return 'text-green-600';
+      case 'uploaded':
+        return 'text-yellow-600';
+      case 'rejected':
+        return 'text-red-600';
+      case 'error':
+        return 'text-red-600';
+      default:
+        return 'text-gray-600';
+    }
+  };
+
+  return (
+    <Card key={doc.id} className="border border-gray-200">
+      <CardContent className="p-4">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-3">
+            {getStatusIcon(doc.status)}
+            <div>
+              <h3 className="font-medium">{doc.type}</h3>
+              <p className="text-sm text-gray-600">
+                {doc.file ? doc.file.name : 'Nenhum arquivo selecionado'}
+              </p>
+            </div>
+          </div>
+          <Badge variant={doc.status === 'uploaded' ? 'default' : 'secondary'}>
+            {getStatusText(doc.status)}
+          </Badge>
+        </div>
+
+        {/* File Input */}
+        {doc.status !== 'uploaded' && doc.status !== 'approved' && doc.status !== 'rejected' && (
+          <div className="space-y-2">
+            <Label htmlFor={`file-${doc.id}`} className="text-sm font-medium">
+              Selecionar Arquivo
+            </Label>
+            <Input
+              id={`file-${doc.id}`}
+              type="file"
+              accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) {
+                  onFileSelect(doc.id, file);
+                }
+              }}
+              disabled={false}
+              className="cursor-pointer"
+            />
+            <p className="text-xs text-gray-500">
+              Formatos aceitos: PDF, JPG, PNG, DOC, DOCX (máx. 10MB)
+            </p>
+          </div>
+        )}
+
+        {/* Status removido para evitar qualquer atualização visual */}
+
+        {/* Error Message */}
+        {doc.status === 'error' && doc.error && (
+          <Alert className="mt-3 border-red-200 bg-red-50">
+            <AlertCircle className="h-4 w-4 text-red-600" />
+            <AlertDescription className="text-red-800">
+              {doc.error}
+            </AlertDescription>
+          </Alert>
+        )}
+      </CardContent>
+    </Card>
+  );
+});
 
 const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
   representativeId,
@@ -48,24 +158,38 @@ const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
   onUploadComplete
 }) => {
   const [documents, setDocuments] = useState<DocumentFile[]>([
-    { id: '1', type: 'Certidão Negativa Civil', file: null, status: 'pending', progress: 0 },
-    { id: '2', type: 'Comprovante de Endereço', file: null, status: 'pending', progress: 0 },
-    { id: '3', type: 'Cartão do CNPJ/CPF', file: null, status: 'pending', progress: 0 },
-    { id: '4', type: 'Certidão de Antecedente Criminal', file: null, status: 'pending', progress: 0 }
+    // Documentos da Empresa
+    { id: '1', type: 'cartilha de credenciamento preenchida', file: null, status: 'pending', progress: 0 },
+    { id: '2', type: 'cartão cnpj', file: null, status: 'pending', progress: 0 },
+    { id: '3', type: 'contrato social e última alteração', file: null, status: 'pending', progress: 0 },
+    { id: '4', type: 'certificado de microempreendedor individual (mei)', file: null, status: 'pending', progress: 0 },
+    { id: '5', type: 'comprovante de endereço em nome da empresa', file: null, status: 'pending', progress: 0 },
+    { id: '6', type: 'declaração de endereço assinada', file: null, status: 'pending', progress: 0 },
+    { id: '7', type: 'dados bancários para recebimento das comissões', file: null, status: 'pending', progress: 0 },
+    // Documentos do Sócio
+    { id: '8', type: 'cartilha de credenciamento pf', file: null, status: 'pending', progress: 0 },
+    { id: '9', type: 'comprovante de endereço em nome do sócio', file: null, status: 'pending', progress: 0 },
+    { id: '10', type: 'certidão de antecedentes criminais', file: null, status: 'pending', progress: 0 },
+    { id: '11', type: 'certidão negativa cível de 1º grau', file: null, status: 'pending', progress: 0 },
+    { id: '12', type: 'certidão negativa criminal de 1º grau', file: null, status: 'pending', progress: 0 },
+    { id: '13', type: 'foto de identidade ou cnh (frente)', file: null, status: 'pending', progress: 0 },
+    { id: '14', type: 'foto de identidade ou cnh (verso)', file: null, status: 'pending', progress: 0 }
   ]);
 
   const [isUploading, setIsUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
+  // Removido uploadProgress para evitar atualizações visuais
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Carregar status dos documentos do banco
+  // Carregar status dos documentos do banco apenas uma vez
   useEffect(() => {
+    console.log('🔄 DocumentUploadModal: Carregando status dos documentos...');
     loadDocumentStatus();
-  }, [representativeId]);
+  }, [representativeId]); // Apenas quando representativeId muda
 
   const loadDocumentStatus = async () => {
     try {
+      console.log('📋 DocumentUploadModal: loadDocumentStatus chamado');
       setIsLoading(true);
       
       const { data, error } = await supabase
@@ -107,41 +231,103 @@ const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
     }
   };
 
-  const handleFileSelect = (documentId: string, file: File) => {
+  // Função otimizada para atualizar documentos
+  const updateDocumentStatus = useCallback((documentId: string, updates: Partial<DocumentFile>) => {
     setDocuments(prev => prev.map(doc => 
-      doc.id === documentId 
-        ? { ...doc, file, status: 'pending' }
-        : doc
+      doc.id === documentId ? { ...doc, ...updates } : doc
     ));
+  }, []);
+
+  const handleFileSelect = (documentId: string, file: File) => {
+    updateDocumentStatus(documentId, { file, status: 'pending' });
     setError(null);
   };
 
   const saveToDatabase = async (fileData: any, representativeId: string) => {
     try {
+      console.log('💾 === INÍCIO saveToDatabase ===');
       console.log('💾 Salvando metadados no banco:', fileData);
       console.log('🔍 Representative ID:', representativeId);
       console.log('📄 Document Type:', fileData.documentType);
-      console.log('📁 File Path:', fileData.path || fileData.filePath);
+      console.log('📁 File Path:', fileData.filePath);
+      console.log('⏰ Timestamp:', new Date().toISOString());
       
       // Validar dados obrigatórios
-      if (!fileData.path && !fileData.filePath && !fileData.directory) {
-        throw new Error('path, filePath ou directory é obrigatório');
+      if (!fileData.filePath && !fileData.directory) {
+        console.error('❌ Dados inválidos: filePath e directory estão vazios');
+        throw new Error('filePath ou directory é obrigatório');
       }
       
       if (!fileData.documentType) {
+        console.error('❌ Dados inválidos: documentType está vazio');
         throw new Error('documentType é obrigatório');
+      }
+
+      // Validação adicional: verificar se o caminho do arquivo não está vazio
+      const filePath = fileData.filePath || fileData.directory;
+      if (!filePath || filePath.trim() === '') {
+        console.error('❌ Dados inválidos: caminho do arquivo está vazio');
+        throw new Error('Caminho do arquivo não pode estar vazio');
+      }
+
+      // Validação adicional: verificar se o caminho contém informações válidas
+      if (filePath === 'EMPTY' || filePath.toLowerCase().includes('empty')) {
+        console.error('❌ Dados inválidos: arquivo marcado como EMPTY');
+        throw new Error('Arquivo não pode estar vazio');
       }
       
       const insertData = {
         representative_id: representativeId,
         document_type: fileData.documentType,
-        file_url: fileData.path || fileData.filePath || fileData.directory,
-        status: 'Pendente',
+        file_url: filePath,
+        status: 'Pendente' as const,
         uploaded_at: new Date().toISOString()
       };
       
       console.log('📝 Dados para inserção:', insertData);
+      console.log('🔍 Verificando se já existe registro para este documento...');
       
+      // Verificar se já existe um registro para este documento
+      const { data: existingDoc, error: checkError } = await supabase
+        .from('representative_documents')
+        .select('*')
+        .eq('representative_id', representativeId)
+        .eq('document_type', fileData.documentType)
+        .maybeSingle();
+
+      if (checkError && checkError.code !== 'PGRST116') {
+        console.error('❌ Erro ao verificar documento existente:', checkError);
+        throw new Error(`Erro ao verificar documento: ${checkError.message}`);
+      }
+
+      if (existingDoc) {
+        console.log('⚠️ Documento já existe no banco, atualizando...', existingDoc);
+        
+        // Atualizar registro existente
+        const { data, error } = await supabase
+          .from('representative_documents')
+          .update({
+            file_url: filePath,
+            status: 'Pendente' as const,
+            uploaded_at: new Date().toISOString()
+          })
+          .eq('id', existingDoc.id)
+          .select();
+
+        if (error) {
+          console.error('❌ Erro ao atualizar no banco:', error);
+          console.error('❌ Detalhes do erro:', error.details);
+          console.error('❌ Código do erro:', error.code);
+          throw new Error(`Erro ao atualizar no banco: ${error.message}`);
+        }
+
+        console.log('✅ Documento atualizado no banco de dados:', data);
+        console.log('📁 File URL atualizada:', filePath);
+        console.log('💾 === FIM saveToDatabase (UPDATE) ===');
+        return;
+      }
+      
+      console.log('✅ Nenhum registro existente, criando novo...');
       const { data, error } = await supabase
         .from('representative_documents')
         .insert(insertData)
@@ -156,6 +342,7 @@ const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
 
       console.log('✅ Metadados salvos no banco de dados:', data);
       console.log('📁 File URL salva:', insertData.file_url);
+      console.log('💾 === FIM saveToDatabase (INSERT) ===');
     } catch (error) {
       console.error('❌ Erro ao salvar no banco:', error);
       throw error;
@@ -171,7 +358,7 @@ const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
     try {
       setIsUploading(true);
       setError(null);
-      setUploadProgress(0);
+      // Removido setUploadProgress para evitar atualizações visuais
 
       const filesToUpload = documents.filter(doc => doc.file);
       
@@ -186,10 +373,29 @@ const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
       for (const doc of filesToUpload) {
         if (!doc.file) continue;
 
-        // Atualizar status para uploading
-        setDocuments(prev => prev.map(d => 
-          d.id === doc.id ? { ...d, status: 'uploading', progress: 0 } : d
-        ));
+        // Validação adicional: verificar se o arquivo não está vazio
+        if (doc.file.size === 0) {
+          console.error(`❌ Arquivo vazio detectado: ${doc.type} - ${doc.file.name}`);
+          updateDocumentStatus(doc.id, { 
+            status: 'error', 
+            error: 'Arquivo vazio detectado. Selecione um arquivo válido.' 
+          });
+          continue;
+        }
+
+        // Validação adicional: verificar se o arquivo tem tamanho mínimo (1KB)
+        if (doc.file.size < 1024) {
+          console.error(`❌ Arquivo muito pequeno detectado: ${doc.type} - ${doc.file.name} (${doc.file.size} bytes)`);
+          updateDocumentStatus(doc.id, { 
+            status: 'error', 
+            error: 'Arquivo muito pequeno. Verifique se o arquivo foi selecionado corretamente.' 
+          });
+          continue;
+        }
+
+        console.log(`📤 Iniciando upload: ${doc.type} - ${doc.file.name} (${doc.file.size} bytes)`);
+
+        // Não atualizar status durante upload para evitar piscar
 
         try {
           // Verificar se servidor está online
@@ -223,10 +429,11 @@ const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
           // Salvar metadados no banco de dados
           console.log('💾 Salvando metadados para:', doc.type);
           console.log('📁 Dados do upload:', result.data);
+          console.log('📋 === CHAMANDO saveToDatabase ===');
           
           // Validar dados antes de salvar
-          if (!result.data || (!result.data.path && !result.data.filePath && !result.data.directory)) {
-            throw new Error(`Dados de upload inválidos para ${doc.type}: sem path, filePath ou directory`);
+          if (!result.data || (!result.data.filePath && !result.data.directory)) {
+            throw new Error(`Dados de upload inválidos para ${doc.type}: sem filePath ou directory`);
           }
           
           const saveData = {
@@ -240,13 +447,11 @@ const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
           
           console.log('✅ Metadados salvos para:', doc.type);
 
-          // Atualizar status para uploaded
-          setDocuments(prev => prev.map(d => 
-            d.id === doc.id ? { ...d, status: 'uploaded', progress: 100 } : d
-          ));
+          // Atualizar status para uploaded (sem progresso para evitar piscar)
+          updateDocumentStatus(doc.id, { status: 'uploaded' });
 
           completedUploads++;
-          setUploadProgress((completedUploads / filesToUpload.length) * 100);
+          // Removido setUploadProgress para evitar atualizações visuais
 
         } catch (docError) {
           console.error(`❌ Error uploading ${doc.type}:`, docError);
@@ -257,22 +462,24 @@ const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
             representativeId: representativeId
           });
           
-          setDocuments(prev => prev.map(d => 
-            d.id === doc.id 
-              ? { 
-                  ...d, 
+          updateDocumentStatus(doc.id, { 
                   status: 'error', 
                   error: docError instanceof Error ? docError.message : 'Erro desconhecido'
-                } 
-              : d
-          ));
+          });
           
           // Tentar novamente uma vez
           console.log(`🔄 Tentando novamente upload de ${doc.type}...`);
           try {
             await new Promise(resolve => setTimeout(resolve, 1000)); // Aguardar 1 segundo
             
-            const retryResult = await uploadService.uploadComplete(doc.file, docInfo);
+            const retryResult = await uploadService.uploadComplete(doc.file, {
+              representativeId: representativeId,
+              cpfCnpj: representativeCpfCnpj,
+              documentType: doc.type,
+              fileName: doc.file.name,
+              fileSize: doc.file.size,
+              fileType: doc.file.type
+            });
             if (retryResult.success) {
               console.log(`✅ Retry bem-sucedido para ${doc.type}`);
               await saveToDatabase({
@@ -280,10 +487,9 @@ const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
                 documentType: doc.type
               }, representativeId);
               
-              setDocuments(prev => prev.map(d => 
-                d.id === doc.id ? { ...d, status: 'uploaded', progress: 100, error: null } : d
-              ));
+              updateDocumentStatus(doc.id, { status: 'uploaded', error: null });
               completedUploads++;
+              // Removido setUploadProgress para evitar atualizações visuais
             } else {
               throw new Error(retryResult.error || 'Erro no retry');
             }
@@ -309,57 +515,6 @@ const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
       setError(error instanceof Error ? error.message : 'Erro ao fazer upload dos documentos');
     } finally {
       setIsUploading(false);
-    }
-  };
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'approved':
-        return <CheckCircle className="h-4 w-4 text-green-600" />;
-      case 'uploaded':
-        return <Clock className="h-4 w-4 text-yellow-600" />;
-      case 'rejected':
-        return <AlertCircle className="h-4 w-4 text-red-600" />;
-      case 'error':
-        return <AlertCircle className="h-4 w-4 text-red-600" />;
-      case 'uploading':
-        return <Clock className="h-4 w-4 text-blue-600 animate-spin" />;
-      default:
-        return <FileText className="h-4 w-4 text-gray-600" />;
-    }
-  };
-
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case 'approved':
-        return 'Aprovado';
-      case 'uploaded':
-        return 'Pendente de Aprovação';
-      case 'rejected':
-        return 'Rejeitado';
-      case 'error':
-        return 'Erro';
-      case 'uploading':
-        return 'Enviando...';
-      default:
-        return 'Pendente';
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'approved':
-        return 'text-green-600';
-      case 'uploaded':
-        return 'text-yellow-600';
-      case 'rejected':
-        return 'text-red-600';
-      case 'error':
-        return 'text-red-600';
-      case 'uploading':
-        return 'text-blue-600';
-      default:
-        return 'text-gray-600';
     }
   };
 
@@ -422,73 +577,46 @@ const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
           )}
 
           {/* Documents List */}
+          <div className="space-y-6">
+            {/* Documentos da Empresa */}
           <div className="space-y-4">
-            {documents.map((doc) => (
-              <Card key={doc.id} className="border border-gray-200">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-3">
-                      {getStatusIcon(doc.status)}
-                      <div>
-                        <h3 className="font-medium">{doc.type}</h3>
-                        <p className="text-sm text-gray-600">
-                          {doc.file ? doc.file.name : 'Nenhum arquivo selecionado'}
-                        </p>
-                      </div>
-                    </div>
-                    <Badge variant={doc.status === 'uploaded' ? 'default' : 'secondary'}>
-                      {getStatusText(doc.status)}
+              <div className="flex items-center gap-2 mb-4">
+                <div className="h-1 w-8 bg-blue-600"></div>
+                <h4 className="text-lg font-semibold text-blue-800">Documentos da Empresa</h4>
+                <Badge variant="outline" className="bg-blue-50 text-blue-700">
+                  {documents.filter(d => d.type.includes('empresa') || d.type.includes('cnpj') || d.type.includes('contrato') || d.type.includes('mei') || d.type.includes('bancários') || d.type.includes('declaração') || d.type.includes('cartilha de credenciamento preenchida')).length} documentos
                     </Badge>
                   </div>
 
-                  {/* File Input */}
-                  {doc.status !== 'uploaded' && doc.status !== 'approved' && doc.status !== 'rejected' && (
-                    <div className="space-y-2">
-                      <Label htmlFor={`file-${doc.id}`} className="text-sm font-medium">
-                        Selecionar Arquivo
-                      </Label>
-                      <Input
-                        id={`file-${doc.id}`}
-                        type="file"
-                        accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) {
-                            handleFileSelect(doc.id, file);
-                          }
-                        }}
-                        disabled={doc.status === 'uploading'}
-                        className="cursor-pointer"
-                      />
-                      <p className="text-xs text-gray-500">
-                        Formatos aceitos: PDF, JPG, PNG, DOC, DOCX (máx. 10MB)
-                      </p>
+              {documents.filter(doc => doc.type.includes('empresa') || doc.type.includes('cnpj') || doc.type.includes('contrato') || doc.type.includes('mei') || doc.type.includes('bancários') || doc.type.includes('declaração') || doc.type.includes('cartilha de credenciamento preenchida')).map((doc) => (
+                <DocumentCard 
+                  key={doc.id} 
+                  doc={doc} 
+                  onFileSelect={handleFileSelect}
+                  onStatusChange={updateDocumentStatus}
+                />
+              ))}
                     </div>
-                  )}
 
-                  {/* Upload Progress */}
-                  {doc.status === 'uploading' && (
-                    <div className="mt-3">
-                      <div className="flex justify-between text-sm mb-1">
-                        <span>Enviando...</span>
-                        <span>{doc.progress}%</span>
-                      </div>
-                      <Progress value={doc.progress} className="h-2" />
+            {/* Documentos do Sócio */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="h-1 w-8 bg-green-600"></div>
+                <h4 className="text-lg font-semibold text-green-800">Documentos do Sócio</h4>
+                <Badge variant="outline" className="bg-green-50 text-green-700">
+                  {documents.filter(d => d.type.includes('sócio') || d.type.includes('pf') || d.type.includes('certidão') || d.type.includes('foto') || d.type.includes('cnh') || d.type.includes('identidade')).length} documentos
+                </Badge>
                     </div>
-                  )}
-
-                  {/* Error Message */}
-                  {doc.status === 'error' && doc.error && (
-                    <Alert className="mt-3 border-red-200 bg-red-50">
-                      <AlertCircle className="h-4 w-4 text-red-600" />
-                      <AlertDescription className="text-red-800">
-                        {doc.error}
-                      </AlertDescription>
-                    </Alert>
-                  )}
-                </CardContent>
-              </Card>
-            ))}
+              
+              {documents.filter(doc => doc.type.includes('sócio') || doc.type.includes('pf') || doc.type.includes('certidão') || doc.type.includes('foto') || doc.type.includes('cnh') || doc.type.includes('identidade')).map((doc) => (
+                <DocumentCard 
+                  key={doc.id} 
+                  doc={doc} 
+                  onFileSelect={handleFileSelect}
+                  onStatusChange={updateDocumentStatus}
+                />
+              ))}
+            </div>
           </div>
         </CardContent>
 

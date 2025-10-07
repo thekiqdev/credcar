@@ -1357,10 +1357,22 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     try {
       const documents = representativeDocuments[representativeId] || [];
       const requiredDocuments = [
-        "Cartão do CNPJ",
-        "Comprovante de Endereço",
-        "Certidão de Antecedente Criminal",
-        "Certidão Negativa Civil",
+        // Documentos da Empresa
+        "cartilha de credenciamento preenchida",
+        "cartão cnpj",
+        "contrato social e última alteração",
+        "certificado de microempreendedor individual (mei)",
+        "comprovante de endereço em nome da empresa",
+        "declaração de endereço assinada",
+        "dados bancários para recebimento das comissões",
+        // Documentos do Sócio
+        "cartilha de credenciamento pf",
+        "comprovante de endereço em nome do sócio",
+        "certidão de antecedentes criminais",
+        "certidão negativa cível de 1º grau",
+        "certidão negativa criminal de 1º grau",
+        "foto de identidade ou cnh (frente)",
+        "foto de identidade ou cnh (verso)"
       ];
 
       // Check if all required documents are approved

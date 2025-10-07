@@ -15,3 +15,5 @@ FOREIGN KEY (id_faixa_de_credito) REFERENCES public.faixas_de_credito(id);
 
 -- Comentário para documentar a coluna
 COMMENT ON COLUMN public.contracts.id_faixa_de_credito IS 'ID da faixa de crédito selecionada no momento da criação do contrato';
+
+

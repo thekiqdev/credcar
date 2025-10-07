@@ -45,3 +45,5 @@ SELECT
     numero_total_parcelas
 FROM public.faixas_de_credito 
 WHERE id = 121;
+
+
