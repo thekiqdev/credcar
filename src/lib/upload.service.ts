@@ -91,6 +91,25 @@ class UploadService {
   }
 
   /**
+   * Helper para tratar respostas HTTP de forma robusta
+   * Evita erro "Unexpected token '<'" quando recebe HTML em vez de JSON
+   */
+  private async handleResponse(response: Response): Promise<any> {
+    const contentType = response.headers.get('content-type') || '';
+    
+    if (contentType.includes('application/json')) {
+      return await response.json();
+    } else {
+      const text = await response.text();
+      return { 
+        success: false, 
+        message: `Erro ${response.status}: ${response.statusText} - ${text}`,
+        error: text
+      };
+    }
+  }
+
+  /**
    * Verificar se o servidor está funcionando
    */
   async checkHealth(): Promise<boolean> {
@@ -99,7 +118,7 @@ class UploadService {
       console.log('📡 Endpoint:', `${this.baseUrl}/health`);
       
       const response = await fetch(`${this.baseUrl}/health`);
-      const data = await response.json();
+      const data = await this.handleResponse(response);
       
       const isHealthy = data.status === 'online';
       
@@ -148,7 +167,7 @@ class UploadService {
         body: JSON.stringify(requestBody)
       });
 
-      const data = await response.json();
+      const data = await this.handleResponse(response);
       
       console.log('📥 Resposta recebida:', data);
 
@@ -236,7 +255,7 @@ class UploadService {
         ok: response.ok
       });
 
-      const data = await response.json();
+      const data = await this.handleResponse(response);
       console.log('📋 Dados da resposta:', data);
 
       if (data.success) {
@@ -320,7 +339,7 @@ class UploadService {
         body: formData
       });
 
-      const data = await response.json();
+      const data = await this.handleResponse(response);
       console.log('📥 Resposta do upload em lote:', data);
 
       return data;
@@ -384,7 +403,7 @@ class UploadService {
         body: formData
       });
 
-      const data = await response.json();
+      const data = await this.handleResponse(response);
       console.log(`📥 Resposta do upload por categoria (${category}):`, data);
 
       return data;
@@ -428,7 +447,7 @@ class UploadService {
       console.log('📡 Endpoint:', url);
 
       const response = await fetch(url);
-      const data = await response.json();
+      const data = await this.handleResponse(response);
       
       console.log('📥 Resposta da listagem:', data);
 
@@ -474,7 +493,7 @@ class UploadService {
         body: JSON.stringify({ filePath })
       });
 
-      const data = await response.json();
+      const data = await this.handleResponse(response);
       return data.success;
     } catch (error) {
       console.error('❌ Erro ao deletar arquivo:', error);
@@ -520,7 +539,7 @@ class UploadService {
         body: JSON.stringify({ representativeId, cpfCnpj })
       });
 
-      const data = await response.json();
+      const data = await this.handleResponse(response);
       
       if (data.success) {
         console.log('✅ Pasta do representante deletada:', data.deletedPath);
@@ -541,7 +560,7 @@ class UploadService {
   async getServerStatus(): Promise<{ online: boolean; message: string }> {
     try {
       const response = await fetch(`${this.baseUrl}/health`);
-      const data = await response.json();
+      const data = await this.handleResponse(response);
       
       return {
         online: data.status === 'online',
