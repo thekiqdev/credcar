@@ -1421,7 +1421,7 @@ export const contractService = {
           *,
           clients(full_name, name),
           profiles!inner (full_name, email),
-          commission_tables!inner (name, commission_percentage)
+          planos!inner (nome, comissao)
         `,
         )
         .order("created_at", { ascending: false });

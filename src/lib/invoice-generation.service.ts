@@ -3,6 +3,7 @@
 
 import { supabase } from './supabase';
 import { contractAnalysisService, InstallmentData, InvoiceGenerationData } from './contract-analysis.service';
+import { asaasInvoiceService } from './asaas-invoice.service';
 
 // Tipos TypeScript para o serviço
 export interface InvoiceData {
@@ -26,6 +27,12 @@ export interface InvoiceGenerationResult {
   contractId: number;
   errors: string[];
   invoices?: InvoiceData[];
+  asaasIntegration?: {
+    success: boolean;
+    created: number;
+    failed: number;
+    errors: string[];
+  };
 }
 
 class InvoiceGenerationService {
@@ -67,8 +74,14 @@ class InvoiceGenerationService {
         };
       }
 
-      // 3. Criar faturas baseadas nas parcelas
-      const invoices = await this.generateInvoicesFromInstallments(contractId, validation.installments);
+      // 3. Criar apenas faturas essenciais (1ª parcela + personalizadas)
+      const essentialInstallments = validation.installments.filter(inst => 
+        inst.tipo === 'primeira' || inst.tipo === 'personalizada'
+      );
+      
+      console.log(`📋 Criando ${essentialInstallments.length} faturas essenciais de ${validation.installments.length} parcelas totais`);
+      
+      const invoices = await this.generateInvoicesFromInstallments(contractId, essentialInstallments);
       
       // 4. Inserir faturas no banco
       const { data: createdInvoices, error: insertError } = await supabase
@@ -82,12 +95,43 @@ class InvoiceGenerationService {
 
       console.log(`✅ ${createdInvoices.length} faturas criadas com sucesso para contrato ${contractId}`);
 
+      // 5. Criar faturas no ASAAS automaticamente
+      let asaasResults = {
+        success: true,
+        created: 0,
+        failed: 0,
+        errors: []
+      };
+
+      try {
+        console.log(`🚀 Criando faturas no ASAAS para contrato ${contractId}...`);
+        
+        // Criar faturas no ASAAS
+        const asaasResult = await asaasInvoiceService.createMultipleInvoicesInAsaas(contractId);
+        asaasResults = asaasResult;
+        
+        if (asaasResult.success) {
+          console.log(`✅ ${asaasResult.created} faturas criadas no ASAAS com sucesso`);
+        } else {
+          console.log(`⚠️ ${asaasResult.failed} faturas falharam no ASAAS: ${asaasResult.errors.join(', ')}`);
+        }
+      } catch (asaasError) {
+        console.error('Erro ao criar faturas no ASAAS:', asaasError);
+        asaasResults = {
+          success: false,
+          created: 0,
+          failed: createdInvoices.length,
+          errors: [asaasError instanceof Error ? asaasError.message : 'Erro desconhecido no ASAAS']
+        };
+      }
+
       return {
         success: true,
         invoicesCreated: createdInvoices.length,
         contractId,
         errors: [],
-        invoices: createdInvoices
+        invoices: createdInvoices,
+        asaasIntegration: asaasResults
       };
 
     } catch (error) {

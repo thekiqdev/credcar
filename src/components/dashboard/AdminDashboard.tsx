@@ -712,6 +712,33 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     }
   };
 
+  const loadInvoicesForContract = async (contractId: number) => {
+    try {
+      console.log(`🔍 Carregando faturas para contrato ${contractId}...`);
+      
+      const { data: invoices, error } = await supabase
+        .from('invoices')
+        .select('*')
+        .eq('contract_id', contractId)
+        .order('installment_number', { ascending: true });
+      
+      if (error) {
+        console.error('Erro ao carregar faturas:', error);
+        return;
+      }
+      
+      console.log(`✅ ${invoices?.length || 0} faturas carregadas para contrato ${contractId}`);
+      console.log(`🔍 Faturas carregadas:`, invoices);
+      if (invoices && invoices.length > 0) {
+        console.log(`🔍 Primeira fatura:`, invoices[0]);
+        console.log(`🔍 Contract ID da primeira fatura: ${invoices[0].contract_id} (tipo: ${typeof invoices[0].contract_id})`);
+      }
+      setInvoices(invoices || []);
+    } catch (error) {
+      console.error('Erro ao carregar faturas:', error);
+    }
+  };
+
   const loadAllContracts = async () => {
     try {
       setIsLoadingContracts(true);
@@ -1475,15 +1502,30 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       if (result.success) {
         console.log(`✅ ${result.invoicesCreated} faturas criadas para contrato ${contractId}`);
         
+        // Verificar integração ASAAS
+        let message = `${result.invoicesCreated} faturas criadas com sucesso!`;
+        if (result.asaasIntegration) {
+          if (result.asaasIntegration.success) {
+            message += ` ${result.asaasIntegration.created} faturas criadas no ASAAS!`;
+          } else {
+            message += ` ⚠️ ${result.asaasIntegration.failed} faturas falharam no ASAAS`;
+          }
+        }
+        
         // Mostrar feedback visual de sucesso
         setSaveStatus({
           status: 'success',
-          message: `${result.invoicesCreated} faturas criadas com sucesso!`,
+          message: message,
           timestamp: Date.now()
         });
         
         // Recarregar contratos para mostrar as faturas
         await loadAllContracts();
+        
+        // Recarregar faturas do contrato atual
+        if (selectedContractForInvoices) {
+          await loadInvoicesForContract(selectedContractForInvoices.id);
+        }
         
         // Auto-dismiss após 5 segundos
         setTimeout(() => {
@@ -4504,6 +4546,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                       new Date().toISOString(),
                                   };
                                   setSelectedContractForInvoices(contractData);
+                                  
+                                  // Carregar faturas do contrato selecionado
+                                  loadInvoicesForContract(contract.id);
                                 }}
                               >
                                 <div className="flex items-center justify-between">
@@ -4606,49 +4651,15 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => {
-                                  // Generate sample invoices for the selected contract
-                                  const newInvoices = [];
-                                  const installmentValue =
-                                    selectedContractForInvoices.remainingValue /
-                                    80;
-
-                                  for (let i = 1; i <= 3; i++) {
-                                    const dueDate = new Date();
-                                    dueDate.setMonth(dueDate.getMonth() + i);
-
-                                    newInvoices.push({
-                                      id: `INV-${selectedContractForInvoices.id}-${i}`,
-                                      contractId:
-                                        selectedContractForInvoices.id,
-                                      amount: installmentValue,
-                                      installmentNumber: i,
-                                      dueDate: dueDate
-                                        .toISOString()
-                                        .split("T")[0],
-                                      status:
-                                        i === 1 ? "paid" : ("pending" as const),
-                                      createdAt: new Date()
-                                        .toISOString()
-                                        .split("T")[0],
-                                      paidAt:
-                                        i === 1
-                                          ? new Date()
-                                              .toISOString()
-                                              .split("T")[0]
-                                          : undefined,
-                                    });
-                                  }
-
-                                  setInvoices((prev) => [
-                                    ...prev.filter(
-                                      (inv) =>
-                                        inv.contractId !==
-                                        selectedContractForInvoices.id,
-                                    ),
-                                    ...newInvoices,
-                                  ]);
-                                }}
+                                onClick={() =>
+                                  handleGenerateInvoices(selectedContractForInvoices.id.toString())
+                                }
+                                disabled={selectedContractForInvoices.status !== "Ativo"}
+                                title={
+                                  selectedContractForInvoices.status !== "Ativo"
+                                    ? "Apenas contratos ativos podem ter faturas geradas"
+                                    : "Gerar faturas para este contrato"
+                                }
                                 className="text-blue-600 hover:text-blue-700 border-blue-200 hover:bg-blue-50"
                               >
                                 <Receipt className="mr-2 h-4 w-4" />
@@ -4738,11 +4749,19 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                             </div>
 
                             {/* Invoices Table */}
-                            {invoices.filter(
-                              (inv) =>
-                                inv.contractId ===
-                                selectedContractForInvoices.id,
-                            ).length === 0 ? (
+                            {(() => {
+                              const filteredInvoices = invoices.filter(
+                                (inv) =>
+                                  inv.contract_id === parseInt(selectedContractForInvoices.id),
+                              );
+                              console.log(`🔍 Faturas filtradas para contrato ${selectedContractForInvoices.id}:`, filteredInvoices);
+                              console.log(`🔍 Total de faturas: ${invoices.length}`);
+                              console.log(`🔍 Faturas filtradas: ${filteredInvoices.length}`);
+                              console.log(`🔍 Contrato selecionado ID: ${selectedContractForInvoices.id} (tipo: ${typeof selectedContractForInvoices.id})`);
+                              console.log(`🔍 Primeira fatura contract_id: ${invoices[0]?.contract_id} (tipo: ${typeof invoices[0]?.contract_id})`);
+                              console.log(`🔍 Comparação: ${invoices[0]?.contract_id} === ${parseInt(selectedContractForInvoices.id)} = ${invoices[0]?.contract_id === parseInt(selectedContractForInvoices.id)}`);
+                              return filteredInvoices.length === 0;
+                            })() ? (
                               <div className="text-center py-8">
                                 <Receipt className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
                                 <p className="text-lg font-medium mb-2">
@@ -4771,8 +4790,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                   {invoices
                                     .filter(
                                       (inv) =>
-                                        inv.contractId ===
-                                        selectedContractForInvoices.id,
+                                        inv.contract_id === parseInt(selectedContractForInvoices.id),
                                     )
                                     .map((invoice) => (
                                       <TableRow key={invoice.id}>
@@ -4780,9 +4798,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                           {invoice.id}
                                         </TableCell>
                                         <TableCell>
-                                          {invoice.installmentNumber === 0
+                                          {invoice.installment_number === 0
                                             ? "Antecipação"
-                                            : `${invoice.installmentNumber}/${selectedContractForInvoices.installments}`}
+                                            : `${invoice.installment_number}/${selectedContractForInvoices.installments}`}
                                         </TableCell>
                                         <TableCell>
                                           {new Intl.NumberFormat("pt-BR", {
@@ -4792,7 +4810,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                         </TableCell>
                                         <TableCell>
                                           {new Date(
-                                            invoice.dueDate,
+                                            invoice.due_date,
                                           ).toLocaleDateString("pt-BR")}
                                         </TableCell>
                                         <TableCell>

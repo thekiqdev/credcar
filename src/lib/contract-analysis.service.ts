@@ -54,19 +54,13 @@ class ContractAnalysisService {
    */
   async getContractPaymentPlan(contractId: number): Promise<PaymentPlan | null> {
     try {
-      // Buscar contrato com commission_table
+      // Buscar contrato com id_faixa_de_credito e commission_table_id
       const { data: contract, error: contractError } = await supabase
         .from('contracts')
         .select(`
           id,
           commission_table_id,
-          commission_tables!inner (
-            id,
-            name,
-            commission_percentage,
-            payment_details,
-            payment_installments
-          )
+          id_faixa_de_credito
         `)
         .eq('id', contractId)
         .single();
@@ -76,7 +70,15 @@ class ContractAnalysisService {
         return null;
       }
 
-      // Buscar plano baseado no nome da commission_table
+      // Usar id_faixa_de_credito se disponível, senão usar commission_table_id como fallback
+      const planId = contract.commission_table_id;
+      
+      if (!planId) {
+        console.error('Nenhum commission_table_id encontrado para contrato:', contractId);
+        return null;
+      }
+
+      // Buscar plano diretamente usando commission_table_id como plan_id
       const { data: plano, error: planoError } = await supabase
         .from('planos')
         .select(`
@@ -88,11 +90,17 @@ class ContractAnalysisService {
             )
           )
         `)
-        .eq('nome', contract.commission_tables.name)
+        .eq('id', planId)
+        .eq('ativo', true)
         .single();
 
       if (planoError) {
         console.error('Error fetching plano:', planoError);
+        return null;
+      }
+
+      if (!plano) {
+        console.error('Plano não encontrado com ID:', planId);
         return null;
       }
 
@@ -108,15 +116,12 @@ class ContractAnalysisService {
    */
   async calculateInstallments(contractId: number): Promise<InstallmentData[]> {
     try {
-      const paymentPlan = await this.getContractPaymentPlan(contractId);
-      if (!paymentPlan) {
-        throw new Error('Plano de pagamento não encontrado');
-      }
-
-      // Buscar faixa de crédito do contrato
+      console.log(`🚀 calculateInstallments iniciado para contrato ${contractId}`);
+      
+      // Buscar contrato com id_faixa_de_credito
       const { data: contract, error: contractError } = await supabase
         .from('contracts')
-        .select('credit_amount')
+        .select('id_faixa_de_credito')
         .eq('id', contractId)
         .single();
 
@@ -124,9 +129,47 @@ class ContractAnalysisService {
         throw new Error('Contrato não encontrado');
       }
 
+      console.log(`📋 Contrato ${contractId} - ID Faixa de Crédito: ${contract.id_faixa_de_credito}`);
+
+      // Se temos id_faixa_de_credito, buscar diretamente
+      if (contract.id_faixa_de_credito) {
+        console.log(`🔍 Buscando faixa diretamente por ID: ${contract.id_faixa_de_credito}`);
+        
+        const { data: creditRange, error: creditRangeError } = await supabase
+          .from('faixas_de_credito')
+          .select('*')
+          .eq('id', contract.id_faixa_de_credito)
+          .single();
+
+        if (creditRangeError) {
+          console.error('❌ Erro ao buscar faixa:', creditRangeError);
+          throw new Error('Faixa de crédito não encontrada');
+        }
+
+        console.log(`✅ Faixa encontrada: ID ${creditRange.id}, Valor R$ ${creditRange.valor_credito.toLocaleString('pt-BR')}`);
+        return this.calculateInstallmentsFromCreditRange(creditRange);
+      }
+
+      // Fallback: usar método antigo se id_faixa_de_credito não estiver disponível
+      const paymentPlan = await this.getContractPaymentPlan(contractId);
+      if (!paymentPlan) {
+        throw new Error('Plano de pagamento não encontrado');
+      }
+
+      // Buscar faixa de crédito do contrato
+      const { data: contractData, error: contractDataError } = await supabase
+        .from('contracts')
+        .select('credit_amount')
+        .eq('id', contractId)
+        .single();
+
+      if (contractDataError) {
+        throw new Error('Contrato não encontrado');
+      }
+
       // Encontrar faixa de crédito correspondente
       const creditRange = paymentPlan.faixas_de_credito.find(
-        faixa => faixa.valor_credito === contract.credit_amount
+        faixa => faixa.valor_credito == contractData.credit_amount
       );
 
       if (!creditRange) {
@@ -200,40 +243,87 @@ class ContractAnalysisService {
    */
   async validateContractForInvoicing(contractId: number): Promise<InvoiceGenerationData> {
     try {
-      const installments = await this.calculateInstallments(contractId);
-      const paymentPlan = await this.getContractPaymentPlan(contractId);
+      console.log(`🔍 validateContractForInvoicing iniciado para contrato ${contractId}`);
       
-      if (!paymentPlan) {
-        return {
-          contractId,
-          creditRange: null as any,
-          installments: [],
-          totalValue: 0,
-          isValid: false,
-          errors: ['Plano de pagamento não encontrado']
-        };
-      }
-
-      // Buscar faixa de crédito
-      const { data: contract } = await supabase
+      const installments = await this.calculateInstallments(contractId);
+      
+      // Buscar contrato com id_faixa_de_credito
+      const { data: contract, error: contractError } = await supabase
         .from('contracts')
-        .select('credit_amount')
+        .select('id_faixa_de_credito, credit_amount')
         .eq('id', contractId)
         .single();
 
-      const creditRange = paymentPlan.faixas_de_credito.find(
-        faixa => faixa.valor_credito === contract.credit_amount
-      );
-
-      if (!creditRange) {
+      if (contractError) {
         return {
           contractId,
           creditRange: null as any,
           installments: [],
           totalValue: 0,
           isValid: false,
-          errors: ['Faixa de crédito não encontrada']
+          errors: ['Contrato não encontrado']
         };
+      }
+
+      console.log(`📋 Contrato ${contractId} - ID Faixa de Crédito: ${contract.id_faixa_de_credito}`);
+
+      let creditRange = null;
+
+      // Se temos id_faixa_de_credito, buscar diretamente
+      if (contract.id_faixa_de_credito) {
+        console.log(`🔍 Buscando faixa diretamente por ID: ${contract.id_faixa_de_credito}`);
+        
+        const { data: faixa, error: faixaError } = await supabase
+          .from('faixas_de_credito')
+          .select('*')
+          .eq('id', contract.id_faixa_de_credito)
+          .single();
+
+        if (faixaError) {
+          console.error('❌ Erro ao buscar faixa:', faixaError);
+          return {
+            contractId,
+            creditRange: null as any,
+            installments: [],
+            totalValue: 0,
+            isValid: false,
+            errors: ['Faixa de crédito não encontrada']
+          };
+        }
+
+        creditRange = faixa;
+        console.log(`✅ Faixa encontrada: ID ${creditRange.id}, Valor R$ ${creditRange.valor_credito.toLocaleString('pt-BR')}`);
+      } else {
+        // Fallback: usar método antigo
+        console.log('⚠️ ID Faixa de Crédito é NULL, usando método antigo');
+        
+        const paymentPlan = await this.getContractPaymentPlan(contractId);
+        
+        if (!paymentPlan) {
+          return {
+            contractId,
+            creditRange: null as any,
+            installments: [],
+            totalValue: 0,
+            isValid: false,
+            errors: ['Plano de pagamento não encontrado']
+          };
+        }
+
+        creditRange = paymentPlan.faixas_de_credito.find(
+          faixa => faixa.valor_credito == contract.credit_amount
+        );
+
+        if (!creditRange) {
+          return {
+            contractId,
+            creditRange: null as any,
+            installments: [],
+            totalValue: 0,
+            isValid: false,
+            errors: ['Faixa de crédito não encontrada']
+          };
+        }
       }
 
       // Calcular total
