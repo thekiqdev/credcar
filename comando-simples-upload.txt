@@ -1,0 +1,4 @@
+# SOLUÇÃO MAIS SIMPLES - EXECUTE NO SERVIDOR
+# Liberar porta 3001 e testar acesso direto
+
+sudo ufw allow 3001 && sudo pm2 restart upload-server && curl -s http://localhost:3001/health && echo "✅ PORTA 3001 LIBERADA - TESTE: http://localhost:3001/api/upload-document"
