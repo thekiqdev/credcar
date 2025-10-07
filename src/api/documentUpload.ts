@@ -502,8 +502,8 @@ export const listRepresentativeDocuments = async (req: Request, res: Response) =
             uploadedAt: stats.birthtime,
             modifiedAt: stats.mtime
           });
-        });
-      }
+          });
+        }
     });
 
     res.json({
