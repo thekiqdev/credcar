@@ -91,25 +91,6 @@ class UploadService {
   }
 
   /**
-   * Helper para tratar respostas HTTP de forma robusta
-   * Evita erro "Unexpected token '<'" quando recebe HTML em vez de JSON
-   */
-  private async handleResponse(response: Response): Promise<any> {
-    const contentType = response.headers.get('content-type') || '';
-    
-    if (contentType.includes('application/json')) {
-      return await response.json();
-    } else {
-      const text = await response.text();
-      return { 
-        success: false, 
-        message: `Erro ${response.status}: ${response.statusText} - ${text}`,
-        error: text
-      };
-    }
-  }
-
-  /**
    * Verificar se o servidor está funcionando
    */
   async checkHealth(): Promise<boolean> {
@@ -118,7 +99,7 @@ class UploadService {
       console.log('📡 Endpoint:', `${this.baseUrl}/health`);
       
       const response = await fetch(`${this.baseUrl}/health`);
-      const data = await this.handleResponse(response);
+      const data = await response.json();
       
       const isHealthy = data.status === 'online';
       
@@ -167,7 +148,7 @@ class UploadService {
         body: JSON.stringify(requestBody)
       });
 
-      const data = await this.handleResponse(response);
+      const data = await response.json();
       
       console.log('📥 Resposta recebida:', data);
 
@@ -252,11 +233,24 @@ class UploadService {
       console.log('📥 Resposta recebida:', {
         status: response.status,
         statusText: response.statusText,
-        ok: response.ok
+        ok: response.ok,
+        contentType: response.headers.get('content-type')
       });
 
-      const data = await this.handleResponse(response);
-      console.log('📋 Dados da resposta:', data);
+      // Verificar content-type antes de fazer parse
+      const contentType = response.headers.get('content-type');
+      let data;
+      
+      if (contentType && contentType.includes('application/json')) {
+        data = await response.json();
+        console.log('📋 Dados da resposta (JSON):', data);
+      } else {
+        const textResponse = await response.text();
+        console.log('📋 Resposta em texto:', textResponse);
+        
+        // Se não é JSON, tratar como erro
+        throw new Error(`Resposta não é JSON. Status: ${response.status}, Conteúdo: ${textResponse.substring(0, 200)}...`);
+      }
 
       if (data.success) {
         console.log('✅ Upload realizado com sucesso!');
@@ -339,7 +333,7 @@ class UploadService {
         body: formData
       });
 
-      const data = await this.handleResponse(response);
+      const data = await response.json();
       console.log('📥 Resposta do upload em lote:', data);
 
       return data;
@@ -403,7 +397,7 @@ class UploadService {
         body: formData
       });
 
-      const data = await this.handleResponse(response);
+      const data = await response.json();
       console.log(`📥 Resposta do upload por categoria (${category}):`, data);
 
       return data;
@@ -447,7 +441,7 @@ class UploadService {
       console.log('📡 Endpoint:', url);
 
       const response = await fetch(url);
-      const data = await this.handleResponse(response);
+      const data = await response.json();
       
       console.log('📥 Resposta da listagem:', data);
 
@@ -493,7 +487,7 @@ class UploadService {
         body: JSON.stringify({ filePath })
       });
 
-      const data = await this.handleResponse(response);
+      const data = await response.json();
       return data.success;
     } catch (error) {
       console.error('❌ Erro ao deletar arquivo:', error);
@@ -539,7 +533,7 @@ class UploadService {
         body: JSON.stringify({ representativeId, cpfCnpj })
       });
 
-      const data = await this.handleResponse(response);
+      const data = await response.json();
       
       if (data.success) {
         console.log('✅ Pasta do representante deletada:', data.deletedPath);
@@ -560,7 +554,7 @@ class UploadService {
   async getServerStatus(): Promise<{ online: boolean; message: string }> {
     try {
       const response = await fetch(`${this.baseUrl}/health`);
-      const data = await this.handleResponse(response);
+      const data = await response.json();
       
       return {
         online: data.status === 'online',
