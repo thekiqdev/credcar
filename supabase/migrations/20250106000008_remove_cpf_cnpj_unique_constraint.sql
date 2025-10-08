@@ -11,8 +11,3 @@ COMMENT ON COLUMN clients.cpf_cnpj IS 'CPF/CNPJ do cliente - permite múltiplos 
 -- Criar índice para melhorar performance (sem constraint UNIQUE)
 CREATE INDEX IF NOT EXISTS idx_clients_cpf_cnpj_performance 
 ON clients(cpf_cnpj);
-
--- Log da migration
-INSERT INTO migration_log (migration_name, applied_at) 
-VALUES ('remove_cpf_cnpj_unique_constraint', NOW())
-ON CONFLICT DO NOTHING;
