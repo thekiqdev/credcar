@@ -4872,33 +4872,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                             <Button variant="outline" size="sm">
                                               <Eye className="h-4 w-4" />
                                             </Button>
-                                            {invoice.status === "pending" && (
-                                              <Button
-                                                variant="outline"
-                                                size="sm"
-                                                onClick={() => {
-                                                  // Mark as paid
-                                                  setInvoices((prev) =>
-                                                    prev.map((inv) =>
-                                                      inv.id === invoice.id
-                                                        ? {
-                                                            ...inv,
-                                                            status:
-                                                              "paid" as const,
-                                                            paidAt: new Date()
-                                                              .toISOString()
-                                                              .split("T")[0],
-                                                          }
-                                                        : inv,
-                                                    ),
-                                                  );
-                                                }}
-                                                className="text-green-600 hover:text-green-700 border-green-200 hover:bg-green-50"
-                                                title="Marcar como pago"
-                                              >
-                                                <CheckCircle className="h-4 w-4" />
-                                              </Button>
-                                            )}
+                                            {/* Botão de confirmar pagamento removido - pagamentos confirmados automaticamente via ASAAS */}
                                           </div>
                                         </TableCell>
                                       </TableRow>
