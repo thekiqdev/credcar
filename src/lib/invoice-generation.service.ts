@@ -75,21 +75,23 @@ class InvoiceGenerationService {
         };
       }
 
-      // 3. Criar APENAS a primeira parcela (estratégia inteligente)
-      const firstInstallment = validation.installments.find(inst => inst.numero_parcela === 1);
+      // 3. Criar 1ª parcela + TODAS as personalizadas (estratégia inteligente)
+      const essentialInstallments = validation.installments.filter(inst => 
+        inst.tipo === 'primeira' || inst.tipo === 'personalizada'
+      );
       
-      if (!firstInstallment) {
+      if (essentialInstallments.length === 0) {
         return {
           success: false,
           invoicesCreated: 0,
           contractId,
-          errors: ['Primeira parcela não encontrada']
+          errors: ['Nenhuma parcela essencial encontrada']
         };
       }
       
-      console.log(`📋 Criando apenas 1ª parcela de ${validation.installments.length} parcelas totais`);
+      console.log(`📋 Criando ${essentialInstallments.length} parcelas essenciais (1ª + personalizadas) de ${validation.installments.length} parcelas totais`);
       
-      const invoices = await this.generateFirstInvoiceWithNextDate(contractId, firstInstallment, validation.installments.length);
+      const invoices = await this.generateEssentialInvoicesWithNextDate(contractId, essentialInstallments, validation.installments.length);
       
       // 4. Inserir faturas no banco
       const { data: createdInvoices, error: insertError } = await supabase
@@ -154,7 +156,103 @@ class InvoiceGenerationService {
   }
 
   /**
-   * Gerar primeira fatura com cálculo de next_invoice_date
+   * Gerar faturas essenciais (1ª + personalizadas) com cálculo de next_invoice_date
+   */
+  private async generateEssentialInvoicesWithNextDate(
+    contractId: number, 
+    essentialInstallments: InstallmentData[],
+    totalInstallments: number
+  ): Promise<InvoiceData[]> {
+    try {
+      const invoices: InvoiceData[] = [];
+      
+      // Ordenar parcelas por número
+      const sortedInstallments = [...essentialInstallments].sort((a, b) => 
+        a.numero_parcela - b.numero_parcela
+      );
+
+      // Obter configuração de dias de antecedência
+      const { systemConfigService } = await import('./system-config.service');
+      const paymentConfig = await systemConfigService.getPaymentConfig();
+      const daysAdvance = paymentConfig.invoiceGenerationDaysAdvance || 15;
+      const defaultDueDays = paymentConfig.defaultDueDays || 30;
+
+      for (const installment of sortedInstallments) {
+        // Calcular data de vencimento
+        let dueDate: string;
+        
+        if (installment.vencimento) {
+          // Usar data calculada (evitar problemas de timezone)
+          const date = installment.vencimento;
+          const year = date.getFullYear();
+          const month = String(date.getMonth() + 1).padStart(2, '0');
+          const day = String(date.getDate()).padStart(2, '0');
+          dueDate = `${year}-${month}-${day}`;
+          console.log(`📅 Parcela ${installment.numero_parcela} (${installment.tipo}): Data específica ${dueDate}`);
+        } else {
+          // Fallback: usar padrão do sistema
+          const today = new Date();
+          const year = today.getFullYear();
+          const month = today.getMonth();
+          const day = today.getDate();
+          
+          const baseDate = new Date(year, month, day + defaultDueDays);
+          const yearStr = baseDate.getFullYear();
+          const monthStr = String(baseDate.getMonth() + 1).padStart(2, '0');
+          const dayStr = String(baseDate.getDate()).padStart(2, '0');
+          dueDate = `${yearStr}-${monthStr}-${dayStr}`;
+          
+          console.log(`📅 Parcela ${installment.numero_parcela} (${installment.tipo}): Data padrão ${dueDate} (${defaultDueDays} dias)`);
+        }
+
+        // Calcular next_invoice_date apenas para a última parcela essencial
+        let nextInvoiceDate: string | null = null;
+        
+        const isLastEssential = installment.numero_parcela === sortedInstallments[sortedInstallments.length - 1].numero_parcela;
+        
+        if (isLastEssential && installment.numero_parcela < totalInstallments) {
+          // Calcular vencimento da próxima parcela (1 mês após a última essencial)
+          const lastDueDate = new Date(dueDate);
+          const nextDueDate = new Date(lastDueDate);
+          nextDueDate.setMonth(nextDueDate.getMonth() + 1);
+          
+          // Calcular quando criar a próxima parcela (daysAdvance dias antes do vencimento)
+          const nextDate = new Date(nextDueDate);
+          nextDate.setDate(nextDate.getDate() - daysAdvance);
+          
+          const yearStr = nextDate.getFullYear();
+          const monthStr = String(nextDate.getMonth() + 1).padStart(2, '0');
+          const dayStr = String(nextDate.getDate()).padStart(2, '0');
+          nextInvoiceDate = `${yearStr}-${monthStr}-${dayStr}`;
+          
+          console.log(`📅 next_invoice_date da última essencial (parcela ${installment.numero_parcela}): ${nextInvoiceDate} (${daysAdvance} dias antes da próxima)`);
+        }
+
+        const invoice: InvoiceData = {
+          contract_id: contractId,
+          installment_number: installment.numero_parcela,
+          amount: installment.valor_parcela,
+          due_date: dueDate,
+          status: 'Pendente',
+          notes: `Parcela ${installment.numero_parcela} - ${installment.tipo}`,
+          next_invoice_date: nextInvoiceDate
+        };
+
+        invoices.push(invoice);
+        
+        console.log(`✅ Fatura essencial gerada: Parcela ${installment.numero_parcela} (${installment.tipo}) - R$ ${invoice.amount.toLocaleString('pt-BR')} - vence ${invoice.due_date}`);
+      }
+
+      console.log(`✅ Total de ${invoices.length} faturas essenciais geradas com sucesso`);
+      return invoices;
+    } catch (error) {
+      console.error('Erro ao gerar faturas essenciais:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Gerar primeira fatura com cálculo de next_invoice_date (método antigo - mantido para compatibilidade)
    */
   private async generateFirstInvoiceWithNextDate(
     contractId: number, 
