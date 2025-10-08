@@ -111,8 +111,46 @@ app.post('/api/webhooks/asaas', express.json({ limit: '10mb' }), async (req, res
     console.log('📅 Data Pagamento:', req.body.payment?.paymentDate);
     console.log('🏦 Status:', req.body.payment?.status);
     
-    // Aqui você pode adicionar a lógica de processamento
-    // Por enquanto, apenas logamos e retornamos sucesso
+    // Processar diferentes tipos de eventos
+    const eventType = req.body.event;
+    const payment = req.body.payment;
+    
+    switch (eventType) {
+      case 'PAYMENT_RECEIVED':
+        console.log('✅ Pagamento recebido - atualizar status para PAGO');
+        // TODO: Atualizar fatura no banco para status 'paid'
+        break;
+        
+      case 'PAYMENT_OVERDUE':
+        console.log('⚠️ Pagamento vencido - atualizar status para VENCIDO');
+        // TODO: Atualizar fatura no banco para status 'overdue'
+        break;
+        
+      case 'PAYMENT_DELETED':
+        console.log('🗑️ Pagamento deletado - atualizar status para CANCELADO');
+        // TODO: Atualizar fatura no banco para status 'cancelled'
+        break;
+        
+      case 'PAYMENT_REFUND_DENIED':
+        console.log('❌ Estorno negado - manter status atual');
+        // TODO: Log do evento, sem mudança de status
+        break;
+        
+      default:
+        console.log(`ℹ️ Evento não tratado: ${eventType}`);
+        break;
+    }
+    
+    // Log para auditoria
+    console.log('📊 Dados para processamento:', {
+      eventType,
+      paymentId: payment?.id,
+      invoiceNumber: payment?.invoiceNumber,
+      externalReference: payment?.externalReference,
+      status: payment?.status,
+      value: payment?.value,
+      paymentDate: payment?.paymentDate
+    });
     
     res.json({ 
       message: 'Webhook processed successfully',
