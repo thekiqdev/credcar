@@ -1,0 +1,56 @@
+# COMANDO RADICAL PARA ERRO 413 - EXECUTE NO SERVIDOR HOSTINGER
+# Este comando para tudo, faz backup, aplica configuração e reinicia
+
+sudo systemctl stop nginx && sudo pm2 stop all && sudo cp /etc/nginx/sites-available/default /etc/nginx/sites-available/default.backup.$(date +%Y%m%d_%H%M%S) && sudo tee /etc/nginx/sites-available/default > /dev/null << 'EOF'
+server {
+    listen 80;
+    server_name sistema.credcarmultimarcas.com.br;
+    
+    client_max_body_size 50M;
+    client_body_timeout 300s;
+    client_header_timeout 300s;
+    client_body_buffer_size 128k;
+    
+    location = /api/upload-document {
+        add_header X-Nginx-Location "upload-document-ACTIVE" always;
+        add_header X-Debug-Config "50MB-limit-applied" always;
+        client_max_body_size 50M;
+        client_body_timeout 300s;
+        proxy_request_buffering off;
+        proxy_buffering off;
+        proxy_pass http://localhost:3001;
+        proxy_connect_timeout 300s;
+        proxy_send_timeout 300s;
+        proxy_read_timeout 300s;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Original-URI $request_uri;
+    }
+    
+    location = /api/create-folder {
+        add_header X-Nginx-Location "create-folder-ACTIVE" always;
+        client_max_body_size 50M;
+        proxy_pass http://localhost:3001;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+    
+    location /api/ {
+        client_max_body_size 50M;
+        proxy_pass http://localhost:3001;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+    
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}
+EOF
+&& sudo nginx -t && sudo systemctl start nginx && sudo pm2 start upload-server.js --name "upload-server" && sleep 5 && curl -I https://sistema.credcarmultimarcas.com.br/api/upload-document && echo "✅ CORREÇÃO RADICAL APLICADA COM SUCESSO!"
