@@ -144,24 +144,21 @@ async function updateInvoiceStatus(paymentData, eventType) {
         newStatus = 'paid';
         updateData = {
           status: newStatus,
-          payment_date: paymentData.paymentDate || new Date().toISOString().split('T')[0],
-          updated_at: new Date().toISOString()
+          payment_date: paymentData.paymentDate || new Date().toISOString().split('T')[0]
         };
         break;
         
       case 'PAYMENT_OVERDUE':
         newStatus = 'overdue';
         updateData = {
-          status: newStatus,
-          updated_at: new Date().toISOString()
+          status: newStatus
         };
         break;
         
       case 'PAYMENT_DELETED':
         newStatus = 'cancelled';
         updateData = {
-          status: newStatus,
-          updated_at: new Date().toISOString()
+          status: newStatus
         };
         break;
         
