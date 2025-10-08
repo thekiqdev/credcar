@@ -53,7 +53,7 @@ const storage = multer.diskStorage({
 const upload = multer({ 
   storage: storage,
   limits: {
-    fileSize: 20 * 1024 * 1024 // 20MB
+    fileSize: 10 * 1024 * 1024 // 10MB
   },
   fileFilter: (req, file, cb) => {
     const allowedTypes = [
@@ -234,7 +234,7 @@ app.post('/api/upload-document', upload.single('file'), validateFile, (req, res)
     console.log('📤 Recebendo upload...');
     console.log('📋 Body:', req.body);
     console.log('📁 File:', req.file);
-
+    
     const { cpfCnpj, documentType } = req.body;
     
     console.log('🔍 Document Type:', documentType);

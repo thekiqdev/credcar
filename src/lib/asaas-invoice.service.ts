@@ -162,10 +162,31 @@ class AsaasInvoiceService {
         installment_number: localInvoice.installment_number
       });
 
-      // Garantir que a data está no formato correto
-      const dueDate = localInvoice.due_date ? 
-        new Date(localInvoice.due_date).toISOString().split('T')[0] : 
-        new Date().toISOString().split('T')[0];
+      // Usar a data de vencimento da fatura local (já calculada corretamente)
+      let dueDate: string;
+      
+      if (localInvoice.due_date) {
+        // A data já vem no formato YYYY-MM-DD do banco, não precisa converter
+        dueDate = localInvoice.due_date;
+        console.log(`📅 Data de vencimento da fatura local: ${localInvoice.due_date} (formato já correto)`);
+      } else {
+        console.error('❌ Fatura local sem data de vencimento!');
+        // Fallback: usar configuração padrão
+        const today = new Date();
+        today.setDate(today.getDate() + 30); // 30 dias padrão
+        dueDate = today.toISOString().split('T')[0];
+        console.log(`📅 Data de fallback calculada: ${dueDate}`);
+      }
+      
+      console.log(`📅 Data de vencimento para ASAAS: "${dueDate}" (formato YYYY-MM-DD)`);
+      console.log(`📅 Fatura local due_date: ${localInvoice.due_date}`);
+      
+      // Validar formato da data (deve ser YYYY-MM-DD)
+      const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+      if (!dateRegex.test(dueDate)) {
+        console.error(`❌ Formato de data inválido: ${dueDate}. Deve ser YYYY-MM-DD`);
+        throw new Error(`Formato de data inválido: ${dueDate}`);
+      }
 
       // Estrutura simplificada baseada na documentação ASAAS
       const asaasInvoiceData = {

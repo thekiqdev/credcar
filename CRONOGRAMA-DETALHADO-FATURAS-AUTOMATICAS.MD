@@ -399,13 +399,68 @@ Parcelas Restantes: 77 × R$ 350,00
 - ✅ **ID CORRETO:** 11534680 salvo na coluna invoice_code
 - ✅ **FILTRO CORRIGIDO:** Comparação de tipos (string vs number)
 - ✅ **SISTEMA COMPLETO:** Criação + Integração + Exibição
+- ✅ **DATA VENCIMENTO CORRIGIDA:** Usando configuração defaultDueDays
+- ✅ **STATUS CORRETO:** Calculado baseado na data real de vencimento
+
+### **🔧 CORREÇÃO DE DATA DE VENCIMENTO:**
+
+**Problema Identificado:**
+- Data de vencimento calculada incorretamente (usando meses em vez de dias)
+- ASAAS recebendo data do dia seguinte
+- Sistema local mostrando fatura como vencida
+
+**Correções Implementadas:**
+- ✅ **contract-analysis.service.ts:** Função `calculateDueDate()` agora usa `defaultDueDays` da configuração
+- ✅ **asaas-invoice.service.ts:** Usa data de vencimento correta da fatura local
+- ✅ **Cálculo correto:** Data base + (parcela - 1) × defaultDueDays
+- ✅ **Logs detalhados:** Para debug e verificação
+
+**Fórmula Corrigida:**
+```
+Primeira Parcela: Data Vencimento = Hoje + defaultDueDays
+Demais Parcelas: Seguem padrão do sistema (sem data específica)
+```
+
+**Lógica Implementada:**
+- ✅ **Apenas primeira parcela** tem data de vencimento calculada
+- ✅ **Demais parcelas** seguem padrão do sistema
+- ✅ **Formato ASAAS:** "YYYY-MM-DD" (ex: "2025-08-10")
+- ✅ **Validação:** Regex para garantir formato correto
+
+### **🔧 CORREÇÃO DE DIVERGÊNCIA DE DATAS:**
+
+**Problema Identificado:**
+- Sistema local mostrava dia 14, ASAAS mostrava dia 15
+- Divergência de 1 dia entre sistemas
+
+**Causa Raiz:**
+- Conversão desnecessária de data no `asaas-invoice.service.ts`
+- Problemas de timezone no cálculo de datas
+- Uso de `new Date().setDate()` que pode causar inconsistências
+
+**Correções Implementadas:**
+- ✅ **asaas-invoice.service.ts:** Usar data diretamente do banco (formato YYYY-MM-DD)
+- ✅ **contract-analysis.service.ts:** Usar data local sem timezone
+- ✅ **invoice-generation.service.ts:** Mesma lógica de data local
+- ✅ **Logs detalhados:** Para debug e verificação
+
+**Fórmula Corrigida:**
+```javascript
+// Evitar problemas de timezone
+const today = new Date();
+const year = today.getFullYear();
+const month = today.getMonth();
+const day = today.getDate();
+const baseDate = new Date(year, month, day + defaultDueDays);
+```
 
 ### **Próxima Ação:**
 ETAPA 4: Implementar webhooks ASAAS para atualização de status de pagamento
 
 ### **Branch Atual:**
 - ✅ **deploy-v1.3:** ETAPA 3 CONCLUÍDA - Sistema funcionando perfeitamente
-- 🚀 **deploy-v1.4:** ETAPA 4 PRONTA - Webhooks ASAAS
+- ✅ **deploy-v1.4:** ETAPA 3 FINALIZADA - Correção de data de vencimento
+- 🚀 **deploy-v1.6:** ETAPA 4 PRONTA - Webhooks ASAAS
 
 ---
 
@@ -441,7 +496,33 @@ Implementar webhooks ASAAS para receber notificações automáticas de mudanças
 - [ ] Documentar processo de webhook
 
 ### **Status da ETAPA 4:**
-- ⏳ **Pronta para iniciar** - Aguardando comando "OK, ETAPA 4"
+- 🚀 **EM ANDAMENTO** - Webhooks ASAAS implementados
+
+### **✅ TAREFAS CONCLUÍDAS DA ETAPA 4:**
+
+#### **4.1 Configuração de Webhooks ASAAS**
+- ✅ **Endpoint configurado:** `/api/webhooks/asaas` criado
+- ✅ **Validação de assinatura:** Implementada com HMAC SHA-256
+- ✅ **Eventos configurados:** PAYMENT_RECEIVED, PAYMENT_OVERDUE, PAYMENT_DELETED
+- ✅ **Interface de configuração:** WebhookTester adicionado ao AdminDashboard
+
+#### **4.2 Serviço de Processamento de Webhooks**
+- ✅ **asaasWebhookService:** Criado com processamento completo
+- ✅ **Lógica de atualização:** Status local atualizado automaticamente
+- ✅ **Logs detalhados:** Debug completo para troubleshooting
+- ✅ **Tratamento de erros:** Retry e fallback implementados
+
+#### **4.3 Atualização de Status de Faturas**
+- ✅ **Mapeamento de status:** ASAAS → Local (RECEIVED → Pago, OVERDUE → Vencido)
+- ✅ **Atualização de tabela:** invoices atualizada com novos status
+- ✅ **Histórico de mudanças:** webhook_logs para auditoria
+- ⏳ **Notificações para usuários:** Pendente
+
+#### **4.4 Testes e Validação**
+- ✅ **Componente de teste:** WebhookTester para simulação
+- ⏳ **Testes com dados reais:** Pendente
+- ⏳ **Validação de sincronização:** Pendente
+- ⏳ **Documentação:** Pendente
 
 ---
 

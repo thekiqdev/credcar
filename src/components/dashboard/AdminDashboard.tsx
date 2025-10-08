@@ -14,6 +14,8 @@ import {
 } from "../../lib/supabase";
 import { systemConfigService } from "../../lib/system-config.service";
 import { asaasService } from "../../lib/asaas.service";
+import { formatDateBR, isDateOverdue } from "../../lib/date-utils";
+import WebhookTester from "./WebhookTester";
 
 // Função para gerar UUID compatível com todos os ambientes
 function generateUUID(): string {
@@ -122,6 +124,7 @@ import {
   Calculator,
   User,
   Key,
+  Copy,
 } from "lucide-react";
 import ContractCreationFlow from "@/components/sales/ContractCreationFlow";
 import ContractTemplateManagement from "@/components/sales/ContractTemplateManagement";
@@ -483,7 +486,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     asaasApiKey: "",
     asaasEnvironment: "sandbox", // sandbox ou production
     webhookSecret: "",
-    webhookUrl: "",
     
     // Payment Methods
     enablePix: true,
@@ -502,6 +504,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   });
 
   const [isLoadingPaymentSettings, setIsLoadingPaymentSettings] = useState(false);
+  const [webhookUrlCopied, setWebhookUrlCopied] = useState(false);
   const [saveStatus, setSaveStatus] = useState<{
     status: 'success' | 'error' | null;
     message: string;
@@ -854,7 +857,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
         asaasApiKey: asaasConfig.apiKey || "",
         asaasEnvironment: asaasConfig.environment || "sandbox",
         webhookSecret: asaasConfig.webhookSecret || "",
-        webhookUrl: asaasConfig.webhookUrl || "",
         enablePix: paymentConfig.enablePix !== undefined ? paymentConfig.enablePix : true,
         enableBoleto: paymentConfig.enableBoleto !== undefined ? paymentConfig.enableBoleto : true,
         enableCreditCard: paymentConfig.enableCreditCard !== undefined ? paymentConfig.enableCreditCard : false,
@@ -875,7 +877,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
         asaasApiKey: "",
         asaasEnvironment: "sandbox",
         webhookSecret: "",
-        webhookUrl: "",
         enablePix: true,
         enableBoleto: true,
         enableCreditCard: false,
@@ -901,7 +902,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
         apiKey: paymentSettings.asaasApiKey,
         environment: paymentSettings.asaasEnvironment as 'sandbox' | 'production',
         webhookSecret: paymentSettings.webhookSecret,
-        webhookUrl: paymentSettings.webhookUrl,
+        webhookUrl: `${window.location.origin}/api/webhooks/asaas`, // URL fixa
         // Automatically set correct base URL based on environment
         baseUrl: paymentSettings.asaasEnvironment === 'sandbox' 
           ? 'https://sandbox.asaas.com/api/v3' 
@@ -1014,6 +1015,26 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   };
 
+  // Função para copiar URL do webhook
+  const copyWebhookUrl = async () => {
+    const webhookUrl = `${window.location.origin}/api/webhooks/asaas`;
+    try {
+      await navigator.clipboard.writeText(webhookUrl);
+      setWebhookUrlCopied(true);
+      setTimeout(() => setWebhookUrlCopied(false), 2000); // Reset após 2 segundos
+    } catch (error) {
+      console.error('Erro ao copiar URL:', error);
+      // Fallback para navegadores mais antigos
+      const textArea = document.createElement('textarea');
+      textArea.value = webhookUrl;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+      setWebhookUrlCopied(true);
+      setTimeout(() => setWebhookUrlCopied(false), 2000);
+    }
+  };
 
   const loadCommissionPlans = async () => {
     try {
@@ -4819,9 +4840,15 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                           }).format(invoice.amount)}
                                         </TableCell>
                                         <TableCell>
-                                          {new Date(
-                                            invoice.due_date,
-                                          ).toLocaleDateString("pt-BR")}
+                                          {(() => {
+                                            // Formatar data diretamente para evitar problemas de timezone
+                                            const dateStr = invoice.due_date;
+                                            if (dateStr && dateStr.includes('-')) {
+                                              const [year, month, day] = dateStr.split('-');
+                                              return `${day}/${month}/${year}`;
+                                            }
+                                            return dateStr || 'N/A';
+                                          })()}
                                         </TableCell>
                                         <TableCell>
                                           <Badge
@@ -4905,7 +4932,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   value={activeConfigTab}
                   onValueChange={setActiveConfigTab}
                 >
-                  <TabsList className="grid w-full grid-cols-6">
+                  <TabsList className="grid w-full grid-cols-7">
                     <TabsTrigger value="general-settings">Geral</TabsTrigger>
                     <TabsTrigger value="commission-tables">
                       Planos de Comissão
@@ -4916,6 +4943,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     <TabsTrigger value="payment-settings">
                       Pagamentos
                     </TabsTrigger>
+                    <TabsTrigger value="webhook-settings">Webhooks</TabsTrigger>
                     <TabsTrigger value="email-settings">Email</TabsTrigger>
                     <TabsTrigger value="system-settings">Sistema</TabsTrigger>
                   </TabsList>
@@ -5751,19 +5779,26 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
                           <div>
                             <Label htmlFor="webhook-url">URL do Webhook</Label>
-                            <Input
-                              id="webhook-url"
-                              value={paymentSettings.webhookUrl}
-                            onChange={(e) =>
-                              setPaymentSettings({
-                                ...paymentSettings,
-                                  webhookUrl: e.target.value,
-                                })
-                              }
-                              placeholder="https://seudominio.com/api/webhooks/asaas"
-                            />
+                            <div className="flex gap-2">
+                              <Input
+                                id="webhook-url"
+                                value={`${window.location.origin}/api/webhooks/asaas`}
+                                readOnly
+                                className="bg-gray-50"
+                              />
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={copyWebhookUrl}
+                                className="flex items-center gap-2"
+                              >
+                                <Copy className="h-4 w-4" />
+                                {webhookUrlCopied ? 'Copiado!' : 'Copiar'}
+                              </Button>
+                            </div>
                             <p className="text-sm text-muted-foreground mt-1">
-                              URL para receber notificações de pagamento
+                              URL para receber notificações de pagamento do ASAAS
                             </p>
                         </div>
 
@@ -6076,6 +6111,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         {isLoadingPaymentSettings ? 'Salvando...' : 'Salvar Configurações de Pagamento'}
                       </Button>
                     </div>
+                  </TabsContent>
+
+                  <TabsContent value="webhook-settings" className="space-y-4">
+                    <WebhookTester />
                   </TabsContent>
 
                   <TabsContent value="email-settings" className="space-y-4">

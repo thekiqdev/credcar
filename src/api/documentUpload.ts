@@ -90,7 +90,7 @@ const storage = multer.diskStorage({
 const upload = multer({ 
   storage,
   limits: {
-    fileSize: 20 * 1024 * 1024, // 20MB
+    fileSize: 10 * 1024 * 1024, // 10MB
   },
   fileFilter: (req, file, cb) => {
     // Tipos de arquivo permitidos
@@ -502,8 +502,8 @@ export const listRepresentativeDocuments = async (req: Request, res: Response) =
             uploadedAt: stats.birthtime,
             modifiedAt: stats.mtime
           });
-          });
-        }
+        });
+      }
     });
 
     res.json({

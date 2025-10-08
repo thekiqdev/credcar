@@ -233,24 +233,11 @@ class UploadService {
       console.log('📥 Resposta recebida:', {
         status: response.status,
         statusText: response.statusText,
-        ok: response.ok,
-        contentType: response.headers.get('content-type')
+        ok: response.ok
       });
 
-      // Verificar content-type antes de fazer parse
-      const contentType = response.headers.get('content-type');
-      let data;
-      
-      if (contentType && contentType.includes('application/json')) {
-        data = await response.json();
-        console.log('📋 Dados da resposta (JSON):', data);
-      } else {
-        const textResponse = await response.text();
-        console.log('📋 Resposta em texto:', textResponse);
-        
-        // Se não é JSON, tratar como erro
-        throw new Error(`Resposta não é JSON. Status: ${response.status}, Conteúdo: ${textResponse.substring(0, 200)}...`);
-      }
+      const data = await response.json();
+      console.log('📋 Dados da resposta:', data);
 
       if (data.success) {
         console.log('✅ Upload realizado com sucesso!');

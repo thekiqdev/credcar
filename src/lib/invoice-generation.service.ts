@@ -155,11 +155,58 @@ class InvoiceGenerationService {
     const invoices: InvoiceData[] = [];
 
     for (const installment of installments) {
+      // Calcular data de vencimento baseada na configuração
+      let dueDate: string;
+      
+      if (installment.vencimento) {
+        // Primeira parcela: usar data calculada (evitar problemas de timezone)
+        const date = installment.vencimento;
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        dueDate = `${year}-${month}-${day}`;
+        console.log(`📅 Parcela ${installment.numero_parcela}: Data específica ${dueDate}`);
+      } else {
+        // Demais parcelas: usar padrão do sistema (hoje + defaultDueDays)
+        try {
+          const { systemConfigService } = await import('./system-config.service');
+          const paymentConfig = await systemConfigService.getPaymentConfig();
+          const defaultDueDays = paymentConfig.defaultDueDays || 30;
+          
+          // Usar data local para evitar problemas de timezone
+          const today = new Date();
+          const year = today.getFullYear();
+          const month = today.getMonth();
+          const day = today.getDate();
+          
+          const baseDate = new Date(year, month, day + defaultDueDays);
+          const yearStr = baseDate.getFullYear();
+          const monthStr = String(baseDate.getMonth() + 1).padStart(2, '0');
+          const dayStr = String(baseDate.getDate()).padStart(2, '0');
+          dueDate = `${yearStr}-${monthStr}-${dayStr}`;
+          
+          console.log(`📅 Parcela ${installment.numero_parcela}: Data padrão ${dueDate} (${defaultDueDays} dias)`);
+        } catch (error) {
+          console.error('Erro ao calcular data padrão:', error);
+          // Fallback: usar 30 dias
+          const today = new Date();
+          const year = today.getFullYear();
+          const month = today.getMonth();
+          const day = today.getDate();
+          
+          const baseDate = new Date(year, month, day + 30);
+          const yearStr = baseDate.getFullYear();
+          const monthStr = String(baseDate.getMonth() + 1).padStart(2, '0');
+          const dayStr = String(baseDate.getDate()).padStart(2, '0');
+          dueDate = `${yearStr}-${monthStr}-${dayStr}`;
+        }
+      }
+
       const invoice: InvoiceData = {
         contract_id: contractId,
         installment_number: installment.numero_parcela,
         amount: installment.valor_parcela,
-        due_date: installment.vencimento.toISOString().split('T')[0], // YYYY-MM-DD
+        due_date: dueDate, // YYYY-MM-DD
         status: 'Pendente',
         notes: `Parcela ${installment.numero_parcela} - ${installment.tipo}`
       };

@@ -35,7 +35,7 @@ export interface CustomInstallment {
 export interface InstallmentData {
   numero_parcela: number;
   valor_parcela: number;
-  vencimento: Date;
+  vencimento: Date | null; // Apenas primeira parcela tem data específica
   tipo: 'primeira' | 'personalizada' | 'restante';
 }
 
@@ -186,7 +186,7 @@ class ContractAnalysisService {
   /**
    * Calcula parcelas baseado em uma faixa de crédito
    */
-  calculateInstallmentsFromCreditRange(creditRange: CreditRange): InstallmentData[] {
+  async calculateInstallmentsFromCreditRange(creditRange: CreditRange): Promise<InstallmentData[]> {
     const installments: InstallmentData[] = [];
     const customInstallments = creditRange.customInstallments || [];
 
@@ -194,19 +194,19 @@ class ContractAnalysisService {
     installments.push({
       numero_parcela: 1,
       valor_parcela: creditRange.valor_primeira_parcela,
-      vencimento: this.calculateDueDate(1),
+      vencimento: await this.calculateDueDate(1),
       tipo: 'primeira'
     });
 
     // Parcelas personalizadas
-    customInstallments.forEach(custom => {
+    for (const custom of customInstallments) {
       installments.push({
         numero_parcela: custom.numero_parcela,
         valor_parcela: custom.valor_parcela,
-        vencimento: this.calculateDueDate(custom.numero_parcela),
+        vencimento: await this.calculateDueDate(custom.numero_parcela),
         tipo: 'personalizada'
       });
-    });
+    }
 
     // Parcelas restantes
     const usedNumbers = new Set([
@@ -219,7 +219,7 @@ class ContractAnalysisService {
         installments.push({
           numero_parcela: i,
           valor_parcela: creditRange.valor_parcelas_restantes,
-          vencimento: this.calculateDueDate(i),
+          vencimento: await this.calculateDueDate(i),
           tipo: 'restante'
         });
       }
@@ -230,12 +230,53 @@ class ContractAnalysisService {
   }
 
   /**
-   * Calcula data de vencimento baseada no número da parcela
+   * Calcula data de vencimento apenas para a primeira parcela
+   * Demais parcelas seguem o padrão (sem data específica)
    */
-  private calculateDueDate(installmentNumber: number): Date {
-    const baseDate = new Date();
-    baseDate.setMonth(baseDate.getMonth() + installmentNumber);
-    return baseDate;
+  private async calculateDueDate(installmentNumber: number): Promise<Date | null> {
+    try {
+      // Apenas a primeira parcela tem data de vencimento calculada
+      if (installmentNumber !== 1) {
+        console.log(`📅 Parcela ${installmentNumber}: Sem data de vencimento específica (seguirá padrão)`);
+        return null; // Demais parcelas não têm data específica
+      }
+
+      // Buscar configuração de dias para vencimento
+      const { systemConfigService } = await import('./system-config.service');
+      const paymentConfig = await systemConfigService.getPaymentConfig();
+      const defaultDueDays = paymentConfig.defaultDueDays || 30;
+      
+      console.log(`📅 Calculando vencimento para PRIMEIRA parcela com ${defaultDueDays} dias`);
+      
+      // Calcular data de vencimento: hoje + defaultDueDays
+      // Usar data local para evitar problemas de timezone
+      const today = new Date();
+      const year = today.getFullYear();
+      const month = today.getMonth();
+      const day = today.getDate();
+      
+      // Criar nova data local sem timezone
+      const baseDate = new Date(year, month, day + defaultDueDays);
+      
+      console.log(`📅 Data atual: ${today.toISOString().split('T')[0]}`);
+      console.log(`📅 Data de vencimento calculada: ${baseDate.toISOString().split('T')[0]} (${defaultDueDays} dias a partir de hoje)`);
+      
+      return baseDate;
+    } catch (error) {
+      console.error('Erro ao calcular data de vencimento:', error);
+      // Fallback: usar 30 dias apenas para primeira parcela
+      if (installmentNumber === 1) {
+        const today = new Date();
+        const year = today.getFullYear();
+        const month = today.getMonth();
+        const day = today.getDate();
+        
+        const baseDate = new Date(year, month, day + 30);
+        console.log(`📅 Fallback: Data de vencimento calculada: ${baseDate.toISOString().split('T')[0]} (30 dias)`);
+        return baseDate;
+      }
+      return null;
+    }
   }
 
   /**
