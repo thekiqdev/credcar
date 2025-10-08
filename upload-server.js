@@ -15,18 +15,51 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = 3001;
 
-// Configuração do Supabase (usando mesma configuração do projeto)
-const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
-const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
+// Configuração do Supabase (usando configuração robusta)
+let supabaseUrl, supabaseAnonKey;
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.error('❌ Variáveis de ambiente do Supabase não encontradas!');
-  console.error('Configure VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY');
+// Tentar diferentes formas de obter as variáveis
+try {
+  // 1. Variáveis de ambiente do Node.js
+  supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
+  supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
+  
+  // 2. Se não encontrou, tentar ler do arquivo .env
+  if (!supabaseUrl || !supabaseAnonKey) {
+    try {
+      const envFile = fs.readFileSync(path.join(__dirname, '.env'), 'utf8');
+      const envLines = envFile.split('\n');
+      
+      for (const line of envLines) {
+        if (line.startsWith('VITE_SUPABASE_URL=')) {
+          supabaseUrl = line.split('=')[1]?.trim();
+        }
+        if (line.startsWith('VITE_SUPABASE_ANON_KEY=')) {
+          supabaseAnonKey = line.split('=')[1]?.trim();
+        }
+      }
+    } catch (envError) {
+      console.log('📋 Arquivo .env não encontrado, continuando...');
+    }
+  }
+  
+  // 3. Se ainda não encontrou, usar valores padrão (você deve substituir pelos seus)
+  if (!supabaseUrl || !supabaseAnonKey) {
+    console.warn('⚠️ Variáveis Supabase não encontradas nas variáveis de ambiente');
+    console.warn('⚠️ Usando configuração padrão - SUBSTITUA pelos seus valores!');
+    
+    // SUBSTITUA ESTES VALORES PELOS SEUS REAIS:
+    supabaseUrl = 'https://cgystsylstnkgfgbqoel.supabase.co'; // SUBSTITUA
+    supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'; // SUBSTITUA
+  }
+  
+} catch (error) {
+  console.error('❌ Erro ao configurar Supabase:', error);
   process.exit(1);
 }
 
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
-console.log('✅ Supabase conectado:', supabaseUrl);
+console.log('✅ Supabase conectado:', supabaseUrl.substring(0, 30) + '...');
 
 // Middleware
 app.use(cors());
