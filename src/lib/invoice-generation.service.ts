@@ -16,7 +16,7 @@ export interface InvoiceData {
   payment_date?: string;
   payment_method?: string;
   notes?: string;
-  status: 'pending' | 'paid' | 'overdue';
+  status: 'Pendente' | 'Pago' | 'Vencido';
   created_at?: string;
   updated_at?: string;
 }
@@ -207,7 +207,7 @@ class InvoiceGenerationService {
         installment_number: installment.numero_parcela,
         amount: installment.valor_parcela,
         due_date: dueDate, // YYYY-MM-DD
-        status: 'pending',
+        status: 'Pendente',
         notes: `Parcela ${installment.numero_parcela} - ${installment.tipo}`
       };
 
@@ -234,7 +234,7 @@ class InvoiceGenerationService {
         installment_number: 1,
         amount: firstInstallment.valor_parcela,
         due_date: firstInstallment.vencimento.toISOString().split('T')[0],
-        status: 'pending',
+        status: 'Pendente',
         notes: 'Primeira parcela'
       };
 
@@ -261,7 +261,7 @@ class InvoiceGenerationService {
           installment_number: installment.numero_parcela,
           amount: installment.valor_parcela,
           due_date: installment.vencimento.toISOString().split('T')[0],
-          status: 'pending',
+          status: 'Pendente',
           notes: `Parcela personalizada ${installment.numero_parcela}`
         };
         
@@ -291,7 +291,7 @@ class InvoiceGenerationService {
           installment_number: installment.numero_parcela,
           amount: installment.valor_parcela,
           due_date: installment.vencimento.toISOString().split('T')[0],
-          status: 'pending',
+          status: 'Pendente',
           notes: `Parcela restante ${installment.numero_parcela}`
         };
         
@@ -347,7 +347,7 @@ class InvoiceGenerationService {
    */
   async updateInvoiceStatus(
     invoiceId: string, 
-    status: 'pending' | 'paid' | 'overdue',
+    status: 'Pendente' | 'Pago' | 'Vencido',
     paymentDate?: string,
     paymentMethod?: string
   ): Promise<boolean> {
@@ -357,7 +357,7 @@ class InvoiceGenerationService {
         updated_at: new Date().toISOString()
       };
 
-      if (status === 'paid' && paymentDate) {
+      if (status === 'Pago' && paymentDate) {
         updateData.payment_date = paymentDate;
         updateData.payment_method = paymentMethod;
       }

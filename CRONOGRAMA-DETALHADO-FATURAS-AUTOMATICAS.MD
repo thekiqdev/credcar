@@ -455,13 +455,12 @@ const baseDate = new Date(year, month, day + defaultDueDays);
 ```
 
 ### **Próxima Ação:**
-ETAPA 5: Integrar webhook ASAAS com banco de dados para atualização automática de status
+ETAPA 4: Implementar webhooks ASAAS para atualização de status de pagamento
 
 ### **Branch Atual:**
 - ✅ **deploy-v1.3:** ETAPA 3 CONCLUÍDA - Sistema funcionando perfeitamente
 - ✅ **deploy-v1.4:** ETAPA 3 FINALIZADA - Correção de data de vencimento
-- ✅ **deploy-v1.6:** ETAPA 4 CONCLUÍDA - Webhooks ASAAS funcionando
-- 🚀 **deploy-v1.7:** ETAPA 5 EM ANDAMENTO - Integração webhook com banco
+- 🚀 **deploy-v1.6:** ETAPA 4 PRONTA - Webhooks ASAAS
 
 ---
 
@@ -497,10 +496,7 @@ Implementar webhooks ASAAS para receber notificações automáticas de mudanças
 - [ ] Documentar processo de webhook
 
 ### **Status da ETAPA 4:**
-- ✅ **CONCLUÍDA** - Webhooks ASAAS funcionando perfeitamente
-
-### **Status da ETAPA 5:**
-- 🚀 **EM ANDAMENTO** - Integração webhook com banco de dados
+- 🚀 **EM ANDAMENTO** - Webhooks ASAAS implementados
 
 ### **✅ TAREFAS CONCLUÍDAS DA ETAPA 4:**
 
@@ -524,64 +520,9 @@ Implementar webhooks ASAAS para receber notificações automáticas de mudanças
 
 #### **4.4 Testes e Validação**
 - ✅ **Componente de teste:** WebhookTester para simulação
-- ✅ **Testes com dados reais:** Webhook funcionando com ASAAS real
-- ✅ **Validação de sincronização:** Eventos sendo recebidos (200 OK)
-- ✅ **Logs detalhados:** Headers e dados capturados perfeitamente
+- ⏳ **Testes com dados reais:** Pendente
+- ⏳ **Validação de sincronização:** Pendente
 - ⏳ **Documentação:** Pendente
-
-### **✅ TAREFAS CONCLUÍDAS DA ETAPA 5:**
-
-#### **5.1 Integração com Banco de Dados**
-- ⏳ **Conectar webhook ao Supabase:** Pendente
-- ⏳ **Atualizar status de faturas:** Pendente
-- ⏳ **Implementar mapeamento de eventos:** Pendente
-- ⏳ **Adicionar logs de auditoria:** Pendente
-
-#### **5.2 Processamento de Eventos**
-- ✅ **Lógica de eventos:** Switch case implementado
-- ⏳ **PAYMENT_RECEIVED → 'paid':** Pendente
-- ⏳ **PAYMENT_OVERDUE → 'overdue':** Pendente
-- ⏳ **PAYMENT_DELETED → 'cancelled':** Pendente
-
-#### **5.3 Validação e Testes**
-- ⏳ **Testar atualização de status:** Pendente
-- ⏳ **Validar sincronização:** Pendente
-- ⏳ **Testar cenários de erro:** Pendente
-
----
-
-## 🚀 ETAPA 5: INTEGRAÇÃO WEBHOOK COM BANCO DE DADOS
-
-### **Objetivo:**
-Integrar o webhook ASAAS com o banco de dados Supabase para atualizar automaticamente o status das faturas quando eventos de pagamento ocorrerem.
-
-### **Tarefas da ETAPA 5:**
-
-#### **5.1 Integração com Supabase**
-- [ ] Conectar upload-server ao Supabase
-- [ ] Implementar função de atualização de status de faturas
-- [ ] Mapear eventos ASAAS para status locais
-- [ ] Adicionar logs de auditoria no banco
-
-#### **5.2 Processamento de Eventos**
-- [ ] PAYMENT_RECEIVED → Status 'paid' + payment_date
-- [ ] PAYMENT_OVERDUE → Status 'overdue'
-- [ ] PAYMENT_DELETED → Status 'cancelled'
-- [ ] PAYMENT_REFUND_DENIED → Log apenas
-
-#### **5.3 Validação e Testes**
-- [ ] Testar atualização de status com webhook real
-- [ ] Validar sincronização entre ASAAS e banco local
-- [ ] Testar cenários de erro e recuperação
-- [ ] Verificar logs de auditoria
-
-#### **5.4 Configuração Final**
-- [ ] Configurar webhook no ASAAS com URL correta
-- [ ] Documentar processo completo
-- [ ] Treinar equipe no uso do sistema
-
-### **Status da ETAPA 5:**
-- 🚀 **EM ANDAMENTO** - Integração webhook com banco de dados
 
 ---
 
