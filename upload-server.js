@@ -76,11 +76,46 @@ const upload = multer({
 
 // Rota de health check
 app.get('/api/health', (req, res) => {
-  res.json({ 
-    status: 'online', 
+  res.json({
+    status: 'online',
     timestamp: new Date().toISOString(),
-    port: PORT 
+    port: PORT
   });
+});
+
+// Rota de webhook ASAAS
+app.post('/api/webhooks/asaas', express.json({ limit: '10mb' }), async (req, res) => {
+  try {
+    console.log('🚀 Webhook ASAAS recebido:', req.body);
+    
+    const signature = req.headers['asaas-access-token'];
+    if (!signature) {
+      console.error('❌ Webhook sem assinatura!');
+      return res.status(401).json({ message: 'Unauthorized: Missing signature' });
+    }
+
+    console.log('📋 Processando webhook ASAAS...');
+    console.log('🔍 Evento:', req.body.event);
+    console.log('💳 Pagamento:', req.body.payment);
+    console.log('🔐 Assinatura:', signature.substring(0, 10) + '...');
+    
+    // Aqui você pode adicionar a lógica de processamento
+    // Por enquanto, apenas logamos e retornamos sucesso
+    
+    res.json({ 
+      message: 'Webhook processed successfully',
+      timestamp: new Date().toISOString(),
+      event: req.body.event,
+      paymentId: req.body.payment?.id || 'N/A'
+    });
+    
+  } catch (error) {
+    console.error('❌ Erro no webhook ASAAS:', error);
+    res.status(500).json({
+      message: 'Internal Server Error',
+      error: error.message
+    });
+  }
 });
 
 // ASAAS Proxy Route (sem CORS)
@@ -551,4 +586,5 @@ app.listen(PORT, () => {
   console.log(`⬇️ Download: http://localhost:${PORT}/api/download-file`);
   console.log(`🗑️ Delete file: http://localhost:${PORT}/api/delete-file`);
   console.log(`🗂️ Delete folder: http://localhost:${PORT}/api/delete-representative-folder`);
+  console.log(`🔔 ASAAS Webhook: http://localhost:${PORT}/api/webhooks/asaas`);
 });
