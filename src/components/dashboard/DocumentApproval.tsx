@@ -232,7 +232,7 @@ const DocumentApproval: React.FC<DocumentApprovalProps> = ({
       const fileName = fileUrl.split('/').pop() || `${documentType}.pdf`;
       
       // Fazer download do arquivo
-      const response = await fetch(`http://localhost:3001/api/download-file?path=${encodeURIComponent(fileUrl)}`);
+      const response = await fetch(`https://sistema.credcarmultimarcas.com.br/api/download-file?path=${encodeURIComponent(fileUrl)}`);
       
       if (!response.ok) {
         throw new Error('Erro ao baixar arquivo');
