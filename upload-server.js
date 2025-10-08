@@ -7,12 +7,26 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fetch from 'node-fetch';
+import { createClient } from '@supabase/supabase-js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = 3001;
+
+// Configuração do Supabase
+const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
+const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
+
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.error('❌ Variáveis de ambiente do Supabase não encontradas!');
+  console.error('Configure VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY');
+  process.exit(1);
+}
+
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
+console.log('✅ Supabase conectado:', supabaseUrl);
 
 // Middleware
 app.use(cors());
@@ -83,6 +97,132 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// Função para atualizar status de fatura no banco
+async function updateInvoiceStatus(paymentData, eventType) {
+  try {
+    console.log('🔄 Atualizando status da fatura...');
+    
+    // Mapear eventos ASAAS para status locais
+    let newStatus;
+    let updateData = {};
+    
+    switch (eventType) {
+      case 'PAYMENT_RECEIVED':
+        newStatus = 'paid';
+        updateData = {
+          status: newStatus,
+          payment_date: paymentData.paymentDate || new Date().toISOString().split('T')[0],
+          updated_at: new Date().toISOString()
+        };
+        break;
+        
+      case 'PAYMENT_OVERDUE':
+        newStatus = 'overdue';
+        updateData = {
+          status: newStatus,
+          updated_at: new Date().toISOString()
+        };
+        break;
+        
+      case 'PAYMENT_DELETED':
+        newStatus = 'cancelled';
+        updateData = {
+          status: newStatus,
+          updated_at: new Date().toISOString()
+        };
+        break;
+        
+      default:
+        console.log(`ℹ️ Evento ${eventType} não requer atualização de status`);
+        return { success: true, message: 'Evento não requer atualização' };
+    }
+    
+    // Buscar fatura pelo invoice_code (ID do ASAAS)
+    const invoiceCode = paymentData.invoiceNumber || paymentData.id;
+    console.log('🔍 Buscando fatura com invoice_code:', invoiceCode);
+    
+    const { data: invoice, error: fetchError } = await supabase
+      .from('invoices')
+      .select('*')
+      .eq('invoice_code', invoiceCode)
+      .single();
+    
+    if (fetchError) {
+      console.error('❌ Erro ao buscar fatura:', fetchError);
+      return { success: false, error: fetchError.message };
+    }
+    
+    if (!invoice) {
+      console.warn('⚠️ Fatura não encontrada com invoice_code:', invoiceCode);
+      return { success: false, error: 'Fatura não encontrada' };
+    }
+    
+    console.log('✅ Fatura encontrada:', invoice.id);
+    
+    // Atualizar fatura
+    const { data: updatedInvoice, error: updateError } = await supabase
+      .from('invoices')
+      .update(updateData)
+      .eq('id', invoice.id)
+      .select()
+      .single();
+    
+    if (updateError) {
+      console.error('❌ Erro ao atualizar fatura:', updateError);
+      return { success: false, error: updateError.message };
+    }
+    
+    console.log('✅ Fatura atualizada com sucesso:', {
+      id: updatedInvoice.id,
+      status: updatedInvoice.status,
+      payment_date: updatedInvoice.payment_date
+    });
+    
+    // Log de auditoria
+    await logWebhookEvent(eventType, paymentData, invoice.id, newStatus);
+    
+    return { 
+      success: true, 
+      invoice: updatedInvoice,
+      message: `Status atualizado para ${newStatus}` 
+    };
+    
+  } catch (error) {
+    console.error('❌ Erro na função updateInvoiceStatus:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+// Função para log de auditoria
+async function logWebhookEvent(eventType, paymentData, invoiceId, newStatus) {
+  try {
+    const logData = {
+      event_type: eventType,
+      payment_id: paymentData.id,
+      invoice_id: invoiceId,
+      invoice_code: paymentData.invoiceNumber || paymentData.id,
+      new_status: newStatus,
+      payment_value: paymentData.value,
+      payment_date: paymentData.paymentDate,
+      processed_at: new Date().toISOString(),
+      raw_data: paymentData
+    };
+    
+    const { error } = await supabase
+      .from('webhook_logs')
+      .insert(logData);
+    
+    if (error) {
+      console.error('❌ Erro ao salvar log de auditoria:', error);
+    } else {
+      console.log('📝 Log de auditoria salvo:', logData.event_type);
+    }
+    
+  } catch (error) {
+    console.error('❌ Erro na função logWebhookEvent:', error);
+  }
+}
+
 // Rota de webhook ASAAS
 app.post('/api/webhooks/asaas', express.json({ limit: '10mb' }), async (req, res) => {
   try {
@@ -115,33 +255,6 @@ app.post('/api/webhooks/asaas', express.json({ limit: '10mb' }), async (req, res
     const eventType = req.body.event;
     const payment = req.body.payment;
     
-    switch (eventType) {
-      case 'PAYMENT_RECEIVED':
-        console.log('✅ Pagamento recebido - atualizar status para PAGO');
-        // TODO: Atualizar fatura no banco para status 'paid'
-        break;
-        
-      case 'PAYMENT_OVERDUE':
-        console.log('⚠️ Pagamento vencido - atualizar status para VENCIDO');
-        // TODO: Atualizar fatura no banco para status 'overdue'
-        break;
-        
-      case 'PAYMENT_DELETED':
-        console.log('🗑️ Pagamento deletado - atualizar status para CANCELADO');
-        // TODO: Atualizar fatura no banco para status 'cancelled'
-        break;
-        
-      case 'PAYMENT_REFUND_DENIED':
-        console.log('❌ Estorno negado - manter status atual');
-        // TODO: Log do evento, sem mudança de status
-        break;
-        
-      default:
-        console.log(`ℹ️ Evento não tratado: ${eventType}`);
-        break;
-    }
-    
-    // Log para auditoria
     console.log('📊 Dados para processamento:', {
       eventType,
       paymentId: payment?.id,
@@ -152,12 +265,50 @@ app.post('/api/webhooks/asaas', express.json({ limit: '10mb' }), async (req, res
       paymentDate: payment?.paymentDate
     });
     
+    // Processar evento e atualizar banco de dados
+    let updateResult = null;
+    
+    switch (eventType) {
+      case 'PAYMENT_RECEIVED':
+        console.log('✅ Pagamento recebido - atualizando status para PAGO');
+        updateResult = await updateInvoiceStatus(payment, eventType);
+        break;
+        
+      case 'PAYMENT_OVERDUE':
+        console.log('⚠️ Pagamento vencido - atualizando status para VENCIDO');
+        updateResult = await updateInvoiceStatus(payment, eventType);
+        break;
+        
+      case 'PAYMENT_DELETED':
+        console.log('🗑️ Pagamento deletado - atualizando status para CANCELADO');
+        updateResult = await updateInvoiceStatus(payment, eventType);
+        break;
+        
+      case 'PAYMENT_REFUND_DENIED':
+        console.log('❌ Estorno negado - apenas log do evento');
+        await logWebhookEvent(eventType, payment, null, null);
+        updateResult = { success: true, message: 'Evento logado sem mudança de status' };
+        break;
+        
+      default:
+        console.log(`ℹ️ Evento não tratado: ${eventType}`);
+        updateResult = { success: true, message: 'Evento não requer processamento' };
+        break;
+    }
+    
+    // Log do resultado
+    if (updateResult) {
+      console.log('📋 Resultado do processamento:', updateResult);
+    }
+    
     res.json({ 
       message: 'Webhook processed successfully',
       timestamp: new Date().toISOString(),
       event: req.body.event,
       paymentId: req.body.payment?.id || 'N/A',
-      status: req.body.payment?.status || 'N/A'
+      status: req.body.payment?.status || 'N/A',
+      processingResult: updateResult,
+      success: updateResult?.success !== false
     });
     
   } catch (error) {
