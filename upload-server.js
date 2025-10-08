@@ -807,6 +807,103 @@ app.delete('/api/delete-representative-folder', (req, res) => {
   }
 });
 
+// Endpoint para execução do cronjob de geração automática de faturas
+app.get('/api/cron/generate-invoices', async (req, res) => {
+  try {
+    console.log('🚀 [CRON API] Iniciando execução do cronjob de geração de faturas');
+    
+    // Verificar token de autorização
+    const authToken = req.headers.authorization;
+    const expectedToken = process.env.CRON_AUTH_TOKEN || 'credcar-cron-token-2025';
+    
+    if (!authToken || !authToken.startsWith('Bearer ')) {
+      console.error('❌ [CRON API] Token de autorização não fornecido');
+      return res.status(401).json({ 
+        error: 'Token de autorização obrigatório',
+        message: 'Use: Authorization: Bearer SEU_TOKEN'
+      });
+    }
+    
+    const providedToken = authToken.replace('Bearer ', '');
+    if (providedToken !== expectedToken) {
+      console.error('❌ [CRON API] Token de autorização inválido');
+      return res.status(401).json({ 
+        error: 'Token de autorização inválido',
+        message: 'Token fornecido não confere'
+      });
+    }
+    
+    console.log('✅ [CRON API] Token de autorização válido');
+    
+    // Importar e executar o serviço de cron
+    const { invoiceCronService } = await import('./src/lib/invoice-cron.service.js');
+    
+    const result = await invoiceCronService.processScheduledInvoices();
+    
+    console.log(`🏁 [CRON API] Execução concluída: ${result.created} criadas, ${result.failed} falharam`);
+    
+    res.json({
+      success: true,
+      message: 'Cronjob executado com sucesso',
+      result: {
+        processed: result.processed,
+        created: result.created,
+        failed: result.failed,
+        errors: result.errors,
+        details: result.details
+      },
+      timestamp: new Date().toISOString()
+    });
+    
+  } catch (error) {
+    console.error('❌ [CRON API] Erro na execução do cronjob:', error);
+    
+    res.status(500).json({
+      success: false,
+      error: 'Erro interno na execução do cronjob',
+      message: error instanceof Error ? error.message : 'Erro desconhecido',
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// Endpoint para teste manual do cronjob (sem autenticação para desenvolvimento)
+app.get('/api/cron/test-generate-invoices', async (req, res) => {
+  try {
+    console.log('🧪 [CRON TEST] Executando teste manual do cronjob');
+    
+    // Importar e executar o serviço de cron
+    const { invoiceCronService } = await import('./src/lib/invoice-cron.service.js');
+    
+    const result = await invoiceCronService.runManualTest();
+    
+    console.log(`🏁 [CRON TEST] Teste concluído: ${result.created} criadas, ${result.failed} falharam`);
+    
+    res.json({
+      success: true,
+      message: 'Teste do cronjob executado com sucesso',
+      result: {
+        processed: result.processed,
+        created: result.created,
+        failed: result.failed,
+        errors: result.errors,
+        details: result.details
+      },
+      timestamp: new Date().toISOString()
+    });
+    
+  } catch (error) {
+    console.error('❌ [CRON TEST] Erro no teste do cronjob:', error);
+    
+    res.status(500).json({
+      success: false,
+      error: 'Erro interno no teste do cronjob',
+      message: error instanceof Error ? error.message : 'Erro desconhecido',
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
 // Iniciar servidor
 app.listen(PORT, () => {
   console.log(`🚀 Servidor de upload rodando na porta ${PORT}`);
@@ -819,4 +916,6 @@ app.listen(PORT, () => {
   console.log(`🗑️ Delete file: http://localhost:${PORT}/api/delete-file`);
   console.log(`🗂️ Delete folder: http://localhost:${PORT}/api/delete-representative-folder`);
   console.log(`🔔 ASAAS Webhook: http://localhost:${PORT}/api/webhooks/asaas`);
+  console.log(`⏰ Cron Generate Invoices: http://localhost:${PORT}/api/cron/generate-invoices`);
+  console.log(`🧪 Cron Test: http://localhost:${PORT}/api/cron/test-generate-invoices`);
 });

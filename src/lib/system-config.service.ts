@@ -33,6 +33,7 @@ export interface PaymentConfig {
   defaultDueDays: number;
   maxInstallments: number;
   autoGenerateBoletos: boolean;
+  invoiceGenerationDaysAdvance: number; // Padrão: 15 dias
 }
 
 export interface NotificationConfig {
@@ -272,6 +273,7 @@ class SystemConfigService {
         defaultDueDays: parseInt(configs.find(c => c.key === 'payment.default.due.days')?.value || '30'),
         maxInstallments: parseInt(configs.find(c => c.key === 'payment.max.installments')?.value || '12'),
         autoGenerateBoletos: configs.find(c => c.key === 'payment.auto.generate.boletos')?.value === 'true',
+        invoiceGenerationDaysAdvance: parseInt(configs.find(c => c.key === 'payment.invoice.generation.days.advance')?.value || '15'),
       };
     } catch (error) {
       console.error('Error getting Payment config:', error);
@@ -283,6 +285,7 @@ class SystemConfigService {
         defaultDueDays: 30,
         maxInstallments: 12,
         autoGenerateBoletos: true,
+        invoiceGenerationDaysAdvance: 15,
       };
     }
   }
@@ -314,6 +317,9 @@ class SystemConfigService {
       }
       if (config.autoGenerateBoletos !== undefined) {
         promises.push(this.setConfig('payment.auto.generate.boletos', config.autoGenerateBoletos.toString(), 'Geração automática de boletos', 'payment'));
+      }
+      if (config.invoiceGenerationDaysAdvance !== undefined) {
+        promises.push(this.setConfig('payment.invoice.generation.days.advance', config.invoiceGenerationDaysAdvance.toString(), 'Dias de antecedência para geração automática de faturas', 'payment'));
       }
 
       const results = await Promise.all(promises);

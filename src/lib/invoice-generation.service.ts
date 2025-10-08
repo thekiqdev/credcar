@@ -19,6 +19,7 @@ export interface InvoiceData {
   status: 'Pendente' | 'Pago' | 'Vencido';
   created_at?: string;
   updated_at?: string;
+  next_invoice_date?: string; // Nova coluna para controle automático
 }
 
 export interface InvoiceGenerationResult {
@@ -74,14 +75,21 @@ class InvoiceGenerationService {
         };
       }
 
-      // 3. Criar apenas faturas essenciais (1ª parcela + personalizadas)
-      const essentialInstallments = validation.installments.filter(inst => 
-        inst.tipo === 'primeira' || inst.tipo === 'personalizada'
-      );
+      // 3. Criar APENAS a primeira parcela (estratégia inteligente)
+      const firstInstallment = validation.installments.find(inst => inst.numero_parcela === 1);
       
-      console.log(`📋 Criando ${essentialInstallments.length} faturas essenciais de ${validation.installments.length} parcelas totais`);
+      if (!firstInstallment) {
+        return {
+          success: false,
+          invoicesCreated: 0,
+          contractId,
+          errors: ['Primeira parcela não encontrada']
+        };
+      }
       
-      const invoices = await this.generateInvoicesFromInstallments(contractId, essentialInstallments);
+      console.log(`📋 Criando apenas 1ª parcela de ${validation.installments.length} parcelas totais`);
+      
+      const invoices = await this.generateFirstInvoiceWithNextDate(contractId, firstInstallment, validation.installments.length);
       
       // 4. Inserir faturas no banco
       const { data: createdInvoices, error: insertError } = await supabase
@@ -146,7 +154,173 @@ class InvoiceGenerationService {
   }
 
   /**
-   * Gerar dados das faturas baseado nas parcelas
+   * Gerar primeira fatura com cálculo de next_invoice_date
+   */
+  private async generateFirstInvoiceWithNextDate(
+    contractId: number, 
+    firstInstallment: InstallmentData,
+    totalInstallments: number
+  ): Promise<InvoiceData[]> {
+    try {
+      // Calcular data de vencimento da primeira parcela
+      let dueDate: string;
+      
+      if (firstInstallment.vencimento) {
+        // Primeira parcela: usar data calculada (evitar problemas de timezone)
+        const date = firstInstallment.vencimento;
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        dueDate = `${year}-${month}-${day}`;
+        console.log(`📅 1ª parcela: Data específica ${dueDate}`);
+      } else {
+        // Fallback: usar padrão do sistema
+        const { systemConfigService } = await import('./system-config.service');
+        const paymentConfig = await systemConfigService.getPaymentConfig();
+        const defaultDueDays = paymentConfig.defaultDueDays || 30;
+        
+        const today = new Date();
+        const year = today.getFullYear();
+        const month = today.getMonth();
+        const day = today.getDate();
+        
+        const baseDate = new Date(year, month, day + defaultDueDays);
+        const yearStr = baseDate.getFullYear();
+        const monthStr = String(baseDate.getMonth() + 1).padStart(2, '0');
+        const dayStr = String(baseDate.getDate()).padStart(2, '0');
+        dueDate = `${yearStr}-${monthStr}-${dayStr}`;
+        
+        console.log(`📅 1ª parcela: Data padrão ${dueDate} (${defaultDueDays} dias)`);
+      }
+
+      // Calcular next_invoice_date (quando criar a 2ª parcela)
+      let nextInvoiceDate: string | null = null;
+      
+      if (totalInstallments > 1) {
+        // Calcular vencimento da 2ª parcela (1 mês após a 1ª)
+        const firstDueDate = new Date(dueDate);
+        const secondDueDate = new Date(firstDueDate);
+        secondDueDate.setMonth(secondDueDate.getMonth() + 1);
+        
+        // Calcular quando criar a 2ª parcela (15 dias antes do vencimento)
+        const { systemConfigService } = await import('./system-config.service');
+        const paymentConfig = await systemConfigService.getPaymentConfig();
+        const daysAdvance = paymentConfig.invoiceGenerationDaysAdvance || 15;
+        
+        const nextDate = new Date(secondDueDate);
+        nextDate.setDate(nextDate.getDate() - daysAdvance);
+        
+        const yearStr = nextDate.getFullYear();
+        const monthStr = String(nextDate.getMonth() + 1).padStart(2, '0');
+        const dayStr = String(nextDate.getDate()).padStart(2, '0');
+        nextInvoiceDate = `${yearStr}-${monthStr}-${dayStr}`;
+        
+        console.log(`📅 next_invoice_date calculado: ${nextInvoiceDate} (${daysAdvance} dias antes do vencimento da 2ª parcela)`);
+      }
+
+      const invoice: InvoiceData = {
+        contract_id: contractId,
+        installment_number: 1,
+        amount: firstInstallment.valor_parcela,
+        due_date: dueDate,
+        status: 'Pendente',
+        notes: `Parcela 1 - primeira`,
+        next_invoice_date: nextInvoiceDate
+      };
+
+      console.log(`✅ 1ª fatura gerada: R$ ${invoice.amount.toLocaleString('pt-BR')} - vence ${invoice.due_date} - próxima criação ${invoice.next_invoice_date || 'N/A'}`);
+
+      return [invoice];
+    } catch (error) {
+      console.error('Erro ao gerar primeira fatura:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Criar próxima fatura automaticamente (usado pelo cronjob)
+   */
+  async createNextInvoice(contractId: number, currentInstallment: number): Promise<InvoiceData | null> {
+    try {
+      console.log(`🚀 Criando próxima fatura para contrato ${contractId}, parcela ${currentInstallment + 1}`);
+
+      // 1. Buscar dados do contrato
+      const validation = await contractAnalysisService.validateContractForInvoicing(contractId);
+      
+      if (!validation.isValid) {
+        console.error(`❌ Contrato ${contractId} inválido: ${validation.errors.join(', ')}`);
+        return null;
+      }
+
+      // 2. Calcular próxima parcela
+      const nextInstallmentNumber = currentInstallment + 1;
+      const nextInstallment = validation.installments.find(inst => inst.numero_parcela === nextInstallmentNumber);
+      
+      if (!nextInstallment) {
+        console.log(`✅ Contrato ${contractId} - todas as parcelas já foram criadas`);
+        return null;
+      }
+
+      // 3. Calcular data de vencimento da próxima parcela
+      const { systemConfigService } = await import('./system-config.service');
+      const paymentConfig = await systemConfigService.getPaymentConfig();
+      const defaultDueDays = paymentConfig.defaultDueDays || 30;
+      
+      // Calcular baseado na parcela anterior + 1 mês
+      const today = new Date();
+      const year = today.getFullYear();
+      const month = today.getMonth();
+      const day = today.getDate();
+      
+      // Calcular vencimento: hoje + (parcela_atual * 30 dias)
+      const baseDate = new Date(year, month, day + (nextInstallmentNumber * defaultDueDays));
+      const yearStr = baseDate.getFullYear();
+      const monthStr = String(baseDate.getMonth() + 1).padStart(2, '0');
+      const dayStr = String(baseDate.getDate()).padStart(2, '0');
+      const dueDate = `${yearStr}-${monthStr}-${dayStr}`;
+
+      // 4. Calcular next_invoice_date da parcela seguinte
+      let nextInvoiceDate: string | null = null;
+      
+      if (nextInstallmentNumber < validation.installments.length) {
+        // Calcular vencimento da próxima parcela (1 mês após esta)
+        const currentDueDate = new Date(dueDate);
+        const nextDueDate = new Date(currentDueDate);
+        nextDueDate.setMonth(nextDueDate.getMonth() + 1);
+        
+        // Calcular quando criar a próxima parcela (15 dias antes do vencimento)
+        const daysAdvance = paymentConfig.invoiceGenerationDaysAdvance || 15;
+        
+        const nextDate = new Date(nextDueDate);
+        nextDate.setDate(nextDate.getDate() - daysAdvance);
+        
+        const nextYearStr = nextDate.getFullYear();
+        const nextMonthStr = String(nextDate.getMonth() + 1).padStart(2, '0');
+        const nextDayStr = String(nextDate.getDate()).padStart(2, '0');
+        nextInvoiceDate = `${nextYearStr}-${nextMonthStr}-${nextDayStr}`;
+      }
+
+      const invoice: InvoiceData = {
+        contract_id: contractId,
+        installment_number: nextInstallmentNumber,
+        amount: nextInstallment.valor_parcela,
+        due_date: dueDate,
+        status: 'Pendente',
+        notes: `Parcela ${nextInstallmentNumber} - automática`,
+        next_invoice_date: nextInvoiceDate
+      };
+
+      console.log(`✅ Próxima fatura gerada: Parcela ${nextInstallmentNumber} - R$ ${invoice.amount.toLocaleString('pt-BR')} - vence ${invoice.due_date} - próxima criação ${invoice.next_invoice_date || 'N/A'}`);
+
+      return invoice;
+    } catch (error) {
+      console.error('Erro ao criar próxima fatura:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Gerar dados das faturas baseado nas parcelas (método antigo - mantido para compatibilidade)
    */
   private async generateInvoicesFromInstallments(
     contractId: number, 
