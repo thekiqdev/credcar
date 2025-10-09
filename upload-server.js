@@ -1603,18 +1603,18 @@ async function createInvoiceInAsaasInline(invoice) {
     const invoiceResult = await invoiceResponse.json();
     
     console.log(`✅ [ASAAS] Fatura criada no ASAAS:`, {
-      id: invoiceResult.id,
+      id: invoiceResult.id, // pay_xxx (para referência)
+      invoiceNumber: invoiceResult.invoiceNumber, // 11559883 (ID correto para API)
       pixQrCode: invoiceResult.pixQrCode ? 'Disponível' : 'N/A',
-      bankSlipUrl: invoiceResult.bankSlipUrl ? 'Disponível' : 'N/A',
-      // Log completo para debug
-      fullResponse: invoiceResult
+      bankSlipUrl: invoiceResult.bankSlipUrl ? 'Disponível' : 'N/A'
     });
 
     // 5. Atualizar fatura local com dados do ASAAS
+    // Usar invoiceNumber ao invés de id para operações futuras na API
     const { error: updateInvoiceError } = await supabase
       .from('invoices')
       .update({
-        invoice_code: invoiceResult.id,
+        invoice_code: invoiceResult.invoiceNumber, // Usar invoiceNumber (11559883) ao invés de id (pay_xxx)
         payment_link_pix: invoiceResult.pixQrCode,
         payment_link_boleto: invoiceResult.bankSlipUrl
       })
@@ -1632,7 +1632,7 @@ async function createInvoiceInAsaasInline(invoice) {
 
     return {
       success: true,
-      asaasInvoiceId: invoiceResult.id,
+      asaasInvoiceId: invoiceResult.invoiceNumber, // Usar invoiceNumber para operações futuras
       pixQrCode: invoiceResult.pixQrCode,
       bankSlipUrl: invoiceResult.bankSlipUrl,
       fullResponse: invoiceResult, // Para debug
@@ -2081,7 +2081,7 @@ app.get('/api/cron/test-generate-invoices', async (req, res) => {
           const asaasResult = await createInvoiceInAsaasInline(createdInvoice);
           
           if (asaasResult.success) {
-            console.log(`✅ [CRON TEST] Fatura criada no ASAAS: ${asaasResult.asaasInvoiceId}`);
+            console.log(`✅ [CRON TEST] Fatura criada no ASAAS: ${asaasResult.asaasInvoiceId} (invoiceNumber)`);
             console.log(`   PIX: ${asaasResult.pixQrCode ? 'Disponível' : 'N/A'}`);
             console.log(`   Boleto: ${asaasResult.bankSlipUrl ? 'Disponível' : 'N/A'}`);
           } else {
