@@ -766,6 +766,15 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       .reduce((total, inv) => total + inv.amount, 0);
   };
 
+  const calculateTotalActiveContractsValue = (): number => {
+    return allContracts
+      .filter(contract => contract.status === 'Ativo' || contract.status === 'Aprovado')
+      .reduce((total, contract) => {
+        const value = parseFloat(contract.credit_amount || contract.total_value || '0');
+        return total + value;
+      }, 0);
+  };
+
   const loadAllContracts = async () => {
     try {
       setIsLoadingContracts(true);
@@ -4824,7 +4833,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                       style: "currency",
                                       currency: "BRL",
                                     }).format(
-                                      selectedContractForInvoices.value,
+                                      calculateTotalActiveContractsValue(),
                                     )}
                                   </p>
                                 </div>
