@@ -148,14 +148,16 @@ interface Contract {
 }
 
 interface Invoice {
-  id: string;
-  contractId: string;
+  id: number;
+  contract_id: number;
   amount: number;
-  installmentNumber: number;
-  dueDate: string;
-  status: "pending" | "paid" | "overdue";
-  createdAt: string;
-  paidAt?: string;
+  installment_number: number;
+  due_date: string;
+  status: string;
+  created_at?: string;
+  paid_at?: string;
+  payment_date?: string;
+  notes?: string;
 }
 
 const AdminDashboard: React.FC<AdminDashboardProps> = ({
@@ -756,6 +758,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     } catch (error) {
       console.error('Erro ao carregar faturas:', error);
     }
+  };
+
+  const calculatePaidAmount = (contractId: number): number => {
+    return invoices
+      .filter(inv => inv.contract_id === contractId && inv.status === 'paid')
+      .reduce((total, inv) => total + inv.amount, 0);
   };
 
   const loadAllContracts = async () => {
@@ -4825,14 +4833,14 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                 </div>
                                 <div>
                                   <p className="text-muted-foreground">
-                                    Valor Restante
+                                    Valor Já Pago
                                   </p>
-                                  <p className="font-semibold text-orange-600">
+                                  <p className="font-semibold text-blue-600">
                                     {new Intl.NumberFormat("pt-BR", {
                                       style: "currency",
                                       currency: "BRL",
                                     }).format(
-                                      selectedContractForInvoices.remainingValue,
+                                      calculatePaidAmount(parseInt(selectedContractForInvoices.id)),
                                     )}
                                   </p>
                                 </div>
@@ -4842,7 +4850,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                   </p>
                                   <p className="font-semibold">
                                     {
-                                      selectedContractForInvoices.paidInstallments
+                                      invoices.filter(inv => inv.contract_id === parseInt(selectedContractForInvoices.id) && inv.status === 'paid').length
                                     }
                                     /{selectedContractForInvoices.installments}
                                   </p>
@@ -4934,14 +4942,14 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                             variant={
                                               invoice.status === "paid"
                                                 ? "default"
-                                                : invoice.status === "pending"
+                                                : invoice.status === "Pendente" || invoice.status === "pending"
                                                   ? "outline"
                                                   : "destructive"
                                             }
                                           >
                                             {invoice.status === "paid"
                                               ? "Pago"
-                                              : invoice.status === "pending"
+                                              : invoice.status === "Pendente" || invoice.status === "pending"
                                                 ? "Pendente"
                                                 : "Vencido"}
                                           </Badge>
