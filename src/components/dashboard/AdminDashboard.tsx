@@ -1740,9 +1740,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
           `✅ Contrato ativado com sucesso! As faturas foram criadas automaticamente.`,
         );
       } else {
-        alert(
-          `Status do contrato alterado para ${newContractStatus} com sucesso!`,
-        );
+      alert(
+        `Status do contrato alterado para ${newContractStatus} com sucesso!`,
+      );
       }
     } catch (error) {
       console.error("Error changing contract status:", error);
@@ -4873,7 +4873,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                             {/* Invoices Table */}
                             {(() => {
                               const filteredInvoices = invoices.filter(
-                                (inv) =>
+                              (inv) =>
                                   inv.contract_id === parseInt(selectedContractForInvoices.id),
                               );
                               console.log(`🔍 Faturas filtradas para contrato ${selectedContractForInvoices.id}:`, filteredInvoices);
@@ -5873,15 +5873,15 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                               id="webhook-secret"
                               type="password"
                               value={paymentSettings.webhookSecret}
-                              onChange={(e) =>
-                                setPaymentSettings({
-                                  ...paymentSettings,
+                            onChange={(e) =>
+                              setPaymentSettings({
+                                ...paymentSettings,
                                   webhookSecret: e.target.value,
-                                })
-                              }
+                              })
+                            }
                               placeholder="Chave secreta para validar webhooks"
-                            />
-                          </div>
+                          />
+                        </div>
                         </div>
 
                         {/* Test Connection Button */}
@@ -6174,7 +6174,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         disabled={isLoadingPaymentSettings}
                       >
                         {isLoadingPaymentSettings ? 'Salvando...' : 'Salvar Configurações de Pagamento'}
-                      </Button>
+                        </Button>
                     </div>
 
                     {/* Monitoramento do Cronjob */}

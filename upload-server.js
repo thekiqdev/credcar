@@ -1419,6 +1419,296 @@ app.get('/api/test/contract-validation/:contractId', async (req, res) => {
   }
 });
 
+// Função para criar fatura no ASAAS (implementação inline)
+async function createInvoiceInAsaasInline(invoice) {
+  try {
+    console.log(`🚀 [ASAAS] Criando fatura no ASAAS para fatura local ID: ${invoice.id}`);
+
+    // 0. Verificar se a fatura já tem invoice_code (já foi criada no ASAAS)
+    if (invoice.invoice_code) {
+      console.log(`✅ [ASAAS] Fatura ${invoice.id} já possui invoice_code: ${invoice.invoice_code}. Pulando criação.`);
+      return {
+        success: true,
+        asaasInvoiceId: invoice.invoice_code,
+        pixQrCode: invoice.payment_link_pix,
+        bankSlipUrl: invoice.payment_link_boleto,
+        message: 'Fatura já existe no ASAAS',
+        errors: []
+      };
+    }
+
+    // 1. Buscar dados do contrato para obter cliente ASAAS
+    const { data: contractData, error: contractError } = await supabase
+      .from('contracts')
+      .select(`
+        id,
+        clients (
+          id,
+          full_name,
+          email,
+          cpf_cnpj,
+          phone,
+          asaas_customer_id
+        )
+      `)
+      .eq('id', invoice.contract_id)
+      .single();
+
+    if (contractError || !contractData) {
+      return {
+        success: false,
+        errors: ['Contrato não encontrado']
+      };
+    }
+
+    const client = contractData.clients;
+    
+    console.log(`📋 [ASAAS] Dados do contrato:`, {
+      contractId: contractData.id,
+      client: client,
+      hasClient: !!client,
+      clientId: client?.id,
+      asaasCustomerId: client?.asaas_customer_id
+    });
+
+    // Verificar se cliente existe
+    if (!client) {
+      return {
+        success: false,
+        errors: ['Cliente não encontrado no contrato']
+      };
+    }
+
+    // 2. Buscar configuração ASAAS
+    const { data: configs, error: configError } = await supabase
+      .from('system_config')
+      .select('key, value')
+      .in('key', ['asaas.api.key', 'asaas.api.url']);
+    
+    if (configError) {
+      return {
+        success: false,
+        errors: [`Erro ao buscar configuração ASAAS: ${configError.message}`]
+      };
+    }
+    
+    const asaasConfig = {};
+    configs.forEach(config => {
+      asaasConfig[config.key] = config.value;
+    });
+    
+    if (!asaasConfig['asaas.api.key']) {
+      return {
+        success: false,
+        errors: ['API Key ASAAS não encontrada']
+      };
+    }
+    
+    const asaasUrl = asaasConfig['asaas.api.url'] || 'https://sandbox.asaas.com/api/v3';
+    console.log(`🌐 [ASAAS] Usando URL ASAAS: ${asaasUrl}`);
+
+    // 3. Verificar se cliente tem ID do ASAAS, se não tiver, criar automaticamente
+    let customerId = client.asaas_customer_id;
+    
+    if (!customerId) {
+      console.log(`🔄 [ASAAS] Cliente não possui ID do ASAAS. Criando cliente automaticamente...`);
+      
+      const customerData = {
+        name: client.full_name,
+        email: client.email,
+        cpfCnpj: client.cpf_cnpj,
+        phone: client.phone || '',
+        externalReference: `client_${client.id}`
+      };
+      
+      const customerResponse = await fetch(`${asaasUrl}/customers`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'access_token': asaasConfig['asaas.api.key']
+        },
+        body: JSON.stringify(customerData)
+      });
+      
+      if (!customerResponse.ok) {
+        const errorText = await customerResponse.text();
+        return {
+          success: false,
+          errors: [`Erro ao criar cliente no ASAAS: ${customerResponse.status} - ${errorText}`]
+        };
+      }
+      
+      const customerResult = await customerResponse.json();
+      customerId = customerResult.id;
+      
+      console.log(`✅ [ASAAS] Cliente criado no ASAAS: ${customerId}`);
+      
+      // Atualizar cliente local com ID do ASAAS
+      const { error: updateError } = await supabase
+        .from('clients')
+        .update({ asaas_customer_id: customerId })
+        .eq('id', client.id);
+
+      if (updateError) {
+        console.error('❌ [ASAAS] Erro ao atualizar cliente com ID do ASAAS:', updateError);
+        return {
+          success: false,
+          errors: [`Erro ao atualizar cliente local: ${updateError.message}`]
+        };
+      } else {
+        console.log(`✅ [ASAAS] Cliente atualizado com ID do ASAAS: ${customerId}`);
+        client.asaas_customer_id = customerId;
+      }
+    } else {
+      console.log(`✅ [ASAAS] Cliente já existe no ASAAS: ${customerId}`);
+    }
+
+    // 4. Criar fatura no ASAAS
+    console.log(`📋 [ASAAS] Dados da fatura local:`, {
+      id: invoice.id,
+      amount: invoice.amount,
+      due_date: invoice.due_date,
+      installment_number: invoice.installment_number
+    });
+
+    const invoiceData = {
+      customer: customerId,
+      billingType: 'PIX',
+      value: invoice.amount,
+      dueDate: invoice.due_date,
+      description: `Parcela ${invoice.installment_number} - ${invoice.notes}`,
+      externalReference: `invoice_${invoice.id}`,
+      installmentNumber: invoice.installment_number
+    };
+    
+    console.log(`📋 [ASAAS] Dados para ASAAS:`, invoiceData);
+    
+    const invoiceResponse = await fetch(`${asaasUrl}/payments`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'access_token': asaasConfig['asaas.api.key']
+      },
+      body: JSON.stringify(invoiceData)
+    });
+    
+    if (!invoiceResponse.ok) {
+      const errorText = await invoiceResponse.text();
+      return {
+        success: false,
+        errors: [`Erro ao criar fatura no ASAAS: ${invoiceResponse.status} - ${errorText}`]
+      };
+    }
+    
+    const invoiceResult = await invoiceResponse.json();
+    
+    console.log(`✅ [ASAAS] Fatura criada no ASAAS:`, {
+      id: invoiceResult.id,
+      pixQrCode: invoiceResult.pixQrCode ? 'Disponível' : 'N/A',
+      bankSlipUrl: invoiceResult.bankSlipUrl ? 'Disponível' : 'N/A',
+      // Log completo para debug
+      fullResponse: invoiceResult
+    });
+
+    // 5. Atualizar fatura local com dados do ASAAS
+    const { error: updateInvoiceError } = await supabase
+      .from('invoices')
+      .update({
+        invoice_code: invoiceResult.id,
+        payment_link_pix: invoiceResult.pixQrCode,
+        payment_link_boleto: invoiceResult.bankSlipUrl
+      })
+      .eq('id', invoice.id);
+
+    if (updateInvoiceError) {
+      console.error('❌ [ASAAS] Erro ao atualizar fatura local:', updateInvoiceError);
+      return {
+        success: false,
+        errors: [`Erro ao atualizar fatura local: ${updateInvoiceError.message}`]
+      };
+    } else {
+      console.log(`✅ [ASAAS] Fatura local atualizada com dados do ASAAS`);
+    }
+
+    return {
+      success: true,
+      asaasInvoiceId: invoiceResult.id,
+      pixQrCode: invoiceResult.pixQrCode,
+      bankSlipUrl: invoiceResult.bankSlipUrl,
+      fullResponse: invoiceResult, // Para debug
+      errors: []
+    };
+
+  } catch (error) {
+    console.error('❌ [ASAAS] Erro na função createInvoiceInAsaasInline:', error);
+    return {
+      success: false,
+      errors: [error instanceof Error ? error.message : 'Erro desconhecido']
+    };
+  }
+}
+
+// Endpoint para testar integração ASAAS diretamente
+app.get('/api/test/test-asaas-integration/:invoiceId', async (req, res) => {
+  try {
+    const invoiceId = parseInt(req.params.invoiceId);
+    console.log(`🧪 [TEST] Testando integração ASAAS para fatura ${invoiceId}`);
+    
+    // Buscar fatura
+    const { data: invoice, error: invoiceError } = await supabase
+      .from('invoices')
+      .select('*')
+      .eq('id', invoiceId)
+      .single();
+    
+    if (invoiceError || !invoice) {
+      throw new Error(`Fatura ${invoiceId} não encontrada`);
+    }
+    
+    console.log(`📋 [TEST] Fatura encontrada:`, {
+      id: invoice.id,
+      contract_id: invoice.contract_id,
+      amount: invoice.amount,
+      due_date: invoice.due_date,
+      installment_number: invoice.installment_number
+    });
+    
+    // Testar integração ASAAS
+    try {
+      console.log(`🔄 [TEST] Chamando createInvoiceInAsaasInline...`);
+      const asaasResult = await createInvoiceInAsaasInline(invoice);
+      
+      console.log(`📋 [TEST] Resultado ASAAS:`, asaasResult);
+      
+      res.json({
+        success: true,
+        invoice: invoice,
+        asaasResult: asaasResult,
+        message: 'Teste de integração ASAAS concluído'
+      });
+      
+    } catch (asaasError) {
+      console.error(`❌ [TEST] Erro na integração ASAAS:`, asaasError);
+      res.json({
+        success: false,
+        invoice: invoice,
+        error: asaasError.message,
+        stack: asaasError.stack,
+        message: 'Erro na integração ASAAS'
+      });
+    }
+    
+  } catch (error) {
+    console.error('❌ [TEST] Erro geral:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      stack: error.stack,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
 // Endpoint para verificar datas reais das faturas
 app.get('/api/test/invoice-dates/:contractId', async (req, res) => {
   try {
@@ -1446,6 +1736,63 @@ app.get('/api/test/invoice-dates/:contractId', async (req, res) => {
     
   } catch (error) {
     console.error('❌ [TEST] Erro na verificação de datas:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// Endpoint para forçar criação de fatura para teste
+app.get('/api/test/force-create-invoice/:contractId', async (req, res) => {
+  try {
+    const contractId = parseInt(req.params.contractId);
+    console.log(`🧪 [TEST] Forçando criação de fatura para contrato ${contractId}`);
+    
+    // Buscar última fatura com next_invoice_date
+    const { data: lastInvoice, error: lastError } = await supabase
+      .from('invoices')
+      .select('*')
+      .eq('contract_id', contractId)
+      .not('next_invoice_date', 'is', null)
+      .order('installment_number', { ascending: false })
+      .limit(1)
+      .single();
+    
+    if (lastError && lastError.code !== 'PGRST116') {
+      throw new Error(`Erro ao buscar última fatura: ${lastError.message}`);
+    }
+    
+    if (!lastInvoice) {
+      return res.json({
+        success: false,
+        message: 'Nenhuma fatura com next_invoice_date encontrada'
+      });
+    }
+    
+    // Temporariamente alterar next_invoice_date para hoje para forçar criação
+    const today = new Date().toISOString().split('T')[0];
+    const { error: updateError } = await supabase
+      .from('invoices')
+      .update({ next_invoice_date: today })
+      .eq('id', lastInvoice.id);
+    
+    if (updateError) {
+      throw new Error(`Erro ao atualizar next_invoice_date: ${updateError.message}`);
+    }
+    
+    console.log(`✅ [TEST] next_invoice_date alterado para hoje (${today})`);
+    
+    res.json({
+      success: true,
+      message: `next_invoice_date alterado para hoje (${today}). Execute o cronjob agora.`,
+      invoiceId: lastInvoice.id,
+      nextInstallment: lastInvoice.installment_number + 1
+    });
+    
+  } catch (error) {
+    console.error('❌ [TEST] Erro ao forçar criação:', error);
     res.status(500).json({
       success: false,
       error: error.message,
@@ -1730,11 +2077,8 @@ app.get('/api/cron/test-generate-invoices', async (req, res) => {
         try {
           console.log(`🔄 [CRON TEST] Criando fatura no ASAAS para parcela ${nextInstallmentNumber}...`);
           
-          // Importar dinamicamente o serviço ASAAS
-          const { asaasInvoiceService } = await import('./src/lib/asaas-invoice.service.js');
-          
-          // Criar fatura no ASAAS
-          const asaasResult = await asaasInvoiceService.createInvoiceInAsaas(createdInvoice);
+          // Criar fatura no ASAAS usando função inline
+          const asaasResult = await createInvoiceInAsaasInline(createdInvoice);
           
           if (asaasResult.success) {
             console.log(`✅ [CRON TEST] Fatura criada no ASAAS: ${asaasResult.asaasInvoiceId}`);

@@ -534,7 +534,7 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
                   )}
                 </CardContent>
               </Card>
-              ))}
+            ))}
             </div>
 
             {/* Documentos do Sócio */}
