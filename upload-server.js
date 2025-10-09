@@ -1419,6 +1419,43 @@ app.get('/api/test/contract-validation/:contractId', async (req, res) => {
   }
 });
 
+// Endpoint de teste para verificar conexão com Supabase
+app.get('/api/test/supabase-connection', async (req, res) => {
+  try {
+    console.log('🧪 [TEST] Testando conexão com Supabase');
+    
+    // Teste simples: buscar um contrato
+    const { data: contracts, error } = await supabase
+      .from('contracts')
+      .select('id, status')
+      .limit(1);
+    
+    if (error) {
+      console.error('❌ [TEST] Erro na conexão:', error);
+      res.json({
+        success: false,
+        error: error.message,
+        timestamp: new Date().toISOString()
+      });
+    } else {
+      console.log('✅ [TEST] Conexão OK:', contracts);
+      res.json({
+        success: true,
+        message: 'Conexão com Supabase funcionando',
+        data: contracts,
+        timestamp: new Date().toISOString()
+      });
+    }
+  } catch (error) {
+    console.error('❌ [TEST] Erro geral:', error);
+    res.json({
+      success: false,
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
 // Endpoint para teste manual do cronjob (sem autenticação para desenvolvimento)
 app.get('/api/cron/test-generate-invoices', async (req, res) => {
   try {
@@ -1454,9 +1491,10 @@ app.get('/api/cron/test-generate-invoices', async (req, res) => {
       console.log(`✅ [CRON TEST] Nenhuma fatura para processar hoje`);
       res.json({
         success: true,
-        message: 'Nenhuma fatura para processar hoje',
+        message: '✅ Nenhuma fatura agendada para processar hoje. O sistema está funcionando corretamente!',
         result: result,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        explanation: 'Faturas são criadas automaticamente quando a data de next_invoice_date chega. Verifique se há faturas com next_invoice_date definido.'
       });
       return;
     }
@@ -1491,24 +1529,57 @@ app.get('/api/cron/test-generate-invoices', async (req, res) => {
         }
 
         // Buscar dados do contrato
+        const contractId = parseInt(invoice.contract_id);
+        
         const { data: contract, error: contractError } = await supabase
           .from('contracts')
-          .select('credit_amount, payment_installments')
-          .eq('id', invoice.contract_id)
+          .select('credit_amount, id_faixa_de_credito')
+          .eq('id', contractId)
           .single();
 
-        if (contractError || !contract) {
+        if (contractError) {
+          throw new Error(`Erro ao buscar contrato ${invoice.contract_id}: ${contractError.message}`);
+        }
+        
+        if (!contract) {
           throw new Error(`Contrato ${invoice.contract_id} não encontrado`);
         }
 
-        // Calcular valor da próxima parcela (simplificado)
-        const totalInstallments = contract.payment_installments || 80;
-        const installmentValue = Math.round(contract.credit_amount / totalInstallments);
+        // Buscar faixa de crédito para calcular valor correto
+        const { data: creditRange, error: rangeError } = await supabase
+          .from('faixas_de_credito')
+          .select('valor_primeira_parcela, valor_parcelas_restantes, numero_total_parcelas')
+          .eq('id', contract.id_faixa_de_credito)
+          .single();
 
-        // Calcular data de vencimento (simplificado)
-        const todayDate = new Date();
-        const dueDate = new Date(todayDate);
-        dueDate.setMonth(dueDate.getMonth() + nextInstallmentNumber);
+        if (rangeError || !creditRange) {
+          throw new Error(`Faixa de crédito não encontrada para contrato ${invoice.contract_id}`);
+        }
+
+        // Calcular valor da próxima parcela
+        let installmentValue;
+        if (nextInstallmentNumber === 1) {
+          installmentValue = creditRange.valor_primeira_parcela;
+        } else {
+          installmentValue = creditRange.valor_parcelas_restantes;
+        }
+
+        // Calcular data de vencimento baseado na primeira parcela
+        const { data: firstInvoice, error: firstError } = await supabase
+          .from('invoices')
+          .select('due_date')
+          .eq('contract_id', invoice.contract_id)
+          .eq('installment_number', 1)
+          .single();
+
+        if (firstError || !firstInvoice) {
+          throw new Error(`Primeira fatura não encontrada para contrato ${invoice.contract_id}`);
+        }
+
+        // Calcular vencimento baseado na primeira parcela + meses
+        const firstDueDate = new Date(firstInvoice.due_date);
+        const dueDate = new Date(firstDueDate);
+        dueDate.setMonth(dueDate.getMonth() + (nextInstallmentNumber - 1));
         
         const yearStr = dueDate.getFullYear();
         const monthStr = String(dueDate.getMonth() + 1).padStart(2, '0');
@@ -1518,7 +1589,7 @@ app.get('/api/cron/test-generate-invoices', async (req, res) => {
         // Calcular next_invoice_date da parcela seguinte
         let nextInvoiceDate = null;
         
-        if (nextInstallmentNumber < totalInstallments) {
+        if (nextInstallmentNumber < creditRange.numero_total_parcelas) {
           const nextDueDate = new Date(dueDate);
           nextDueDate.setMonth(nextDueDate.getMonth() + 1);
           

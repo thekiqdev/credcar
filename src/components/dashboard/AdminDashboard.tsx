@@ -1080,19 +1080,23 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       setIsLoadingCronTest(true);
       setCronTestResult(null);
 
-      const response = await fetch('/api/cron/test-generate-invoices', {
+      const response = await fetch('http://localhost:3001/api/cron/test-generate-invoices', {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
         },
       });
 
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
       const data = await response.json();
 
       if (response.ok) {
         setCronTestResult({
           success: true,
-          message: 'Teste do cronjob executado com sucesso',
+          message: data.message || 'Teste do cronjob executado com sucesso',
           result: data.result,
           timestamp: Date.now()
         });
@@ -1107,7 +1111,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       console.error('Erro ao testar cronjob:', error);
       setCronTestResult({
         success: false,
-        message: 'Erro de conexão ao testar cronjob',
+        message: `Erro de conexão: ${error instanceof Error ? error.message : 'Erro desconhecido'}`,
         timestamp: Date.now()
       });
     } finally {
