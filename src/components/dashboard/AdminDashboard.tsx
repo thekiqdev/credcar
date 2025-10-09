@@ -4572,7 +4572,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     </CardHeader>
                     <CardContent>
                       <div className="text-2xl font-bold">
-                        {invoices.filter((i) => i.status === "pending").length}
+                        {invoices.filter((i) => i.status === "Pendente" || i.status === "pending").length}
                       </div>
                       <p className="text-xs text-muted-foreground">
                         Aguardando pagamento
