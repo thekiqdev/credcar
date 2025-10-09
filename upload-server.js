@@ -867,6 +867,127 @@ app.get('/api/cron/generate-invoices', async (req, res) => {
   }
 });
 
+// Endpoint para buscar dados do cliente de um contrato
+app.get('/api/test/client-data/:contractId', async (req, res) => {
+  try {
+    const contractId = parseInt(req.params.contractId);
+    console.log(`🧪 [TEST] Buscando dados do cliente para contrato ${contractId}`);
+    
+    // Buscar contrato com dados do cliente
+    const { data: contract, error: contractError } = await supabase
+      .from('contracts')
+      .select(`
+        id,
+        clients (
+          id,
+          full_name,
+          email,
+          cpf_cnpj,
+          phone,
+          asaas_customer_id
+        )
+      `)
+      .eq('id', contractId)
+      .single();
+
+    if (contractError || !contract) {
+      return res.status(404).json({
+        success: false,
+        message: `Contrato ${contractId} não encontrado`,
+        error: contractError?.message
+      });
+    }
+
+    res.json({
+      success: true,
+      contract: contract,
+      client: contract.clients,
+      message: `Dados do cliente encontrados para contrato ${contractId}`
+    });
+    
+  } catch (error) {
+    console.error('❌ [TEST] Erro ao buscar dados do cliente:', error);
+    
+    res.status(500).json({
+      success: false,
+      error: 'Erro interno ao buscar dados do cliente',
+      message: error instanceof Error ? error.message : 'Erro desconhecido',
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// Endpoint para testar busca de cliente no ASAAS
+app.get('/api/test/find-customer/:cpfCnpj', async (req, res) => {
+  try {
+    const cpfCnpj = req.params.cpfCnpj;
+    console.log(`🧪 [TEST] Testando busca de cliente no ASAAS: ${cpfCnpj}`);
+    
+    // Simular busca de cliente no ASAAS
+    const cleanCpfCnpj = cpfCnpj.replace(/\D/g, '');
+    console.log(`🧪 [TEST] CPF/CNPJ limpo: ${cleanCpfCnpj}`);
+    
+    // Buscar configuração ASAAS
+    const { data: configs, error: configError } = await supabase
+      .from('system_config')
+      .select('key, value')
+      .in('key', ['asaas.api.key', 'asaas.environment'])
+      .eq('is_active', true);
+
+    if (configError || !configs || configs.length === 0) {
+      return res.status(500).json({
+        success: false,
+        message: 'Configuração ASAAS não encontrada',
+        error: configError?.message
+      });
+    }
+
+    const apiKey = configs.find(c => c.key === 'asaas.api.key')?.value;
+    const environment = configs.find(c => c.key === 'asaas.environment')?.value || 'sandbox';
+
+    // Fazer requisição para ASAAS via proxy
+    const proxyResponse = await fetch('http://localhost:3001/api/proxy/asaas', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        method: 'GET',
+        url: `customers?cpfCnpj=${cleanCpfCnpj}`,
+        key: apiKey,
+        env: environment,
+        data: null
+      })
+    });
+    
+    const proxyData = await proxyResponse.json();
+    
+    const found = proxyData?.ok && proxyData?.data?.data && proxyData.data.data.length > 0;
+    const customerCount = proxyData?.data?.data?.length || 0;
+    const existingCustomer = found ? proxyData.data.data[0] : null;
+
+    res.json({
+      success: true,
+      cpfCnpj: cpfCnpj,
+      cleanCpfCnpj: cleanCpfCnpj,
+      asaasResponse: proxyData,
+      found: found,
+      customerCount: customerCount,
+      existingCustomer: existingCustomer
+    });
+    
+  } catch (error) {
+    console.error('❌ [TEST] Erro no teste de busca de cliente:', error);
+    
+    res.status(500).json({
+      success: false,
+      error: 'Erro interno no teste de busca',
+      message: error instanceof Error ? error.message : 'Erro desconhecido',
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
 // Endpoint para deletar faturas de teste
 app.delete('/api/test/delete-invoices/:contractId', async (req, res) => {
   try {

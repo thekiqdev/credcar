@@ -326,11 +326,11 @@ class AsaasService {
       // Remove any non-numeric characters from CPF/CNPJ
       const cleanCpfCnpj = cpfCnpj.replace(/\D/g, '');
       
-      const customers = await this.client.get<{ data: AsaasCustomer[] }>(`/customers?cpfCnpj=${cleanCpfCnpj}`);
+      const response = await this.client.get<{ data: { data: AsaasCustomer[] } }>(`/customers?cpfCnpj=${cleanCpfCnpj}`);
       
-      if (customers?.data && customers.data.length > 0) {
-        console.log('Customer found:', customers.data[0]);
-        return customers.data[0];
+      if (response?.data?.data && response.data.data.length > 0) {
+        console.log('Customer found:', response.data.data[0]);
+        return response.data.data[0];
       }
       
       console.log('No customer found with CPF/CNPJ:', cleanCpfCnpj);
