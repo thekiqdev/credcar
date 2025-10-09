@@ -1701,19 +1701,19 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     if (!selectedContractForStatusChange || !newContractStatus) return;
 
     try {
-      const { error } = await supabase
-        .from("contracts")
-        .update({
-          status:
-            newContractStatus as Database["public"]["Enums"]["contract_status"],
-        })
-        .eq("id", selectedContractForStatusChange.id);
+      console.log(`🔄 Alterando status do contrato ${selectedContractForStatusChange.id} para ${newContractStatus}`);
+      
+      // Usar contractService.updateStatus para garantir que a lógica de criação de faturas seja executada
+      const updatedContract = await contractService.updateStatus(
+        selectedContractForStatusChange.id.toString(),
+        newContractStatus as Database["public"]["Enums"]["contract_status"]
+      );
 
-      if (error) {
-        console.error("Error updating contract status:", error);
-        alert(`Erro ao alterar status: ${error.message}`);
-        return;
+      if (!updatedContract) {
+        throw new Error('Erro ao atualizar status do contrato');
       }
+
+      console.log(`✅ Status do contrato ${selectedContractForStatusChange.id} alterado para ${newContractStatus}`);
 
       // Refresh contracts list
       await loadAllContracts();
@@ -1722,12 +1722,20 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       setSelectedContractForStatusChange(null);
       setNewContractStatus("");
 
-      alert(
-        `Status do contrato alterado para ${newContractStatus} com sucesso!`,
-      );
+      // Mensagem específica para ativação
+      if (newContractStatus === "Ativo") {
+        alert(
+          `✅ Contrato ativado com sucesso! As faturas foram criadas automaticamente.`,
+        );
+      } else {
+        alert(
+          `Status do contrato alterado para ${newContractStatus} com sucesso!`,
+        );
+      }
     } catch (error) {
       console.error("Error changing contract status:", error);
-      alert("Erro ao alterar status do contrato");
+      const errorMessage = error instanceof Error ? error.message : "Erro desconhecido";
+      alert(`Erro ao alterar status do contrato: ${errorMessage}`);
     }
   };
 

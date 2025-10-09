@@ -867,28 +867,566 @@ app.get('/api/cron/generate-invoices', async (req, res) => {
   }
 });
 
+// Endpoint para deletar faturas de teste
+app.delete('/api/test/delete-invoices/:contractId', async (req, res) => {
+  try {
+    const contractId = parseInt(req.params.contractId);
+    console.log(`🧪 [TEST] Deletando faturas de teste para contrato ${contractId}`);
+    
+    // Deletar todas as faturas do contrato
+    const { error: deleteError } = await supabase
+      .from('invoices')
+      .delete()
+      .eq('contract_id', contractId);
+
+    if (deleteError) {
+      return res.status(500).json({
+        success: false,
+        message: `Erro ao deletar faturas: ${deleteError.message}`,
+        contractId: contractId
+      });
+    }
+
+    res.json({
+      success: true,
+      message: `Faturas deletadas com sucesso para contrato ${contractId}`,
+      contractId: contractId
+    });
+    
+  } catch (error) {
+    console.error('❌ [TEST] Erro ao deletar faturas:', error);
+    
+    res.status(500).json({
+      success: false,
+      error: 'Erro interno ao deletar faturas',
+      message: error instanceof Error ? error.message : 'Erro desconhecido',
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// Endpoint para testar cálculo de datas de vencimento
+app.get('/api/test/due-dates/:contractId', async (req, res) => {
+  try {
+    const contractId = parseInt(req.params.contractId);
+    console.log(`🧪 [TEST] Testando cálculo de datas para contrato ${contractId}`);
+    
+    // Buscar dados básicos do contrato
+    const { data: contract, error: contractError } = await supabase
+      .from('contracts')
+      .select('id, status, credit_amount, id_faixa_de_credito')
+      .eq('id', contractId)
+      .single();
+
+    if (contractError || !contract) {
+      return res.status(404).json({
+        success: false,
+        message: `Contrato ${contractId} não encontrado`,
+        error: contractError?.message
+      });
+    }
+
+    // Buscar faixa de crédito
+    let creditRange = null;
+    if (contract.id_faixa_de_credito) {
+      const { data: range, error: rangeError } = await supabase
+        .from('faixas_de_credito')
+        .select('*')
+        .eq('id', contract.id_faixa_de_credito)
+        .single();
+      
+      if (!rangeError) {
+        creditRange = range;
+      }
+    }
+
+    if (!creditRange) {
+      return res.status(400).json({
+        success: false,
+        message: `Faixa de crédito não encontrada para contrato ${contractId}`,
+        contract: contract
+      });
+    }
+
+    // Buscar parcelas personalizadas
+    const { data: customInstallments, error: customError } = await supabase
+      .from('condicoes_parcelas')
+      .select('numero_parcela, valor_parcela')
+      .eq('faixa_credito_id', creditRange.id)
+      .order('numero_parcela');
+
+    // Simular cálculo de datas (simplificado)
+    const today = new Date();
+    const defaultDueDays = 30;
+    
+    const installments = [];
+    
+    // 1ª Parcela
+    const firstDueDate = new Date(today);
+    firstDueDate.setDate(firstDueDate.getDate() + defaultDueDays);
+    installments.push({
+      numero_parcela: 1,
+      valor_parcela: creditRange.valor_primeira_parcela,
+      due_date: firstDueDate.toISOString().split('T')[0],
+      tipo: 'primeira'
+    });
+
+    // Parcelas personalizadas
+    if (customInstallments && customInstallments.length > 0) {
+      for (const custom of customInstallments) {
+        if (custom.numero_parcela === 1) continue;
+        
+        const dueDate = new Date(firstDueDate);
+        dueDate.setMonth(dueDate.getMonth() + (custom.numero_parcela - 1));
+        
+        installments.push({
+          numero_parcela: custom.numero_parcela,
+          valor_parcela: custom.valor_parcela,
+          due_date: dueDate.toISOString().split('T')[0],
+          tipo: 'personalizada'
+        });
+      }
+    }
+
+    res.json({
+      success: true,
+      contract: contract,
+      creditRange: creditRange,
+      customInstallments: customInstallments || [],
+      calculatedInstallments: installments,
+      message: `Calculadas ${installments.length} parcelas com datas de vencimento`
+    });
+    
+  } catch (error) {
+    console.error('❌ [TEST] Erro no teste de datas:', error);
+    
+    res.status(500).json({
+      success: false,
+      error: 'Erro interno no teste de datas',
+      message: error instanceof Error ? error.message : 'Erro desconhecido',
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// Endpoint para verificar parcelas personalizadas
+app.get('/api/test/custom-installments/:faixaId', async (req, res) => {
+  try {
+    const faixaId = parseInt(req.params.faixaId);
+    console.log(`🧪 [TEST] Verificando parcelas personalizadas para faixa ${faixaId}`);
+    
+    // Buscar parcelas personalizadas
+    const { data: customInstallments, error: customError } = await supabase
+      .from('condicoes_parcelas')
+      .select('numero_parcela, valor_parcela')
+      .eq('faixa_credito_id', faixaId)
+      .order('numero_parcela');
+
+    if (customError) {
+      return res.status(500).json({
+        success: false,
+        message: `Erro ao buscar parcelas personalizadas: ${customError.message}`,
+        faixaId: faixaId
+      });
+    }
+
+    res.json({
+      success: true,
+      faixaId: faixaId,
+      customInstallments: customInstallments || [],
+      count: customInstallments?.length || 0,
+      message: `Encontradas ${customInstallments?.length || 0} parcelas personalizadas para faixa ${faixaId}`
+    });
+    
+  } catch (error) {
+    console.error('❌ [TEST] Erro ao verificar parcelas personalizadas:', error);
+    
+    res.status(500).json({
+      success: false,
+      error: 'Erro interno ao verificar parcelas personalizadas',
+      message: error instanceof Error ? error.message : 'Erro desconhecido',
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// Endpoint para testar criação manual de faturas
+app.get('/api/test/create-invoices/:contractId', async (req, res) => {
+  try {
+    const contractId = parseInt(req.params.contractId);
+    console.log(`🧪 [TEST] Testando criação manual de faturas para contrato ${contractId}`);
+    
+    // Buscar dados básicos do contrato
+    const { data: contract, error: contractError } = await supabase
+      .from('contracts')
+      .select('id, status, credit_amount, id_faixa_de_credito')
+      .eq('id', contractId)
+      .single();
+
+    if (contractError || !contract) {
+      return res.status(404).json({
+        success: false,
+        message: `Contrato ${contractId} não encontrado`,
+        error: contractError?.message
+      });
+    }
+
+    // Verificar se já existem faturas
+    const { data: existingInvoices, error: invoicesError } = await supabase
+      .from('invoices')
+      .select('id, installment_number, amount, status')
+      .eq('contract_id', contractId)
+      .order('installment_number');
+
+    if (invoicesError) {
+      console.error('Erro ao buscar faturas:', invoicesError);
+    }
+
+    // Se já existem faturas, não criar novas
+    if (existingInvoices && existingInvoices.length > 0) {
+      return res.json({
+        success: false,
+        message: `Contrato ${contractId} já possui ${existingInvoices.length} faturas`,
+        existingInvoices: existingInvoices,
+        contract: contract
+      });
+    }
+
+    // Buscar faixa de crédito
+    let creditRange = null;
+    if (contract.id_faixa_de_credito) {
+      const { data: range, error: rangeError } = await supabase
+        .from('faixas_de_credito')
+        .select('*')
+        .eq('id', contract.id_faixa_de_credito)
+        .single();
+      
+      if (!rangeError) {
+        creditRange = range;
+      }
+    }
+
+    if (!creditRange) {
+      return res.status(400).json({
+        success: false,
+        message: `Faixa de crédito não encontrada para contrato ${contractId}`,
+        contract: contract
+      });
+    }
+
+    // Criar primeira fatura manualmente (simplificado)
+    const today = new Date();
+    const dueDate = new Date(today);
+    dueDate.setDate(dueDate.getDate() + 30); // 30 dias
+    
+    const yearStr = dueDate.getFullYear();
+    const monthStr = String(dueDate.getMonth() + 1).padStart(2, '0');
+    const dayStr = String(dueDate.getDate()).padStart(2, '0');
+    const dueDateStr = `${yearStr}-${monthStr}-${dayStr}`;
+
+    // Calcular next_invoice_date para segunda parcela
+    const nextDueDate = new Date(dueDate);
+    nextDueDate.setMonth(nextDueDate.getMonth() + 1);
+    const nextDate = new Date(nextDueDate);
+    nextDate.setDate(nextDate.getDate() - 15); // 15 dias antes
+    
+    const nextYearStr = nextDate.getFullYear();
+    const nextMonthStr = String(nextDate.getMonth() + 1).padStart(2, '0');
+    const nextDayStr = String(nextDate.getDate()).padStart(2, '0');
+    const nextInvoiceDate = `${nextYearStr}-${nextMonthStr}-${nextDayStr}`;
+
+    const newInvoice = {
+      contract_id: contractId,
+      installment_number: 1,
+      amount: creditRange.valor_primeira_parcela,
+      due_date: dueDateStr,
+      status: 'Pendente',
+      notes: 'Parcela 1 - primeira',
+      next_invoice_date: nextInvoiceDate
+    };
+
+    // Inserir fatura no banco
+    const { data: createdInvoice, error: insertError } = await supabase
+      .from('invoices')
+      .insert(newInvoice)
+      .select()
+      .single();
+
+    if (insertError) {
+      throw new Error(`Erro ao inserir fatura: ${insertError.message}`);
+    }
+
+    res.json({
+      success: true,
+      message: `Fatura criada com sucesso para contrato ${contractId}`,
+      invoice: createdInvoice,
+      contract: contract,
+      creditRange: creditRange
+    });
+    
+  } catch (error) {
+    console.error('❌ [TEST] Erro na criação manual:', error);
+    
+    res.status(500).json({
+      success: false,
+      error: 'Erro interno na criação manual',
+      message: error instanceof Error ? error.message : 'Erro desconhecido',
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// Endpoint para testar validação de contratos
+app.get('/api/test/contract-validation/:contractId', async (req, res) => {
+  try {
+    const contractId = parseInt(req.params.contractId);
+    console.log(`🧪 [TEST] Testando validação do contrato ${contractId}`);
+    
+    // Buscar dados básicos do contrato
+    const { data: contract, error: contractError } = await supabase
+      .from('contracts')
+      .select('id, status, credit_amount, id_faixa_de_credito')
+      .eq('id', contractId)
+      .single();
+
+    if (contractError || !contract) {
+      return res.status(404).json({
+        success: false,
+        message: `Contrato ${contractId} não encontrado`,
+        error: contractError?.message
+      });
+    }
+
+    // Verificar se já existem faturas
+    const { data: existingInvoices, error: invoicesError } = await supabase
+      .from('invoices')
+      .select('id, installment_number, amount, status')
+      .eq('contract_id', contractId)
+      .order('installment_number');
+
+    if (invoicesError) {
+      console.error('Erro ao buscar faturas:', invoicesError);
+    }
+
+    // Buscar faixa de crédito se disponível
+    let creditRange = null;
+    if (contract.id_faixa_de_credito) {
+      const { data: range, error: rangeError } = await supabase
+        .from('faixas_de_credito')
+        .select('*')
+        .eq('id', contract.id_faixa_de_credito)
+        .single();
+      
+      if (!rangeError) {
+        creditRange = range;
+      }
+    }
+
+    res.json({
+      success: true,
+      contract: {
+        id: contract.id,
+        status: contract.status,
+        credit_amount: contract.credit_amount,
+        id_faixa_de_credito: contract.id_faixa_de_credito
+      },
+      creditRange: creditRange,
+      existingInvoices: existingInvoices || [],
+      canCreateInvoices: contract.status === 'Ativo' && (!existingInvoices || existingInvoices.length === 0),
+      message: `Contrato ${contractId} encontrado - Status: ${contract.status}`
+    });
+    
+  } catch (error) {
+    console.error('❌ [TEST] Erro no teste de validação:', error);
+    
+    res.status(500).json({
+      success: false,
+      error: 'Erro interno no teste de validação',
+      message: error instanceof Error ? error.message : 'Erro desconhecido',
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
 // Endpoint para teste manual do cronjob (sem autenticação para desenvolvimento)
 app.get('/api/cron/test-generate-invoices', async (req, res) => {
   try {
     console.log('🧪 [CRON TEST] Executando teste manual do cronjob');
     
-    // Importar e executar o serviço de cron
-    const { invoiceCronService } = await import('./src/lib/invoice-cron.service.js');
+    // Implementação inline simplificada para teste
+    const today = new Date().toISOString().split('T')[0];
     
-    const result = await invoiceCronService.runManualTest();
-    
+    // Buscar faturas que precisam gerar próxima parcela
+    const { data: invoicesToProcess, error: searchError } = await supabase
+      .from('invoices')
+      .select('id, contract_id, installment_number, amount, due_date, next_invoice_date, status')
+      .not('next_invoice_date', 'is', null)
+      .lte('next_invoice_date', today)
+      .neq('status', 'cancelled')
+      .order('contract_id, installment_number');
+
+    if (searchError) {
+      throw new Error(`Erro ao buscar faturas: ${searchError.message}`);
+    }
+
+    console.log(`📋 [CRON TEST] Encontradas ${invoicesToProcess?.length || 0} faturas para processar`);
+
+    const result = {
+      processed: 0,
+      created: 0,
+      failed: 0,
+      errors: [],
+      details: []
+    };
+
+    if (!invoicesToProcess || invoicesToProcess.length === 0) {
+      console.log(`✅ [CRON TEST] Nenhuma fatura para processar hoje`);
+      res.json({
+        success: true,
+        message: 'Nenhuma fatura para processar hoje',
+        result: result,
+        timestamp: new Date().toISOString()
+      });
+      return;
+    }
+
+    // Processar cada fatura encontrada
+    for (const invoice of invoicesToProcess) {
+      result.processed++;
+      
+      try {
+        console.log(`🔄 [CRON TEST] Processando contrato ${invoice.contract_id}, parcela ${invoice.installment_number}`);
+        
+        const nextInstallmentNumber = invoice.installment_number + 1;
+        
+        // Verificar se já existe a próxima parcela
+        const { data: existingInvoice } = await supabase
+          .from('invoices')
+          .select('id')
+          .eq('contract_id', invoice.contract_id)
+          .eq('installment_number', nextInstallmentNumber)
+          .single();
+
+        if (existingInvoice) {
+          console.log(`✅ Parcela ${nextInstallmentNumber} já existe para contrato ${invoice.contract_id}`);
+          result.details.push({
+            contractId: invoice.contract_id,
+            invoiceId: invoice.id,
+            installmentNumber: invoice.installment_number,
+            status: 'skipped',
+            message: 'Próxima parcela já existe'
+          });
+          continue;
+        }
+
+        // Buscar dados do contrato
+        const { data: contract, error: contractError } = await supabase
+          .from('contracts')
+          .select('credit_amount, payment_installments')
+          .eq('id', invoice.contract_id)
+          .single();
+
+        if (contractError || !contract) {
+          throw new Error(`Contrato ${invoice.contract_id} não encontrado`);
+        }
+
+        // Calcular valor da próxima parcela (simplificado)
+        const totalInstallments = contract.payment_installments || 80;
+        const installmentValue = Math.round(contract.credit_amount / totalInstallments);
+
+        // Calcular data de vencimento (simplificado)
+        const todayDate = new Date();
+        const dueDate = new Date(todayDate);
+        dueDate.setMonth(dueDate.getMonth() + nextInstallmentNumber);
+        
+        const yearStr = dueDate.getFullYear();
+        const monthStr = String(dueDate.getMonth() + 1).padStart(2, '0');
+        const dayStr = String(dueDate.getDate()).padStart(2, '0');
+        const dueDateStr = `${yearStr}-${monthStr}-${dayStr}`;
+
+        // Calcular next_invoice_date da parcela seguinte
+        let nextInvoiceDate = null;
+        
+        if (nextInstallmentNumber < totalInstallments) {
+          const nextDueDate = new Date(dueDate);
+          nextDueDate.setMonth(nextDueDate.getMonth() + 1);
+          
+          const nextDate = new Date(nextDueDate);
+          nextDate.setDate(nextDate.getDate() - 15); // 15 dias antes
+          
+          const nextYearStr = nextDate.getFullYear();
+          const nextMonthStr = String(nextDate.getMonth() + 1).padStart(2, '0');
+          const nextDayStr = String(nextDate.getDate()).padStart(2, '0');
+          nextInvoiceDate = `${nextYearStr}-${nextMonthStr}-${nextDayStr}`;
+        }
+
+        const newInvoice = {
+          contract_id: invoice.contract_id,
+          installment_number: nextInstallmentNumber,
+          amount: installmentValue,
+          due_date: dueDateStr,
+          status: 'Pendente',
+          notes: `Parcela ${nextInstallmentNumber} - automática`,
+          next_invoice_date: nextInvoiceDate
+        };
+
+        // Inserir nova fatura no banco
+        const { data: createdInvoice, error: insertError } = await supabase
+          .from('invoices')
+          .insert(newInvoice)
+          .select()
+          .single();
+
+        if (insertError) {
+          throw new Error(`Erro ao inserir fatura: ${insertError.message}`);
+        }
+
+        // Atualizar next_invoice_date da fatura anterior para NULL
+        const { error: updateError } = await supabase
+          .from('invoices')
+          .update({ next_invoice_date: null })
+          .eq('id', invoice.id);
+
+        if (updateError) {
+          console.warn(`⚠️ [CRON TEST] Erro ao atualizar next_invoice_date da fatura ${invoice.id}:`, updateError);
+        }
+
+        // Registrar sucesso
+        result.details.push({
+          contractId: invoice.contract_id,
+          invoiceId: createdInvoice.id,
+          installmentNumber: nextInstallmentNumber,
+          status: 'success',
+          message: `Parcela ${nextInstallmentNumber} criada com sucesso`,
+          nextInvoiceDate: nextInvoiceDate
+        });
+        result.created++;
+
+        console.log(`✅ [CRON TEST] Contrato ${invoice.contract_id} - parcela ${nextInstallmentNumber} criada (R$ ${newInvoice.amount.toLocaleString('pt-BR')})`);
+
+      } catch (error) {
+        result.failed++;
+        const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+        result.errors.push(`Contrato ${invoice.contract_id}: ${errorMessage}`);
+
+        result.details.push({
+          contractId: invoice.contract_id,
+          invoiceId: invoice.id,
+          installmentNumber: invoice.installment_number,
+          status: 'failed',
+          message: errorMessage
+        });
+
+        console.error(`❌ [CRON TEST] Erro ao processar contrato ${invoice.contract_id}:`, error);
+      }
+    }
+
     console.log(`🏁 [CRON TEST] Teste concluído: ${result.created} criadas, ${result.failed} falharam`);
     
     res.json({
       success: true,
       message: 'Teste do cronjob executado com sucesso',
-      result: {
-        processed: result.processed,
-        created: result.created,
-        failed: result.failed,
-        errors: result.errors,
-        details: result.details
-      },
+      result: result,
       timestamp: new Date().toISOString()
     });
     

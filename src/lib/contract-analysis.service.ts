@@ -188,49 +188,105 @@ class ContractAnalysisService {
    */
   async calculateInstallmentsFromCreditRange(creditRange: CreditRange): Promise<InstallmentData[]> {
     const installments: InstallmentData[] = [];
-    const customInstallments = creditRange.customInstallments || [];
+
+    // Buscar parcelas personalizadas da tabela condicoes_parcelas
+    const { data: customInstallments, error: customError } = await supabase
+      .from('condicoes_parcelas')
+      .select('numero_parcela, valor_parcela')
+      .eq('faixa_credito_id', creditRange.id)
+      .order('numero_parcela');
+
+    if (customError) {
+      console.error('Erro ao buscar parcelas personalizadas:', customError);
+    }
+
+    console.log(`📋 Encontradas ${customInstallments?.length || 0} parcelas personalizadas para faixa ${creditRange.id}`);
+
+    // Buscar configuração de dias para vencimento
+    const { systemConfigService } = await import('./system-config.service');
+    const paymentConfig = await systemConfigService.getPaymentConfig();
+    const defaultDueDays = paymentConfig.defaultDueDays || 30;
 
     // 1ª Parcela
     installments.push({
       numero_parcela: 1,
       valor_parcela: creditRange.valor_primeira_parcela,
-      vencimento: await this.calculateDueDate(1),
+      vencimento: this.calculateDueDateForInstallment(1, defaultDueDays),
       tipo: 'primeira'
     });
 
-    // Parcelas personalizadas
-    for (const custom of customInstallments) {
-      installments.push({
-        numero_parcela: custom.numero_parcela,
-        valor_parcela: custom.valor_parcela,
-        vencimento: await this.calculateDueDate(custom.numero_parcela),
-        tipo: 'personalizada'
-      });
+    // Parcelas personalizadas (da tabela condicoes_parcelas)
+    if (customInstallments && customInstallments.length > 0) {
+      for (const custom of customInstallments) {
+        // Pular a primeira parcela se já foi adicionada
+        if (custom.numero_parcela === 1) {
+          continue;
+        }
+        
+        installments.push({
+          numero_parcela: custom.numero_parcela,
+          valor_parcela: custom.valor_parcela,
+          vencimento: this.calculateDueDateForInstallment(custom.numero_parcela, defaultDueDays),
+          tipo: 'personalizada'
+        });
+      }
     }
 
-    // Parcelas restantes
-    const usedNumbers = new Set([
-      1,
-      ...customInstallments.map(c => c.numero_parcela)
-    ]);
-
-    for (let i = 2; i <= creditRange.numero_total_parcelas; i++) {
-      if (!usedNumbers.has(i)) {
+    // Parcelas restantes (se não foram todas personalizadas)
+    const totalInstallments = creditRange.numero_total_parcelas || 80;
+    const existingNumbers = installments.map(inst => inst.numero_parcela);
+    
+    for (let i = 1; i <= totalInstallments; i++) {
+      if (!existingNumbers.includes(i)) {
         installments.push({
           numero_parcela: i,
           valor_parcela: creditRange.valor_parcelas_restantes,
-          vencimento: await this.calculateDueDate(i),
+          vencimento: this.calculateDueDateForInstallment(i, defaultDueDays),
           tipo: 'restante'
         });
       }
     }
 
     // Ordenar por número da parcela
-    return installments.sort((a, b) => a.numero_parcela - b.numero_parcela);
+    installments.sort((a, b) => a.numero_parcela - b.numero_parcela);
+
+    console.log(`✅ Total de parcelas calculadas: ${installments.length}`);
+    console.log(`   - Primeira: ${installments.filter(i => i.tipo === 'primeira').length}`);
+    console.log(`   - Personalizadas: ${installments.filter(i => i.tipo === 'personalizada').length}`);
+    console.log(`   - Restantes: ${installments.filter(i => i.tipo === 'restante').length}`);
+
+    return installments;
   }
 
   /**
-   * Calcula data de vencimento apenas para a primeira parcela
+   * Calcula data de vencimento para uma parcela específica
+   * 1ª parcela: hoje + defaultDueDays
+   * Demais parcelas: 1ª parcela + (número_parcela - 1) meses
+   */
+  private calculateDueDateForInstallment(installmentNumber: number, defaultDueDays: number): Date {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = today.getMonth();
+    const day = today.getDate();
+    
+    if (installmentNumber === 1) {
+      // 1ª parcela: hoje + defaultDueDays
+      const dueDate = new Date(year, month, day + defaultDueDays);
+      console.log(`📅 Parcela ${installmentNumber}: ${dueDate.toISOString().split('T')[0]} (${defaultDueDays} dias a partir de hoje)`);
+      return dueDate;
+    } else {
+      // Demais parcelas: 1ª parcela + (número_parcela - 1) meses
+      const firstDueDate = new Date(year, month, day + defaultDueDays);
+      const dueDate = new Date(firstDueDate);
+      dueDate.setMonth(dueDate.getMonth() + (installmentNumber - 1));
+      
+      console.log(`📅 Parcela ${installmentNumber}: ${dueDate.toISOString().split('T')[0]} (${installmentNumber - 1} meses após a 1ª)`);
+      return dueDate;
+    }
+  }
+
+  /**
+   * Calcula data de vencimento apenas para a primeira parcela (método antigo - mantido para compatibilidade)
    * Demais parcelas seguem o padrão (sem data específica)
    */
   private async calculateDueDate(installmentNumber: number): Promise<Date | null> {
