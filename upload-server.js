@@ -1419,6 +1419,109 @@ app.get('/api/test/contract-validation/:contractId', async (req, res) => {
   }
 });
 
+// Endpoint para verificar datas reais das faturas
+app.get('/api/test/invoice-dates/:contractId', async (req, res) => {
+  try {
+    const contractId = parseInt(req.params.contractId);
+    console.log(`🧪 [TEST] Verificando datas das faturas para contrato ${contractId}`);
+    
+    // Buscar todas as faturas do contrato com TODOS os campos
+    const { data: invoices, error: invoicesError } = await supabase
+      .from('invoices')
+      .select('*')
+      .eq('contract_id', contractId)
+      .order('installment_number');
+    
+    if (invoicesError) {
+      throw new Error(`Erro ao buscar faturas: ${invoicesError.message}`);
+    }
+    
+    res.json({
+      success: true,
+      contractId: contractId,
+      invoices: invoices || [],
+      totalInvoices: invoices?.length || 0,
+      message: `Encontradas ${invoices?.length || 0} faturas para contrato ${contractId}`
+    });
+    
+  } catch (error) {
+    console.error('❌ [TEST] Erro na verificação de datas:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// Endpoint para verificar se uma fatura será gerada pelo cronjob
+app.get('/api/test/check-next-invoice/:contractId', async (req, res) => {
+  try {
+    const contractId = parseInt(req.params.contractId);
+    console.log(`🧪 [TEST] Verificando próxima fatura para contrato ${contractId}`);
+    
+    // Buscar última fatura com next_invoice_date
+    const { data: lastInvoice, error: lastError } = await supabase
+      .from('invoices')
+      .select('*')
+      .eq('contract_id', contractId)
+      .not('next_invoice_date', 'is', null)
+      .order('installment_number', { ascending: false })
+      .limit(1)
+      .single();
+    
+    if (lastError && lastError.code !== 'PGRST116') { // PGRST116 = no rows returned
+      throw new Error(`Erro ao buscar última fatura: ${lastError.message}`);
+    }
+    
+    const today = new Date().toISOString().split('T')[0];
+    const willRunToday = lastInvoice ? lastInvoice.next_invoice_date <= today : false;
+    const nextInstallment = lastInvoice ? lastInvoice.installment_number + 1 : null;
+    
+    // Buscar dados do contrato para contexto
+    const { data: contract, error: contractError } = await supabase
+      .from('contracts')
+      .select('id, status, credit_amount, id_faixa_de_credito')
+      .eq('id', contractId)
+      .single();
+    
+    // Buscar faixa de crédito
+    let creditRange = null;
+    if (contract && contract.id_faixa_de_credito) {
+      const { data: range, error: rangeError } = await supabase
+        .from('faixas_de_credito')
+        .select('valor_primeira_parcela, valor_parcelas_restantes, numero_total_parcelas')
+        .eq('id', contract.id_faixa_de_credito)
+        .single();
+      
+      if (!rangeError) {
+        creditRange = range;
+      }
+    }
+    
+    res.json({
+      success: true,
+      contract: contract,
+      creditRange: creditRange,
+      lastInvoice: lastInvoice,
+      willRunToday: willRunToday,
+      nextInstallment: nextInstallment,
+      today: today,
+      message: lastInvoice 
+        ? `Próxima fatura será a parcela ${nextInstallment} em ${lastInvoice.next_invoice_date}`
+        : 'Nenhuma fatura agendada para este contrato'
+    });
+    
+  } catch (error) {
+    console.error('❌ [TEST] Erro na verificação:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
 // Endpoint de teste para verificar conexão com Supabase
 app.get('/api/test/supabase-connection', async (req, res) => {
   try {
@@ -1621,6 +1724,28 @@ app.get('/api/cron/test-generate-invoices', async (req, res) => {
 
         if (insertError) {
           throw new Error(`Erro ao inserir fatura: ${insertError.message}`);
+        }
+
+        // Integrar com ASAAS
+        try {
+          console.log(`🔄 [CRON TEST] Criando fatura no ASAAS para parcela ${nextInstallmentNumber}...`);
+          
+          // Importar dinamicamente o serviço ASAAS
+          const { asaasInvoiceService } = await import('./src/lib/asaas-invoice.service.js');
+          
+          // Criar fatura no ASAAS
+          const asaasResult = await asaasInvoiceService.createInvoiceInAsaas(createdInvoice);
+          
+          if (asaasResult.success) {
+            console.log(`✅ [CRON TEST] Fatura criada no ASAAS: ${asaasResult.asaasInvoiceId}`);
+            console.log(`   PIX: ${asaasResult.pixQrCode ? 'Disponível' : 'N/A'}`);
+            console.log(`   Boleto: ${asaasResult.bankSlipUrl ? 'Disponível' : 'N/A'}`);
+          } else {
+            console.warn(`⚠️ [CRON TEST] Falha ao criar fatura no ASAAS:`, asaasResult.errors);
+          }
+        } catch (asaasError) {
+          console.error(`❌ [CRON TEST] Erro ao integrar com ASAAS:`, asaasError);
+          // Não falhar o cronjob, apenas registrar o erro
         }
 
         // Atualizar next_invoice_date da fatura anterior para NULL

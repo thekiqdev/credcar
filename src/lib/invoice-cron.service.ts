@@ -100,12 +100,14 @@ class InvoiceCronService {
 
           // Criar fatura no ASAAS
           try {
-            const asaasResult = await asaasInvoiceService.createInvoiceInAsaas(createdInvoice.id);
+            const asaasResult = await asaasInvoiceService.createInvoiceInAsaas(createdInvoice);
             
             if (asaasResult.success) {
               console.log(`✅ [CRON] Fatura ${createdInvoice.id} criada no ASAAS: ${asaasResult.asaasInvoiceId}`);
+              console.log(`   PIX: ${asaasResult.pixQrCode ? 'Disponível' : 'N/A'}`);
+              console.log(`   Boleto: ${asaasResult.bankSlipUrl ? 'Disponível' : 'N/A'}`);
             } else {
-              console.warn(`⚠️ [CRON] Falha ao criar fatura ${createdInvoice.id} no ASAAS: ${asaasResult.error}`);
+              console.warn(`⚠️ [CRON] Falha ao criar fatura ${createdInvoice.id} no ASAAS:`, asaasResult.errors);
             }
           } catch (asaasError) {
             console.warn(`⚠️ [CRON] Erro ASAAS para fatura ${createdInvoice.id}:`, asaasError);
