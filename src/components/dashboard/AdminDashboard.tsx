@@ -4705,25 +4705,18 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                             style: "currency",
                                             currency: "BRL",
                                           }).format(
-                                            (contract.credit_amount ||
-                                              contract.total_value ||
-                                              0) * 0.15, // Simulando 15% pago
+                                            calculatePaidAmount(contract.id)
                                           )}
                                         </span>
                                       </div>
                                       <div className="flex justify-between text-xs">
                                         <span className="text-muted-foreground">
-                                          Restante:
+                                          Parcelas:
                                         </span>
                                         <span className="text-orange-600 font-medium">
-                                          {new Intl.NumberFormat("pt-BR", {
-                                            style: "currency",
-                                            currency: "BRL",
-                                          }).format(
-                                            (contract.credit_amount ||
-                                              contract.total_value ||
-                                              0) * 0.85, // Simulando 85% restante
-                                          )}
+                                          {
+                                            invoices.filter(inv => inv.contract_id === contract.id && inv.status === 'paid').length
+                                          }/{contract.installments || 80}
                                         </span>
                                       </div>
                                     </div>
