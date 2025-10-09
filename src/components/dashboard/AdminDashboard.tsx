@@ -4735,7 +4735,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                             style: "currency",
                                             currency: "BRL",
                                           }).format(
-                                            calculatePaidAmount(contract.id),
+                                            calculatePaidAmount(contract.id)
                                           )}
                                         </span>
                                       </div>
@@ -4744,8 +4744,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                           Parcelas:
                                         </span>
                                         <span className="text-blue-600 font-medium">
-                                          {invoices.filter(inv => inv.contract_id === contract.id && inv.status === 'paid').length}
-                                          /{contract.installments || contract.numero_total_parcelas || 'N/A'}
+                                          {allInvoices.filter(inv => inv.contract_id === contract.id && inv.status === 'paid').length}
+                                          /{contract.installments || 80}
                                         </span>
                                       </div>
                                     </div>
