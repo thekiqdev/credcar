@@ -917,6 +917,56 @@ app.get('/api/test/client-data/:contractId', async (req, res) => {
   }
 });
 
+// Endpoint para verificar status de geração automática de fatura
+app.get('/api/test/check-next-invoice/:contractId', async (req, res) => {
+  try {
+    const contractId = parseInt(req.params.contractId);
+    console.log(`🧪 [TEST] Verificando próxima fatura para contrato ${contractId}`);
+    
+    // Buscar última fatura com next_invoice_date
+    const { data: lastInvoice, error } = await supabase
+      .from('invoices')
+      .select('*')
+      .eq('contract_id', contractId)
+      .not('next_invoice_date', 'is', null)
+      .order('installment_number', { ascending: false })
+      .limit(1)
+      .single();
+    
+    if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
+      console.error('Erro ao buscar fatura:', error);
+      return res.status(500).json({
+        success: false,
+        message: error.message
+      });
+    }
+    
+    const today = new Date().toISOString().split('T')[0];
+    const willRunToday = lastInvoice ? lastInvoice.next_invoice_date <= today : false;
+    
+    res.json({
+      success: true,
+      lastInvoice: lastInvoice || null,
+      willRunToday: willRunToday,
+      nextInstallment: lastInvoice ? lastInvoice.installment_number + 1 : null,
+      todayDate: today,
+      message: lastInvoice 
+        ? `Última fatura: ${lastInvoice.installment_number}, Próxima: ${lastInvoice.installment_number + 1}, Data agendada: ${lastInvoice.next_invoice_date}`
+        : 'Nenhuma fatura aguardando criação'
+    });
+    
+  } catch (error) {
+    console.error('❌ [TEST] Erro ao verificar próxima fatura:', error);
+    
+    res.status(500).json({
+      success: false,
+      error: 'Erro interno ao verificar próxima fatura',
+      message: error instanceof Error ? error.message : 'Erro desconhecido',
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
 // Endpoint para testar busca de cliente no ASAAS
 app.get('/api/test/find-customer/:cpfCnpj', async (req, res) => {
   try {
