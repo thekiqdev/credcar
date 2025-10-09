@@ -14,6 +14,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ArrowLeft, Save, Upload, FileText, Users, Lock } from "lucide-react";
 import { Editor } from "@tinymce/tinymce-react";
 import mammoth from "mammoth";
+import MergeFieldsHelper from "./MergeFieldsHelper";
 
 interface ContractTemplate {
   id: number;
@@ -56,6 +57,7 @@ const ContractTemplateEditor: React.FC<ContractTemplateEditorProps> = ({
     message: string;
   } | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [showMergeFields, setShowMergeFields] = useState(false);
 
   useEffect(() => {
     if (alert) {
@@ -80,6 +82,12 @@ const ContractTemplateEditor: React.FC<ContractTemplateEditorProps> = ({
         return;
       }
       onSave(editorContent, metadata);
+    }
+  };
+
+  const handleInsertField = (placeholder: string) => {
+    if (editorRef.current) {
+      editorRef.current.insertContent(placeholder);
     }
   };
 
@@ -191,6 +199,14 @@ const ContractTemplateEditor: React.FC<ContractTemplateEditorProps> = ({
               <span>{isUploading ? "Convertendo..." : "Importar Word"}</span>
             </Button>
             <Button
+              variant="outline"
+              onClick={() => setShowMergeFields(!showMergeFields)}
+              className="flex items-center space-x-2"
+            >
+              <FileText className="w-4 h-4" />
+              <span>Campos de Mesclagem</span>
+            </Button>
+            <Button
               onClick={handleSave}
               className="bg-red-600 hover:bg-red-700 text-white flex items-center space-x-2"
             >
@@ -279,8 +295,9 @@ const ContractTemplateEditor: React.FC<ContractTemplateEditorProps> = ({
 
       {/* Editor */}
       <div className="h-[calc(100vh-200px)] p-6">
-        <div className="h-full">
-          <Editor
+        <div className="flex gap-4 h-full">
+          <div className={showMergeFields ? "flex-1" : "w-full"}>
+            <Editor
             apiKey="46lebzjws4vt4ywtma8d15683tj61n80shufdxg1spuuwpbm"
             onInit={(evt, editor) => (editorRef.current = editor)}
             initialValue={template.content}
@@ -428,6 +445,14 @@ const ContractTemplateEditor: React.FC<ContractTemplateEditorProps> = ({
               },
             }}
           />
+          </div>
+          
+          {/* Painel Lateral de Campos de Mesclagem */}
+          {showMergeFields && (
+            <div className="w-80 flex-shrink-0">
+              <MergeFieldsHelper onInsertField={handleInsertField} />
+            </div>
+          )}
         </div>
       </div>
     </div>

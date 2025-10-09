@@ -22,6 +22,8 @@ import { ArrowLeft, Save, FileText, PenTool } from "lucide-react";
 import { Editor } from "@tinymce/tinymce-react";
 import { contractTemplateService } from "../../lib/supabase";
 import SignatureCanvas from "@/components/ui/signature-canvas";
+import { mergePlaceholders, MergeData } from "@/lib/merge-fields";
+import MergeFieldsHelper from "./MergeFieldsHelper";
 
 interface CommissionPlan {
   id: number;
@@ -83,6 +85,7 @@ const ContractContentEditor: React.FC<ContractContentEditorProps> = ({
   const [templates, setTemplates] = useState<any[]>([]);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>("");
   const [isLoadingTemplates, setIsLoadingTemplates] = useState(true);
+  const [showMergeFields, setShowMergeFields] = useState(false);
 
   // Signature modal states
   const [isSignatureModalOpen, setIsSignatureModalOpen] = useState(false);
@@ -309,6 +312,13 @@ const ContractContentEditor: React.FC<ContractContentEditorProps> = ({
     loadTemplates();
   }, []);
 
+  // Função para inserir campos de mesclagem
+  const handleInsertField = (placeholder: string) => {
+    if (editorRef.current) {
+      editorRef.current.insertContent(placeholder);
+    }
+  };
+
   // Handle template selection
   const handleTemplateSelect = async (templateId: string) => {
     if (
@@ -331,10 +341,32 @@ const ContractContentEditor: React.FC<ContractContentEditorProps> = ({
       console.log("Loaded template:", template);
 
       if (template && editorRef.current) {
-        // Replace variables in template content
-        let content = template.content;
-
-        // Replace client variables
+        // **NOVO SISTEMA DE MESCLAGEM DE CAMPOS**
+        // Preparar dados para mesclagem
+        const mergeData: MergeData = {
+          client: {
+            full_name: clientData.full_name,
+            email: clientData.email,
+            phone: clientData.phone,
+            cpf_cnpj: clientData.cpf_cnpj,
+            address: clientData.address,
+            city: clientData.city,
+            state: clientData.state,
+            zip_code: clientData.zip_code,
+          },
+          contract: {
+            value: selectedCreditRange.valor_credito,
+            installments: selectedCreditRange.numero_total_parcelas,
+            number: `CONT-${Date.now()}`, // Gerar número único
+            date: new Date().toLocaleDateString('pt-BR'),
+          },
+        };
+        
+        // Aplicar mesclagem usando novo sistema
+        let content = mergePlaceholders(template.content, mergeData);
+        
+        // **MANTER COMPATIBILIDADE COM SISTEMA ANTIGO**
+        // Replace old-style variables {{VAR}} (para templates antigos)
         content = content.replace(/{{CLIENTE_NOME}}/g, clientData.full_name);
         content = content.replace(/{{CLIENTE_EMAIL}}/g, clientData.email);
         content = content.replace(/{{CLIENTE_TELEFONE}}/g, clientData.phone);
@@ -509,20 +541,31 @@ const ContractContentEditor: React.FC<ContractContentEditorProps> = ({
             </div>
           </div>
 
-          <Button
-            onClick={handleSubmit}
-            className="bg-red-600 hover:bg-red-700 text-white flex items-center space-x-2"
-          >
-            <Save className="w-4 h-4" />
-            <span>Salvar e Continuar</span>
-          </Button>
+          <div className="flex items-center space-x-3">
+            <Button
+              variant="outline"
+              onClick={() => setShowMergeFields(!showMergeFields)}
+              className="flex items-center space-x-2"
+            >
+              <FileText className="w-4 h-4" />
+              <span>Campos de Mesclagem</span>
+            </Button>
+            <Button
+              onClick={handleSubmit}
+              className="bg-red-600 hover:bg-red-700 text-white flex items-center space-x-2"
+            >
+              <Save className="w-4 h-4" />
+              <span>Salvar e Continuar</span>
+            </Button>
+          </div>
         </div>
       </div>
 
       {/* Full Screen Editor */}
       <div className="h-[calc(100vh-140px)] p-6">
-        <div className="h-full">
-          <Editor
+        <div className="flex gap-4 h-full">
+          <div className={showMergeFields ? "flex-1" : "w-full"}>
+            <Editor
             apiKey="46lebzjws4vt4ywtma8d15683tj61n80shufdxg1spuuwpbm"
             onInit={(evt, editor) => (editorRef.current = editor)}
             initialValue={getDefaultContent()}
@@ -579,6 +622,14 @@ const ContractContentEditor: React.FC<ContractContentEditorProps> = ({
               },
             }}
           />
+          </div>
+          
+          {/* Painel Lateral de Campos de Mesclagem */}
+          {showMergeFields && (
+            <div className="w-80 flex-shrink-0">
+              <MergeFieldsHelper onInsertField={handleInsertField} />
+            </div>
+          )}
         </div>
       </div>
 

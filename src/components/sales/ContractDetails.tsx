@@ -60,6 +60,8 @@ import {
   contractService,
   contractTemplateService,
 } from "@/lib/supabase";
+import { mergePlaceholders, MergeData } from "@/lib/merge-fields";
+import MergeFieldsHelper from "./MergeFieldsHelper";
 import { electronicSignatureService } from "@/lib/supabase";
 import {
   ContractStatus,
@@ -86,6 +88,7 @@ const ContractDetails: React.FC<ContractDetailsProps> = ({
   const [editedContent, setEditedContent] = useState("");
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
+  const [showMergeFields, setShowMergeFields] = useState(false);
   const [availableTemplates, setAvailableTemplates] = useState<any[]>([]);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>("");
   const [isLoadingTemplates, setIsLoadingTemplates] = useState(false);
@@ -653,6 +656,51 @@ const ContractDetails: React.FC<ContractDetailsProps> = ({
     );
     setEditedContent(currentContent);
     setIsEditingContent(true);
+  };
+
+  // Função para inserir campos de mesclagem
+  const handleInsertField = (placeholder: string) => {
+    if (editorRef.current) {
+      editorRef.current.insertContent(placeholder);
+    }
+  };
+
+  // Função para aplicar mesclagem no conteúdo atual
+  const handleApplyMerge = () => {
+    if (!contract || !editorRef.current) return;
+    
+    const currentContent = editorRef.current.getContent();
+    
+    // Preparar dados do contrato existente para mesclagem
+    const mergeData: MergeData = {
+      client: contract.clients ? {
+        full_name: contract.clients.full_name,
+        email: contract.clients.email,
+        phone: contract.clients.phone,
+        cpf_cnpj: contract.clients.cpf_cnpj,
+        address: contract.clients.address,
+        city: contract.clients.city,
+        state: contract.clients.state,
+        zip_code: contract.clients.zip_code,
+      } : undefined,
+      contract: {
+        value: parseFloat(contract.credit_amount || '0'),
+        installments: contract.total_installments,
+        number: contract.contract_number,
+        date: new Date(contract.created_at).toLocaleDateString('pt-BR'),
+        status: contract.status,
+      },
+      representative: contract.representatives ? {
+        name: contract.representatives.full_name,
+        email: contract.representatives.email,
+        phone: contract.representatives.phone,
+      } : undefined,
+    };
+    
+    // Aplicar mesclagem
+    const mergedContent = mergePlaceholders(currentContent, mergeData);
+    editorRef.current.setContent(mergedContent);
+    setEditedContent(mergedContent);
   };
 
   const handleInsertTemplate = async () => {
@@ -2534,7 +2582,38 @@ const ContractDetails: React.FC<ContractDetailsProps> = ({
                         depois clique no botão acima.
                       </p>
                     </div>
-                    <Editor
+
+                    {/* Merge Fields Section */}
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                      <h4 className="text-sm font-medium text-green-800 mb-3">
+                        Mesclagem de Campos
+                      </h4>
+                      <div className="flex gap-3">
+                        <Button
+                          variant="outline"
+                          onClick={() => setShowMergeFields(!showMergeFields)}
+                          className="flex items-center space-x-2"
+                        >
+                          <FileText className="w-4 h-4" />
+                          <span>{showMergeFields ? 'Ocultar' : 'Mostrar'} Campos</span>
+                        </Button>
+                        <Button
+                          variant="outline"
+                          onClick={handleApplyMerge}
+                          className="bg-green-600 text-white hover:bg-green-700"
+                        >
+                          Aplicar Mesclagem
+                        </Button>
+                      </div>
+                      <p className="text-xs text-green-600 mt-2">
+                        Use os campos de mesclagem para inserir dados do cliente e contrato automaticamente.
+                      </p>
+                    </div>
+
+                    {/* Editor Container with Merge Fields Panel */}
+                    <div className="flex gap-4">
+                      <div className={showMergeFields ? "flex-1" : "w-full"}>
+                        <Editor
                       apiKey="46lebzjws4vt4ywtma8d15683tj61n80shufdxg1spuuwpbm"
                       onInit={(evt, editor) => {
                         editorRef.current = editor;
@@ -2665,6 +2744,16 @@ const ContractDetails: React.FC<ContractDetailsProps> = ({
                         setEditedContent(content);
                       }}
                     />
+                      </div>
+                      
+                      {/* Painel Lateral de Campos de Mesclagem */}
+                      {showMergeFields && (
+                        <div className="w-80 flex-shrink-0">
+                          <MergeFieldsHelper onInsertField={handleInsertField} />
+                        </div>
+                      )}
+                    </div>
+
                     <div className="flex gap-2">
                       <Button
                         onClick={handleSaveContent}
