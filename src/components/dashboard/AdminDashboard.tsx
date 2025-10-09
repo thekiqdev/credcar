@@ -766,21 +766,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       .reduce((total, inv) => total + inv.amount, 0);
   };
 
-  const calculateTotalActiveContractsValue = (): number => {
-    const activeContracts = allContracts.filter(contract => contract.status === 'Ativo' || contract.status === 'Aprovado');
-    console.log('🔍 Contratos ativos encontrados:', activeContracts.length);
-    console.log('📋 Contratos ativos:', activeContracts.map(c => ({ id: c.id, status: c.status, value: c.credit_amount || c.total_value })));
-    
-    const total = activeContracts.reduce((total, contract) => {
-      const value = parseFloat(contract.credit_amount || contract.total_value || '0');
-      console.log(`💰 Contrato ${contract.id}: R$ ${value.toLocaleString('pt-BR')}`);
-      return total + value;
-    }, 0);
-    
-    console.log(`✅ Valor total dos contratos ativos: R$ ${total.toLocaleString('pt-BR')}`);
-    return total;
-  };
-
   const loadAllContracts = async () => {
     try {
       setIsLoadingContracts(true);
@@ -4575,6 +4560,17 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       Gerencie as faturas e pagamentos dos contratos.
                     </p>
                   </div>
+                  <div className="text-right">
+                    <p className="text-sm text-muted-foreground">Valor Total das Faturas</p>
+                    <p className="text-2xl font-bold text-blue-600">
+                      {new Intl.NumberFormat("pt-BR", {
+                        style: "currency",
+                        currency: "BRL",
+                      }).format(
+                        invoices.reduce((total, inv) => total + inv.amount, 0)
+                      )}
+                    </p>
+                  </div>
                 </div>
 
                 <div className="grid gap-4 md:grid-cols-3 mb-6">
@@ -4587,7 +4583,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     </CardHeader>
                     <CardContent>
                       <div className="text-2xl font-bold">
-                        {invoices.filter((i) => i.status === "Pendente" || i.status === "pending").length}
+                        {invoices.filter((i) => i.status === "pending" || i.status === "Pendente").length}
                       </div>
                       <p className="text-xs text-muted-foreground">
                         Aguardando pagamento
@@ -4619,7 +4615,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     </CardHeader>
                     <CardContent>
                       <div className="text-2xl font-bold">
-                        {invoices.filter((i) => i.status === "overdue").length}
+                        {invoices.filter((i) => i.status === "overdue" || i.status === "Vencido").length}
                       </div>
                       <p className="text-xs text-muted-foreground">
                         Pagamentos em atraso
@@ -4720,18 +4716,25 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                             style: "currency",
                                             currency: "BRL",
                                           }).format(
-                                            calculatePaidAmount(contract.id)
+                                            (contract.credit_amount ||
+                                              contract.total_value ||
+                                              0) * 0.15, // Simulando 15% pago
                                           )}
                                         </span>
                                       </div>
                                       <div className="flex justify-between text-xs">
                                         <span className="text-muted-foreground">
-                                          Parcelas:
+                                          Restante:
                                         </span>
                                         <span className="text-orange-600 font-medium">
-                                          {
-                                            invoices.filter(inv => inv.contract_id === contract.id && inv.status === 'paid').length
-                                          }/{contract.installments || 80}
+                                          {new Intl.NumberFormat("pt-BR", {
+                                            style: "currency",
+                                            currency: "BRL",
+                                          }).format(
+                                            (contract.credit_amount ||
+                                              contract.total_value ||
+                                              0) * 0.85, // Simulando 85% restante
+                                          )}
                                         </span>
                                       </div>
                                     </div>
@@ -4839,7 +4842,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                       style: "currency",
                                       currency: "BRL",
                                     }).format(
-                                      calculateTotalActiveContractsValue(),
+                                      selectedContractForInvoices.value,
                                     )}
                                   </p>
                                 </div>
