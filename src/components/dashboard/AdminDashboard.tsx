@@ -767,12 +767,18 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   };
 
   const calculateTotalActiveContractsValue = (): number => {
-    return allContracts
-      .filter(contract => contract.status === 'Ativo' || contract.status === 'Aprovado')
-      .reduce((total, contract) => {
-        const value = parseFloat(contract.credit_amount || contract.total_value || '0');
-        return total + value;
-      }, 0);
+    const activeContracts = allContracts.filter(contract => contract.status === 'Ativo' || contract.status === 'Aprovado');
+    console.log('🔍 Contratos ativos encontrados:', activeContracts.length);
+    console.log('📋 Contratos ativos:', activeContracts.map(c => ({ id: c.id, status: c.status, value: c.credit_amount || c.total_value })));
+    
+    const total = activeContracts.reduce((total, contract) => {
+      const value = parseFloat(contract.credit_amount || contract.total_value || '0');
+      console.log(`💰 Contrato ${contract.id}: R$ ${value.toLocaleString('pt-BR')}`);
+      return total + value;
+    }, 0);
+    
+    console.log(`✅ Valor total dos contratos ativos: R$ ${total.toLocaleString('pt-BR')}`);
+    return total;
   };
 
   const loadAllContracts = async () => {
