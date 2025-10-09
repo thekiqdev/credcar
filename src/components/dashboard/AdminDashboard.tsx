@@ -275,6 +275,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     },
   ]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [allInvoices, setAllInvoices] = useState<Invoice[]>([]); // Todas as faturas para contadores globais
   // Commission Plans State
   const [commissionPlans, setCommissionPlans] = useState([]);
   const [creditRanges, setCreditRanges] = useState([]);
@@ -541,6 +542,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   } | null>(null);
   const [isLoadingCronTest, setIsLoadingCronTest] = useState(false);
 
+  // Carregar todas as faturas quando a seção de invoices for ativada
+  useEffect(() => {
+    if (activeSection === "invoices") {
+      loadAllInvoices();
+    }
+  }, [activeSection]);
+
   // Email settings state
   const [emailSettings, setEmailSettings] = useState({
     provider: "smtp",
@@ -757,6 +765,28 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       setInvoices(invoices || []);
     } catch (error) {
       console.error('Erro ao carregar faturas:', error);
+    }
+  };
+
+  // Função para carregar todas as faturas (para contadores globais)
+  const loadAllInvoices = async () => {
+    try {
+      console.log(`🔍 Carregando todas as faturas...`);
+      
+      const { data: allInvoices, error } = await supabase
+        .from('invoices')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Erro ao carregar todas as faturas:', error);
+        return;
+      }
+
+      console.log(`✅ ${allInvoices?.length || 0} faturas totais carregadas`);
+      setAllInvoices(allInvoices || []);
+    } catch (error) {
+      console.error('Erro ao carregar todas as faturas:', error);
     }
   };
 
@@ -4560,17 +4590,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       Gerencie as faturas e pagamentos dos contratos.
                     </p>
                   </div>
-                  <div className="text-right">
-                    <p className="text-sm text-muted-foreground">Valor Total das Faturas</p>
-                    <p className="text-2xl font-bold text-blue-600">
-                      {new Intl.NumberFormat("pt-BR", {
-                        style: "currency",
-                        currency: "BRL",
-                      }).format(
-                        invoices.reduce((total, inv) => total + inv.amount, 0)
-                      )}
-                    </p>
-                  </div>
                 </div>
 
                 <div className="grid gap-4 md:grid-cols-3 mb-6">
@@ -4583,7 +4602,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     </CardHeader>
                     <CardContent>
                       <div className="text-2xl font-bold">
-                        {invoices.filter((i) => i.status === "pending" || i.status === "Pendente").length}
+                        {allInvoices.filter((i) => i.status === "pending" || i.status === "Pendente").length}
                       </div>
                       <p className="text-xs text-muted-foreground">
                         Aguardando pagamento
@@ -4599,7 +4618,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     </CardHeader>
                     <CardContent>
                       <div className="text-2xl font-bold">
-                        {invoices.filter((i) => i.status === "paid").length}
+                        {allInvoices.filter((i) => i.status === "paid").length}
                       </div>
                       <p className="text-xs text-muted-foreground">
                         Pagamentos confirmados
@@ -4615,7 +4634,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     </CardHeader>
                     <CardContent>
                       <div className="text-2xl font-bold">
-                        {invoices.filter((i) => i.status === "overdue" || i.status === "Vencido").length}
+                        {allInvoices.filter((i) => i.status === "overdue" || i.status === "Vencido").length}
                       </div>
                       <p className="text-xs text-muted-foreground">
                         Pagamentos em atraso
