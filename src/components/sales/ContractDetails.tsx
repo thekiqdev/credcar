@@ -449,10 +449,10 @@ const ContractDetails: React.FC<ContractDetailsProps> = ({
             phone,
             commission_code
           ),
-          quotas!inner (
+          quotas (
             id,
             quota_number,
-            groups!inner (
+            groups (
               id,
               name,
               description
@@ -525,17 +525,17 @@ const ContractDetails: React.FC<ContractDetailsProps> = ({
           phone: data.profiles?.phone,
           commission_code: data.profiles?.commission_code,
         },
-         quota: data.quotas
-           ? {
-               id: data.quotas.id,
-               quota_number: data.quotas.quota_number,
-               group: {
-                 id: data.quotas.groups.id,
-                 name: data.quotas.groups.name,
-                 description: data.quotas.groups.description,
-               },
-             }
-           : null,
+        quota: data.quotas
+          ? {
+              id: data.quotas.id,
+              quota_number: data.quotas.quota_number,
+              group: {
+                id: data.quotas.groups?.id || 0,
+                name: data.quotas.groups?.name || "Grupo não encontrado",
+                description: data.quotas.groups?.description,
+              },
+            }
+          : null,
         invoices: data.invoices || [],
       };
 
