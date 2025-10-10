@@ -439,8 +439,7 @@ const ContractDetails: React.FC<ContractDetailsProps> = ({
             id,
             nome,
             descricao,
-            comissao,
-            commission_percentage
+            comissao
           ),
           profiles!inner (
             id,
@@ -461,7 +460,7 @@ const ContractDetails: React.FC<ContractDetailsProps> = ({
           invoices (
             id,
             invoice_code,
-            value,
+            amount,
             due_date,
             status,
             paid_at,
@@ -514,7 +513,7 @@ const ContractDetails: React.FC<ContractDetailsProps> = ({
           id: data.planos?.id || 0,
           name: data.planos?.nome || "Plano não encontrado",
           commission_percentage:
-            data.planos?.commission_percentage || data.planos?.comissao || 4, // Padrão: 4%
+            data.planos?.comissao || 0,
           payment_details: data.planos?.descricao || "",
           payment_installments: 1, // Default value since planos doesn't have this field
         },
@@ -1170,25 +1169,16 @@ const ContractDetails: React.FC<ContractDetailsProps> = ({
     );
   }
 
-  // Calcular valor total das parcelas (faturas)
-  const totalInvoicesValue = contract.invoices.reduce((sum, invoice) => {
-    return sum + (invoice.value || 0);
-  }, 0);
+  // Calculate commission value based on contract value and commission percentage from planos table
+  const commissionPercentage = contract.commission_table.commission_percentage || 4; // Default 4%
+  const commissionValue = contract.total_value * (commissionPercentage / 100);
 
-  // Calcular valor pago (faturas com status 'paid')
+  // Calculate values based on invoices (parcels)
+  const totalInvoicesValue = contract.invoices.reduce((sum, invoice) => sum + (invoice.amount || 0), 0);
   const paidInvoicesValue = contract.invoices
     .filter(invoice => invoice.status === 'paid')
-    .reduce((sum, invoice) => {
-      return sum + (invoice.value || 0);
-    }, 0);
-
-  // Saldo devedor = valor total das parcelas - valor pago
-  const remainingValue = totalInvoicesValue - paidInvoicesValue;
-
-  // Calcular comissão baseada no valor do contrato
-  const commissionValue =
-    contract.total_value *
-    (contract.commission_table.commission_percentage / 100);
+    .reduce((sum, invoice) => sum + (invoice.amount || 0), 0);
+  const remainingInvoicesValue = totalInvoicesValue - paidInvoicesValue;
 
   return (
     <div className="bg-background">
@@ -1728,7 +1718,7 @@ const ContractDetails: React.FC<ContractDetailsProps> = ({
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold text-orange-600">
-                    {formatCurrency(remainingValue)}
+                    {formatCurrency(remainingInvoicesValue)}
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">
                     Pendente de pagamento
@@ -1745,16 +1735,16 @@ const ContractDetails: React.FC<ContractDetailsProps> = ({
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold text-blue-600">
-                    {contract.invoices.filter(inv => inv.status === 'paid').length}/{contract.invoices.length}
+                    {contract.invoices.filter(invoice => invoice.status === 'paid').length}/{contract.invoices.length}
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">
                     {contract.invoices.length > 0 ? (
                       (
-                        (contract.invoices.filter(inv => inv.status === 'paid').length /
+                        (contract.invoices.filter(invoice => invoice.status === 'paid').length /
                           contract.invoices.length) *
                         100
                       ).toFixed(0)
-                    ) : 0}
+                    ) : '0'}
                     % pagas
                   </p>
                 </CardContent>
@@ -1919,8 +1909,7 @@ const ContractDetails: React.FC<ContractDetailsProps> = ({
                         {formatCurrency(commissionValue)}
                       </div>
                       <p className="text-xs text-purple-700 mt-1">
-                        {contract.commission_table.commission_percentage}% do
-                        valor do contrato
+                        {commissionPercentage}% do valor do contrato
                       </p>
                       <p className="text-xs text-purple-600 mt-1">
                         Tabela: {contract.commission_table.name}
@@ -2068,7 +2057,7 @@ const ContractDetails: React.FC<ContractDetailsProps> = ({
                           <TableCell className="font-medium">
                             {invoice.invoice_code}
                           </TableCell>
-                          <TableCell>{formatCurrency(invoice.value)}</TableCell>
+                          <TableCell>{formatCurrency(invoice.amount)}</TableCell>
                           <TableCell>{formatDate(invoice.due_date)}</TableCell>
                           <TableCell>
                             <Badge
@@ -2437,7 +2426,7 @@ const ContractDetails: React.FC<ContractDetailsProps> = ({
                   <div>
                     <Label className="text-sm font-medium">Percentual</Label>
                     <p className="text-sm text-muted-foreground mt-1">
-                      {contract.commission_table.commission_percentage}%
+                      {commissionPercentage}%
                     </p>
                   </div>
                   <div>
