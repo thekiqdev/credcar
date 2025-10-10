@@ -449,10 +449,10 @@ const ContractDetails: React.FC<ContractDetailsProps> = ({
             phone,
             commission_code
           ),
-          quotas!left (
+          quotas (
             id,
             quota_number,
-            groups!left (
+            groups (
               id,
               name,
               description
@@ -481,6 +481,16 @@ const ContractDetails: React.FC<ContractDetailsProps> = ({
       if (!data) {
         throw new Error("Contrato não encontrado");
       }
+
+      console.log("Contract data loaded:", {
+        contractId: contractId,
+        quotaData: data.quotas,
+        groupData: data.quotas?.groups,
+        hasQuota: !!data.quotas,
+        quotaId: data.quotas?.id,
+        quotaNumber: data.quotas?.quota_number,
+        groupName: data.quotas?.groups?.name
+      });
 
       // Transform the data to match our interface
       const contractData: ContractData = {
@@ -525,7 +535,7 @@ const ContractDetails: React.FC<ContractDetailsProps> = ({
           phone: data.profiles?.phone,
           commission_code: data.profiles?.commission_code,
         },
-        quota: data.quotas && data.quotas.id
+        quota: data.quotas
           ? {
               id: data.quotas.id,
               quota_number: data.quotas.quota_number,
@@ -1939,7 +1949,7 @@ const ContractDetails: React.FC<ContractDetailsProps> = ({
                     <div>
                       <Label className="text-sm font-medium">Grupo</Label>
                       <p className="text-sm text-muted-foreground">
-                        {contract.quota?.group?.name || "Grupo não encontrado"}
+                        {contract.quota.group.name}
                       </p>
                     </div>
                     <div>
@@ -1947,7 +1957,7 @@ const ContractDetails: React.FC<ContractDetailsProps> = ({
                         Número da Cota
                       </Label>
                       <p className="text-sm text-muted-foreground">
-                        #{contract.quota?.quota_number?.toString().padStart(3, '0') || "N/A"}
+                        {contract.quota.quota_number}
                       </p>
                     </div>
                     <div>
@@ -1955,7 +1965,7 @@ const ContractDetails: React.FC<ContractDetailsProps> = ({
                         Descrição do Grupo
                       </Label>
                       <p className="text-sm text-muted-foreground">
-                        {contract.quota?.group?.description || "Sem descrição"}
+                        {contract.quota.group.description || "Sem descrição"}
                       </p>
                     </div>
                   </div>
