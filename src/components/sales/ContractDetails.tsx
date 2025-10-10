@@ -482,36 +482,6 @@ const ContractDetails: React.FC<ContractDetailsProps> = ({
         throw new Error("Contrato não encontrado");
       }
 
-      // Debug: Log dos dados retornados
-      console.log("Contract data:", data);
-      console.log("Quota data:", data.quotas);
-
-      // Se não temos dados da quota, fazer query separada
-      let quotaData = data.quotas;
-      if (!quotaData && data.quota_id) {
-        console.log("Fazendo query separada para quota_id:", data.quota_id);
-        const { data: quotaResult, error: quotaError } = await supabase
-          .from("quotas")
-          .select(`
-            id,
-            quota_number,
-            groups (
-              id,
-              name,
-              description
-            )
-          `)
-          .eq("id", data.quota_id)
-          .single();
-        
-        if (!quotaError && quotaResult) {
-          quotaData = quotaResult;
-          console.log("Quota data encontrada:", quotaData);
-        } else {
-          console.error("Erro ao buscar quota:", quotaError);
-        }
-      }
-
       // Transform the data to match our interface
       const contractData: ContractData = {
         id: data.id,
@@ -555,14 +525,14 @@ const ContractDetails: React.FC<ContractDetailsProps> = ({
           phone: data.profiles?.phone,
           commission_code: data.profiles?.commission_code,
         },
-        quota: quotaData && quotaData.id
+        quota: data.quotas && data.quotas.id
           ? {
-              id: quotaData.id,
-              quota_number: quotaData.quota_number,
+              id: data.quotas.id,
+              quota_number: data.quotas.quota_number,
               group: {
-                id: quotaData.groups?.id || 0,
-                name: quotaData.groups?.name || "Grupo não encontrado",
-                description: quotaData.groups?.description || "Sem descrição",
+                id: data.quotas.groups?.id || 0,
+                name: data.quotas.groups?.name || "Grupo não encontrado",
+                description: data.quotas.groups?.description || "Sem descrição",
               },
             }
           : null,
