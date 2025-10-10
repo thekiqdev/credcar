@@ -439,7 +439,8 @@ const ContractDetails: React.FC<ContractDetailsProps> = ({
             id,
             nome,
             descricao,
-            commission_percentage
+            comissao,
+            "commission-percentage"
           ),
           profiles!inner (
             id,
@@ -513,7 +514,7 @@ const ContractDetails: React.FC<ContractDetailsProps> = ({
           id: data.planos?.id || 0,
           name: data.planos?.nome || "Plano não encontrado",
           commission_percentage:
-            data.planos?.commission_percentage || 0,
+            data.planos?.["commission-percentage"] || 4, // Usar commission-percentage da tabela planos
           payment_details: data.planos?.descricao || "",
           payment_installments: 1, // Default value since planos doesn't have this field
         },
@@ -1745,8 +1746,8 @@ const ContractDetails: React.FC<ContractDetailsProps> = ({
                     {contract.total_installments > 0 ? (
                       (
                         (contract.invoices.filter(invoice => invoice.status === 'paid').length /
-                          contract.total_installments) *
-                        100
+                        contract.total_installments) *
+                      100
                       ).toFixed(0)
                     ) : '0'}
                     % pagas
