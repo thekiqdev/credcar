@@ -449,10 +449,10 @@ const ContractDetails: React.FC<ContractDetailsProps> = ({
             phone,
             commission_code
           ),
-          quotas!inner (
+          quotas (
             id,
             quota_number,
-            groups!inner (
+            groups (
               id,
               name,
               description
@@ -481,6 +481,10 @@ const ContractDetails: React.FC<ContractDetailsProps> = ({
       if (!data) {
         throw new Error("Contrato não encontrado");
       }
+
+      // Debug: Log dos dados retornados
+      console.log("Contract data:", data);
+      console.log("Quota data:", data.quotas);
 
       // Transform the data to match our interface
       const contractData: ContractData = {
