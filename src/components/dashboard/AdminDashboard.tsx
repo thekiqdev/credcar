@@ -14,8 +14,8 @@ import {
 } from "../../lib/supabase";
 import { systemConfigService } from "../../lib/system-config.service";
 import { asaasService } from "../../lib/asaas.service";
-import { formatDateBR, isDateOverdue } from "../../lib/date-utils";
 import { commissionService } from "../../lib/commission.service";
+import { formatDateBR, isDateOverdue } from "../../lib/date-utils";
 import WebhookTester from "./WebhookTester";
 
 // Função para gerar UUID compatível com todos os ambientes
@@ -415,7 +415,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     description: "",
   });
   const [commissionReports, setCommissionReports] = useState([]);
-  const [isLoadingCommissions, setIsLoadingCommissions] = useState(false);
   const [isRepresentativeModalOpen, setIsRepresentativeModalOpen] =
     useState(false);
   const [selectedRepresentativeForModal, setSelectedRepresentativeForModal] =
@@ -523,35 +522,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     }
   }, [activeSection]);
 
-  // Carregar relatório de comissões quando a seção for ativada
-  useEffect(() => {
-    const loadCommissionReports = async () => {
-      if (activeSection === "commission-reports") {
-        setIsLoadingCommissions(true);
-        try {
-          const reports = await commissionService.getGlobalCommissionReport();
-          setCommissionReports(
-            reports.map((report, index) => ({
-              id: report.representativeId,
-              representative: report.representativeName,
-              period: report.period,
-              totalCommission: report.totalCommission,
-              paidCommission: report.paidCommission,
-              pendingCommission: report.pendingCommission,
-              contracts: report.contractsCount,
-            }))
-          );
-        } catch (error) {
-          console.error("Erro ao carregar relatório de comissões:", error);
-        } finally {
-          setIsLoadingCommissions(false);
-        }
-      }
-    };
-
-    loadCommissionReports();
-  }, [activeSection]);
-
   // Email settings state
   const [emailSettings, setEmailSettings] = useState({
     provider: "smtp",
@@ -632,6 +602,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
           loadInternalUsers(),
           loadPaymentSettings(),
           loadCronStats(),
+          loadCommissionReports(),
         ]);
         console.log("AdminDashboard: All data loaded successfully");
       } catch (error) {
@@ -741,6 +712,29 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       setRepresentativeDocuments(groupedDocs);
     } catch (error) {
       console.error("Error loading documents:", error);
+    }
+  };
+
+  const loadCommissionReports = async () => {
+    try {
+      console.log("Loading commission reports...");
+      const report = await commissionService.getGlobalCommissionReport();
+      
+      // Formatar dados para o formato esperado pelo componente
+      const formattedReports = report.representatives.map((rep) => ({
+        id: rep.representativeId,
+        representative: rep.representativeName,
+        period: new Date().toLocaleDateString("pt-BR", { month: "long", year: "numeric" }),
+        totalCommission: rep.totalCommission,
+        paidCommission: rep.paidCommission,
+        pendingCommission: rep.pendingCommission,
+        contracts: rep.contractsCount,
+      }));
+      
+      console.log("Commission reports loaded:", formattedReports);
+      setCommissionReports(formattedReports);
+    } catch (error) {
+      console.error("Error loading commission reports:", error);
     }
   };
 
@@ -4413,67 +4407,53 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    {isLoadingCommissions ? (
-                      <div className="text-center py-8">
-                        <p className="text-muted-foreground">
-                          Carregando relatório de comissões...
-                        </p>
-                      </div>
-                    ) : commissionReports.length === 0 ? (
-                      <div className="text-center py-8">
-                        <p className="text-muted-foreground">
-                          Nenhum relatório de comissão encontrado
-                        </p>
-                      </div>
-                    ) : (
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Representante</TableHead>
-                            <TableHead>Período</TableHead>
-                            <TableHead>Total Comissão</TableHead>
-                            <TableHead>Pago</TableHead>
-                            <TableHead>Pendente</TableHead>
-                            <TableHead>Contratos</TableHead>
-                            <TableHead className="text-right">Ações</TableHead>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Representante</TableHead>
+                          <TableHead>Período</TableHead>
+                          <TableHead>Total Comissão</TableHead>
+                          <TableHead>Pago</TableHead>
+                          <TableHead>Pendente</TableHead>
+                          <TableHead>Contratos</TableHead>
+                          <TableHead className="text-right">Ações</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {commissionReports.map((report) => (
+                          <TableRow key={report.id}>
+                            <TableCell className="font-medium">
+                              {report.representative}
+                            </TableCell>
+                            <TableCell>{report.period}</TableCell>
+                            <TableCell>
+                              {new Intl.NumberFormat("pt-BR", {
+                                style: "currency",
+                                currency: "BRL",
+                              }).format(report.totalCommission)}
+                            </TableCell>
+                            <TableCell>
+                              {new Intl.NumberFormat("pt-BR", {
+                                style: "currency",
+                                currency: "BRL",
+                              }).format(report.paidCommission)}
+                            </TableCell>
+                            <TableCell>
+                              {new Intl.NumberFormat("pt-BR", {
+                                style: "currency",
+                                currency: "BRL",
+                              }).format(report.pendingCommission)}
+                            </TableCell>
+                            <TableCell>{report.contracts}</TableCell>
+                            <TableCell className="text-right">
+                              <Button variant="outline" size="sm">
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                            </TableCell>
                           </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {commissionReports.map((report) => (
-                            <TableRow key={report.id}>
-                              <TableCell className="font-medium">
-                                {report.representative}
-                              </TableCell>
-                              <TableCell>{report.period}</TableCell>
-                              <TableCell>
-                                {new Intl.NumberFormat("pt-BR", {
-                                  style: "currency",
-                                  currency: "BRL",
-                                }).format(report.totalCommission)}
-                              </TableCell>
-                              <TableCell>
-                                {new Intl.NumberFormat("pt-BR", {
-                                  style: "currency",
-                                  currency: "BRL",
-                                }).format(report.paidCommission)}
-                              </TableCell>
-                              <TableCell>
-                                {new Intl.NumberFormat("pt-BR", {
-                                  style: "currency",
-                                  currency: "BRL",
-                                }).format(report.pendingCommission)}
-                              </TableCell>
-                              <TableCell>{report.contracts}</TableCell>
-                              <TableCell className="text-right">
-                                <Button variant="outline" size="sm">
-                                  <Eye className="h-4 w-4" />
-                                </Button>
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    )}
+                        ))}
+                      </TableBody>
+                    </Table>
                   </CardContent>
                 </Card>
               </div>

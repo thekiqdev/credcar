@@ -1498,7 +1498,7 @@ export const dashboardService = {
           `
           *,
           clients(full_name, name),
-          planos(nome, descricao, comissao)
+          planos(nome, descricao, comissao, "commission-percentage")
         `,
         )
         .eq("representative_id", representativeId);
@@ -1527,7 +1527,7 @@ export const dashboardService = {
             `
             *,
             clients(full_name, name),
-            planos(nome, descricao, comissao)
+            planos(nome, descricao, comissao, "commission-percentage")
           `,
           )
           .eq("representative_id", representativeId);
@@ -1623,8 +1623,25 @@ export const dashboardService = {
         });
       }
 
+      // Build commission history with both contracts and withdrawals
+      const commissionHistory: any[] = [];
+      
+      // Add contract commissions
+      formattedContracts.forEach((contract) => {
+        commissionHistory.push({
+          id: `contract-${contract.id}`,
+          contract: contract.contractNumber,
+          date: contract.date,
+          value: contract.commission,
+          status: "pending" as const,
+          dueDate: undefined,
+          type: "contract",
+        });
+      });
+      
+      // Add withdrawal history
       const validWithdrawals = Array.isArray(withdrawals) ? withdrawals : [];
-      const commissionHistory = validWithdrawals.map((withdrawal) => {
+      validWithdrawals.forEach((withdrawal) => {
         let requestedDate = "Data não disponível";
         let processedDate: string | undefined;
 
@@ -1643,9 +1660,9 @@ export const dashboardService = {
           console.warn("Error formatting withdrawal dates:", dateError);
         }
 
-        return {
+        commissionHistory.push({
           id: withdrawal?.id?.toString() || "unknown",
-          contract: withdrawal?.request_code || "N/A",
+          contract: withdrawal?.request_code || "Saque",
           date: requestedDate,
           value: withdrawal?.requested_value || 0,
           status:
@@ -1653,7 +1670,8 @@ export const dashboardService = {
               ? ("paid" as const)
               : ("pending" as const),
           dueDate: processedDate,
-        };
+          type: "withdrawal",
+        });
       });
 
       const dashboardData = {
