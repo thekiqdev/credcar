@@ -1561,8 +1561,8 @@ export const dashboardService = {
         (c) => c?.status === "Concluído",
       ).length;
 
-      // Calculate pending commission (simplified calculation)
-      const pendingCommission = validContracts.reduce((sum, contract) => {
+      // Calculate total commission from contracts
+      const totalCommission = validContracts.reduce((sum, contract) => {
         if (contract?.status === "Ativo" || contract?.status === "Concluído") {
           const commissionRate =
             contract?.planos?.["commission-percentage"] || 4; // Default 4%
@@ -1571,6 +1571,25 @@ export const dashboardService = {
         }
         return sum;
       }, 0);
+
+      // Get approved withdrawals to subtract from available balance
+      const { data: approvedWithdrawals, error: approvedWithdrawalsError } = await supabase
+        .from("withdrawal_requests")
+        .select("requested_value")
+        .eq("representative_id", representativeId)
+        .eq("status", "Aprovado");
+
+      if (approvedWithdrawalsError) {
+        console.error("Error fetching approved withdrawals:", approvedWithdrawalsError);
+      }
+
+      const withdrawnAmount = (approvedWithdrawals || []).reduce(
+        (sum, w) => sum + (w.requested_value || 0),
+        0
+      );
+
+      // Available balance = total commission - withdrawn amount
+      const pendingCommission = Math.max(0, totalCommission - withdrawnAmount);
 
       // Format contracts for display
       const formattedContracts = validContracts.map((contract) => {
@@ -1668,7 +1687,9 @@ export const dashboardService = {
           status:
             withdrawal?.status === "Aprovado"
               ? ("paid" as const)
-              : ("pending" as const),
+              : withdrawal?.status === "Rejeitado"
+                ? ("rejected" as const)
+                : ("pending" as const),
           dueDate: processedDate,
           type: "withdrawal",
         });

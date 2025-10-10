@@ -41,6 +41,7 @@ import {
   User,
 } from "lucide-react";
 import DocumentNotification from './DocumentNotification';
+import { withdrawalService } from "../../lib/withdrawal.service";
 import {
   Dialog,
   DialogContent,
@@ -124,6 +125,7 @@ const RepresentativeDashboard: React.FC<RepresentativeDashboardProps> = ({
   const [isWithdrawalDialogOpen, setIsWithdrawalDialogOpen] =
     React.useState(false);
   const [withdrawalAmount, setWithdrawalAmount] = React.useState("");
+  const [isProcessing, setIsProcessing] = React.useState(false);
   const [activeTab, setActiveTab] = React.useState("dashboard");
   const [showContractFlow, setShowContractFlow] = React.useState(false);
   const [selectedContractId, setSelectedContractId] = React.useState<
@@ -281,17 +283,72 @@ const RepresentativeDashboard: React.FC<RepresentativeDashboardProps> = ({
     navigate("/", { replace: true });
   };
 
-  const handleWithdrawalRequest = () => {
-    const amount = parseFloat(withdrawalAmount);
-    if (amount > 0 && amount <= availableBalance) {
-      console.log(`Withdrawal request: R$ ${amount.toLocaleString("pt-BR")}`);
+  const handleWithdrawalRequest = async () => {
+    try {
+      const amount = parseFloat(withdrawalAmount);
+      
+      if (!amount || amount <= 0) {
+        alert("Por favor, informe um valor válido");
+        return;
+      }
+      
+      if (amount > availableBalance) {
+        alert(`Saldo insuficiente. Valor disponível: R$ ${availableBalance.toLocaleString("pt-BR")}`);
+        return;
+      }
+      
+      setIsProcessing(true);
+      
+      const withdrawal = await withdrawalService.createWithdrawalRequest(
+        currentUser.id,
+        amount
+      );
+      
+      // Atualizar UI
       setIsWithdrawalDialogOpen(false);
       setWithdrawalAmount("");
+      
+      // Recarregar dados do dashboard para atualizar saldo
+      const loadData = async () => {
+        if (!currentUser?.id) return;
+        
+        try {
+          const { dashboardService } = await import("../../lib/supabase");
+          const dashboardData = await dashboardService.getRepresentativeDashboardData(currentUser.id);
+          
+          if (dashboardData) {
+            setPerformanceData(
+              dashboardData.performanceData || {
+                totalSales: 0,
+                targetSales: 500000,
+                activeContracts: 0,
+                completedContracts: 0,
+                pendingCommission: 0,
+                nextCommissionDate: "15/08/2025",
+                nextCommissionValue: 0,
+              },
+            );
+            setMyContracts(dashboardData.myContracts || []);
+            setCommissionHistory(dashboardData.commissionHistory || []);
+          }
+        } catch (error) {
+          console.error("Erro ao recarregar dados:", error);
+        }
+      };
+      
+      await loadData();
+      
       alert(
-        `Solicitação de retirada de R$ ${amount.toLocaleString("pt-BR")} enviada com sucesso!`,
+        `✅ Solicitação ${withdrawal.request_code} criada com sucesso!\n\n` +
+        `Valor: R$ ${amount.toLocaleString("pt-BR")}\n` +
+        `Status: Pendente de aprovação\n\n` +
+        `Acompanhe o status na aba Comissão.`
       );
-    } else {
-      alert("Valor inválido para retirada");
+    } catch (error) {
+      console.error("Erro ao criar solicitação:", error);
+      alert("❌ Erro ao criar solicitação de retirada. Tente novamente.");
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -922,11 +979,15 @@ const RepresentativeDashboard: React.FC<RepresentativeDashboardProps> = ({
                         <Button
                           variant="outline"
                           onClick={() => setIsWithdrawalDialogOpen(false)}
+                          disabled={isProcessing}
                         >
                           Cancelar
                         </Button>
-                        <Button onClick={handleWithdrawalRequest}>
-                          Solicitar Retirada
+                        <Button 
+                          onClick={handleWithdrawalRequest}
+                          disabled={isProcessing}
+                        >
+                          {isProcessing ? "Processando..." : "Solicitar Retirada"}
                         </Button>
                       </DialogFooter>
                     </DialogContent>
