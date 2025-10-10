@@ -1173,6 +1173,38 @@ const ContractDetails: React.FC<ContractDetailsProps> = ({
     contract.total_value *
     (contract.commission_table.commission_percentage / 100);
 
+  // Calcular total de todas as faturas
+  const calculateTotalInvoicesValue = () => {
+    if (!contract?.invoices || contract.invoices.length === 0) {
+      return 0;
+    }
+    return contract.invoices.reduce((total, invoice) => {
+      const value = parseFloat(invoice.value) || 0;
+      return total + value;
+    }, 0);
+  };
+
+  // Calcular total pago (faturas com status paid/Pago)
+  const calculatePaidInvoicesValue = () => {
+    if (!contract?.invoices || contract.invoices.length === 0) {
+      return 0;
+    }
+    return contract.invoices
+      .filter(invoice => 
+        invoice.status === 'paid' || 
+        invoice.status === 'Pago'
+      )
+      .reduce((total, invoice) => {
+        const value = parseFloat(invoice.value) || 0;
+        return total + value;
+      }, 0);
+  };
+
+  // Calcular saldo devedor (total de todas faturas - valor pago)
+  const calculateRemainingInvoicesValue = () => {
+    return calculateTotalInvoicesValue() - calculatePaidInvoicesValue();
+  };
+
   return (
     <div className="bg-background">
       {/* Header */}
@@ -1694,9 +1726,7 @@ const ContractDetails: React.FC<ContractDetailsProps> = ({
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold text-blue-600">
-                    {formatCurrency(
-                      contract.total_value - contract.remaining_value,
-                    )}
+                    {formatCurrency(calculatePaidInvoicesValue())}
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">
                     Já quitado pelo cliente
@@ -1713,7 +1743,7 @@ const ContractDetails: React.FC<ContractDetailsProps> = ({
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold text-orange-600">
-                    {formatCurrency(contract.remaining_value)}
+                    {formatCurrency(calculateRemainingInvoicesValue())}
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">
                     Pendente de pagamento
