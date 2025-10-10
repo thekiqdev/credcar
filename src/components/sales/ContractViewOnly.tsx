@@ -441,7 +441,8 @@ const ContractViewOnly: React.FC = () => {
               <strong>${generalSettings?.company_name || "CredCar Soluções Financeiras"}</strong><br>
               CNPJ: ${generalSettings?.company_cnpj || "12.345.678/0001-90"}<br>
               ${generalSettings?.company_address || "Rua das Empresas, 123 - Centro - São Paulo/SP"}<br>
-              Tel: ${generalSettings?.company_phone || "(11) 3000-0000"} | Email: ${generalSettings?.company_email || "contato@credcar.com.br"}
+              Tel: ${generalSettings?.company_phone || "(11) 3000-0000"} | Email: ${generalSettings?.company_email || "contato@credcar.com.br"}<br>
+              <strong style="font-size: 16px; color: #dc2626;">Valor de Contrato: ${formatCurrency(contract?.total_value || 0)}</strong>
             </div>
           </div>
           
