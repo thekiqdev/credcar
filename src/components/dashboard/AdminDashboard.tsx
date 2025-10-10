@@ -15,6 +15,7 @@ import {
 import { systemConfigService } from "../../lib/system-config.service";
 import { asaasService } from "../../lib/asaas.service";
 import { commissionService } from "../../lib/commission.service";
+import WithdrawalManagement from "../admin/WithdrawalManagement";
 import { formatDateBR, isDateOverdue } from "../../lib/date-utils";
 import WebhookTester from "./WebhookTester";
 
@@ -379,32 +380,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       installments: 4,
       description: "Pagamento dividido em 4 parcelas",
       activeContracts: 46,
-    },
-  ]);
-  const [withdrawalRequests, setWithdrawalRequests] = useState([
-    {
-      id: "WR-001",
-      representativeName: "Carlos Oliveira",
-      amount: 2400,
-      requestDate: "2023-06-20",
-      status: "pending",
-      availableBalance: 3200,
-    },
-    {
-      id: "WR-002",
-      representativeName: "Ana Pereira",
-      amount: 1800,
-      requestDate: "2023-06-21",
-      status: "pending",
-      availableBalance: 2100,
-    },
-    {
-      id: "WR-003",
-      representativeName: "Marcos Souza",
-      amount: 1500,
-      requestDate: "2023-06-19",
-      status: "approved",
-      availableBalance: 1500,
     },
   ]);
   const [isNewTableDialogOpen, setIsNewTableDialogOpen] = useState(false);
@@ -2419,23 +2394,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     setEarlyPaymentInstallments("");
 
     console.log("Early payment processed:", earlyPaymentInvoice);
-  };
-
-  const handleWithdrawalAction = (
-    requestId: string,
-    action: "approve" | "reject",
-  ) => {
-    setWithdrawalRequests((prev) =>
-      prev.map((request) =>
-        request.id === requestId
-          ? {
-              ...request,
-              status: action === "approve" ? "approved" : "rejected",
-            }
-          : request,
-      ),
-    );
-    console.log(`Withdrawal request ${requestId} ${action}d`);
   };
 
   const handleCreateTable = () => {
@@ -4460,120 +4418,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
             )}
 
             {activeSection === "withdrawals" && (
-              <div className="space-y-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h1 className="text-2xl font-bold tracking-tight">
-                      Solicitações de Retirada
-                    </h1>
-                    <p className="text-muted-foreground">
-                      Gerencie as solicitações de retirada dos representantes.
-                    </p>
-                  </div>
-                </div>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Solicitações Pendentes</CardTitle>
-                    <CardDescription>
-                      {
-                        withdrawalRequests.filter((r) => r.status === "pending")
-                          .length
-                      }{" "}
-                      solicitações aguardando aprovação
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>ID</TableHead>
-                          <TableHead>Representante</TableHead>
-                          <TableHead>Valor Solicitado</TableHead>
-                          <TableHead>Saldo Disponível</TableHead>
-                          <TableHead>Data</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead className="text-right">Ações</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {withdrawalRequests.map((request) => (
-                          <TableRow key={request.id}>
-                            <TableCell className="font-medium">
-                              {request.id}
-                            </TableCell>
-                            <TableCell>{request.representativeName}</TableCell>
-                            <TableCell>
-                              {new Intl.NumberFormat("pt-BR", {
-                                style: "currency",
-                                currency: "BRL",
-                              }).format(request.amount)}
-                            </TableCell>
-                            <TableCell>
-                              {new Intl.NumberFormat("pt-BR", {
-                                style: "currency",
-                                currency: "BRL",
-                              }).format(request.availableBalance)}
-                            </TableCell>
-                            <TableCell>
-                              {new Date(request.requestDate).toLocaleDateString(
-                                "pt-BR",
-                              )}
-                            </TableCell>
-                            <TableCell>
-                              <Badge
-                                variant={
-                                  request.status === "approved"
-                                    ? "default"
-                                    : request.status === "pending"
-                                      ? "outline"
-                                      : "destructive"
-                                }
-                              >
-                                {request.status === "pending"
-                                  ? "Pendente"
-                                  : request.status === "approved"
-                                    ? "Aprovado"
-                                    : "Rejeitado"}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="text-right">
-                              {request.status === "pending" && (
-                                <div className="flex gap-2 justify-end">
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() =>
-                                      handleWithdrawalAction(
-                                        request.id,
-                                        "approve",
-                                      )
-                                    }
-                                  >
-                                    <CheckCircle className="h-4 w-4" />
-                                  </Button>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() =>
-                                      handleWithdrawalAction(
-                                        request.id,
-                                        "reject",
-                                      )
-                                    }
-                                  >
-                                    <XCircle className="h-4 w-4" />
-                                  </Button>
-                                </div>
-                              )}
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </CardContent>
-                </Card>
-              </div>
+              <WithdrawalManagement />
             )}
 
             {activeSection === "invoices" && (
