@@ -366,27 +366,16 @@ const ContractViewOnly: React.FC = () => {
             .header {
               text-align: center;
               border-bottom: 2px solid #dc2626;
-              padding-bottom: 20px;
-              margin-bottom: 25px;
-              background-color: #f8f9fa;
-              padding: 20px;
-              border-radius: 8px;
+              padding-bottom: 15px;
+              margin-bottom: 20px;
             }
             .header h1 {
-              font-size: 24px;
-              margin: 10px 0 5px 0;
-              color: #1f2937;
-              font-weight: bold;
+              font-size: 18px;
+              margin: 10px 0;
             }
             .company-info {
-              font-size: 12px;
+              font-size: 11px;
               margin-bottom: 15px;
-              color: #374151;
-              line-height: 1.5;
-            }
-            .company-info strong {
-              font-size: 14px;
-              color: #1f2937;
             }
             .contract-info {
               background-color: #f8f9fa;
@@ -426,53 +415,33 @@ const ContractViewOnly: React.FC = () => {
             }
             @media print {
               body {
-                font-size: 12px;
-                padding: 15px;
-                margin: 0;
-              }
-              .header {
-                background-color: #f8f9fa !important;
-                border-bottom: 2px solid #dc2626 !important;
-                padding: 20px !important;
-                margin-bottom: 25px !important;
-                page-break-inside: avoid;
+                font-size: 10px;
+                padding: 10px;
               }
               .header h1 {
-                font-size: 20px !important;
-                color: #1f2937 !important;
-                margin: 10px 0 5px 0 !important;
-              }
-              .company-info {
-                font-size: 11px !important;
-                color: #374151 !important;
-                line-height: 1.4 !important;
-              }
-              .company-info strong {
-                font-size: 13px !important;
-                color: #1f2937 !important;
+                font-size: 16px;
               }
               .contract-info h2 {
-                font-size: 14px !important;
+                font-size: 12px;
               }
               .client-info h3, .contract-details h3 {
-                font-size: 12px !important;
+                font-size: 11px;
               }
               .content {
-                font-size: 11px !important;
-                line-height: 1.3 !important;
+                font-size: 10px;
               }
             }
           </style>
         </head>
         <body>
           <div class="header">
-            ${generalSettings?.logo_url ? `<img src="${generalSettings.logo_url}" alt="Logo" style="height: 60px; margin-bottom: 10px;">` : ""}
+            ${generalSettings?.logo_url ? `<img src="${generalSettings.logo_url}" alt="Logo" style="height: 50px; margin-bottom: 8px;">` : ""}
             <h1>${generalSettings?.system_name || "CredCar"}</h1>
             <div class="company-info">
               <strong>${generalSettings?.company_name || "CredCar Soluções Financeiras"}</strong><br>
-              📄 CNPJ: ${generalSettings?.company_cnpj || "12.345.678/0001-90"}<br>
-              📍 ${generalSettings?.company_address || "Rua das Empresas, 123 - Centro - São Paulo/SP"}<br>
-              📞 Tel: ${generalSettings?.company_phone || "(11) 3000-0000"} | ✉️ Email: ${generalSettings?.company_email || "contato@credcar.com.br"}
+              CNPJ: ${generalSettings?.company_cnpj || "12.345.678/0001-90"}<br>
+              ${generalSettings?.company_address || "Rua das Empresas, 123 - Centro - São Paulo/SP"}<br>
+              Tel: ${generalSettings?.company_phone || "(11) 3000-0000"} | Email: ${generalSettings?.company_email || "contato@credcar.com.br"}
             </div>
           </div>
           
@@ -506,18 +475,16 @@ const ContractViewOnly: React.FC = () => {
     const blob = new Blob([htmlContent], { type: "text/html" });
     const url = URL.createObjectURL(blob);
 
-    // Open print dialog with the HTML content
-    const printWindow = window.open(url, '_blank');
-    if (printWindow) {
-      printWindow.onload = () => {
-        printWindow.print();
-      };
-    }
+    // Create a temporary link element and trigger download
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `Contrato_${contract?.contract_code || "documento"}.html`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
 
-    // Clean up the URL object after a delay
-    setTimeout(() => {
-      URL.revokeObjectURL(url);
-    }, 1000);
+    // Clean up the URL object
+    URL.revokeObjectURL(url);
   };
 
   if (isLoading) {
