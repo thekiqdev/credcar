@@ -445,24 +445,24 @@ const ContractViewOnly: React.FC = () => {
             </div>
           </div>
           
-          <div class="contract-info">
-            <h2>Informações do Contrato</h2>
-            <div class="contract-details">
-              <h3>Detalhes do Contrato</h3>
-              <p><strong>Código:</strong> ${contract?.contract_code}</p>
-              <p><strong>Valor de Contrato:</strong> <span style="font-size: 16px; font-weight: bold; color: #dc2626;">${formatCurrency(contract?.total_value || 0)}</span></p>
-              <p><strong>Status:</strong> ${contract?.status}</p>
-              <p><strong>Data de Criação:</strong> ${formatDate(contract?.created_at || "")}</p>
+            <div class="contract-info">
+              <h2>Informações do Contrato</h2>
+              <div class="contract-details">
+                <h3>Detalhes do Contrato</h3>
+                <p><strong>Código:</strong> ${contract?.contract_code}</p>
+                <p><strong>Valor de Contrato:</strong> <span style="font-size: 16px; font-weight: bold; color: #dc2626;">${formatCurrency(contract?.total_value || 0)}</span></p>
+                <p><strong>Status:</strong> ${contract?.status}</p>
+                <p><strong>Data de Criação:</strong> ${formatDate(contract?.created_at || "")}</p>
+              </div>
+              <div class="client-info">
+                <h3>Informações do Cliente</h3>
+                <p><strong>Nome:</strong> ${contract?.client.full_name}</p>
+                ${contract?.client.email ? `<p><strong>Email:</strong> ${contract.client.email}</p>` : ""}
+                ${contract?.client.phone ? `<p><strong>Telefone:</strong> ${contract.client.phone}</p>` : ""}
+                ${contract?.client.cpf_cnpj ? `<p><strong>CPF/CNPJ:</strong> ${contract.client.cpf_cnpj}</p>` : ""}
+                ${contract?.client.address ? `<p><strong>Endereço:</strong> ${contract.client.address}</p>` : ""}
+              </div>
             </div>
-            <div class="client-info">
-              <h3>Informações do Cliente</h3>
-              <p><strong>Nome:</strong> ${contract?.client.full_name}</p>
-              ${contract?.client.email ? `<p><strong>Email:</strong> ${contract.client.email}</p>` : ""}
-              ${contract?.client.phone ? `<p><strong>Telefone:</strong> ${contract.client.phone}</p>` : ""}
-              ${contract?.client.cpf_cnpj ? `<p><strong>CPF/CNPJ:</strong> ${contract.client.cpf_cnpj}</p>` : ""}
-              ${contract?.client.address ? `<p><strong>Endereço:</strong> ${contract.client.address}</p>` : ""}
-            </div>
-          </div>
           
           <div class="content">
             ${contractContent}
@@ -613,53 +613,53 @@ const ContractViewOnly: React.FC = () => {
               </div>
             </div>
           </CardHeader>
-          <CardContent className="print:hidden">
-            <div className="grid gap-6 md:grid-cols-2 print:grid-cols-2">
-              <div>
-                <h3 className="font-semibold mb-3 print:text-sm">
-                  Informações do Contrato
-                </h3>
-                <div className="space-y-2 text-sm print:text-xs">
-                  <p>
-                    <strong>Valor de Contrato:</strong>{" "}
-                    <span className="text-lg font-bold text-red-600">
-                      {formatCurrency(contract.total_value)}
-                    </span>
-                  </p>
+            <CardContent className="print:hidden">
+              <div className="grid gap-6 md:grid-cols-2 print:grid-cols-2">
+                <div>
+                  <h3 className="font-semibold mb-3 print:text-sm">
+                    Informações do Contrato
+                  </h3>
+                  <div className="space-y-2 text-sm print:text-xs">
+                    <p>
+                      <strong>Valor de Contrato:</strong>{" "}
+                      <span className="text-lg font-bold text-red-600">
+                        {formatCurrency(contract.total_value)}
+                      </span>
+                    </p>
+                  </div>
+                </div>
+                <div>
+                  <h3 className="font-semibold mb-3 print:text-sm">
+                    Informações do Cliente
+                  </h3>
+                  <div className="space-y-2 text-sm print:text-xs">
+                    <p>
+                      <strong>Nome:</strong> {contract.client.full_name}
+                    </p>
+                    {contract.client.email && (
+                      <p>
+                        <strong>Email:</strong> {contract.client.email}
+                      </p>
+                    )}
+                    {contract.client.phone && (
+                      <p>
+                        <strong>Telefone:</strong> {contract.client.phone}
+                      </p>
+                    )}
+                    {contract.client.cpf_cnpj && (
+                      <p>
+                        <strong>CPF/CNPJ:</strong> {contract.client.cpf_cnpj}
+                      </p>
+                    )}
+                    {contract.client.address && (
+                      <p>
+                        <strong>Endereço:</strong> {contract.client.address}
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
-              <div>
-                <h3 className="font-semibold mb-3 print:text-sm">
-                  Informações do Cliente
-                </h3>
-                <div className="space-y-2 text-sm print:text-xs">
-                  <p>
-                    <strong>Nome:</strong> {contract.client.full_name}
-                  </p>
-                  {contract.client.email && (
-                    <p>
-                      <strong>Email:</strong> {contract.client.email}
-                    </p>
-                  )}
-                  {contract.client.phone && (
-                    <p>
-                      <strong>Telefone:</strong> {contract.client.phone}
-                    </p>
-                  )}
-                  {contract.client.cpf_cnpj && (
-                    <p>
-                      <strong>CPF/CNPJ:</strong> {contract.client.cpf_cnpj}
-                    </p>
-                  )}
-                  {contract.client.address && (
-                    <p>
-                      <strong>Endereço:</strong> {contract.client.address}
-                    </p>
-                  )}
-                </div>
-              </div>
-            </div>
-          </CardContent>
+            </CardContent>
         </Card>
 
         {/* Contract Content */}
