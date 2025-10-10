@@ -1204,7 +1204,7 @@ export const contractService = {
           quotas (
             id,
             quota_number,
-            groups!inner (
+            groups (
               id,
               name,
               description

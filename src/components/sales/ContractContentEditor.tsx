@@ -550,13 +550,13 @@ const ContractContentEditor: React.FC<ContractContentEditorProps> = ({
               <FileText className="w-4 h-4" />
               <span>Campos de Mesclagem</span>
             </Button>
-            <Button
-              onClick={handleSubmit}
-              className="bg-red-600 hover:bg-red-700 text-white flex items-center space-x-2"
-            >
-              <Save className="w-4 h-4" />
-              <span>Salvar e Continuar</span>
-            </Button>
+          <Button
+            onClick={handleSubmit}
+            className="bg-red-600 hover:bg-red-700 text-white flex items-center space-x-2"
+          >
+            <Save className="w-4 h-4" />
+            <span>Salvar e Continuar</span>
+          </Button>
           </div>
         </div>
       </div>
@@ -565,7 +565,7 @@ const ContractContentEditor: React.FC<ContractContentEditorProps> = ({
       <div className="h-[calc(100vh-140px)] p-6">
         <div className="flex gap-4 h-full">
           <div className={showMergeFields ? "flex-1" : "w-full"}>
-            <Editor
+          <Editor
             apiKey="46lebzjws4vt4ywtma8d15683tj61n80shufdxg1spuuwpbm"
             onInit={(evt, editor) => (editorRef.current = editor)}
             initialValue={getDefaultContent()}

@@ -1906,6 +1906,310 @@ app.get('/api/test/supabase-connection', async (req, res) => {
   }
 });
 
+// Endpoint para testar query simples do contrato
+app.get('/api/test/contract-simple/:contractId', async (req, res) => {
+  try {
+    const { contractId } = req.params;
+    
+    console.log(`🔍 [TEST] Testando query simples do contrato ${contractId}...`);
+    
+    // Query mais simples para debug
+    const { data, error } = await supabase
+      .from("contracts")
+      .select(`
+        id,
+        contract_number,
+        quota_id,
+        clients (
+          full_name,
+          email
+        ),
+        planos (
+          nome,
+          "commission-percentage"
+        )
+      `)
+      .eq('id', contractId)
+      .single();
+
+    if (error) {
+      console.error('❌ [TEST] Erro na query simples:', error);
+      return res.status(400).json({
+        success: false,
+        error: error.message,
+        details: error
+      });
+    }
+
+    console.log('✅ [TEST] Query simples funcionou:', data);
+
+    // Agora buscar quota separadamente
+    if (data.quota_id) {
+      const { data: quotaData, error: quotaError } = await supabase
+        .from("quotas")
+        .select(`
+          id,
+          quota_number,
+          groups!inner (
+            id,
+            name,
+            description
+          )
+        `)
+        .eq('id', data.quota_id)
+        .single();
+
+      if (quotaError) {
+        console.error('❌ [TEST] Erro ao buscar quota:', quotaError);
+      } else {
+        console.log('✅ [TEST] Quota encontrada separadamente:', quotaData);
+      }
+
+      res.json({
+        success: true,
+        contract: data,
+        quota: quotaData || null,
+        quotaError: quotaError?.message || null
+      });
+    } else {
+      res.json({
+        success: true,
+        contract: data,
+        quota: null,
+        quotaError: 'Contrato não possui quota_id'
+      });
+    }
+
+  } catch (err) {
+    console.error('❌ [TEST] Erro no teste:', err);
+    res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
+});
+
+// Endpoint para verificar dados da quota específica
+app.get('/api/test/quota/:quotaId', async (req, res) => {
+  try {
+    const { quotaId } = req.params;
+    
+    console.log(`🔍 [TEST] Verificando quota ID: ${quotaId}...`);
+    
+    const { data, error } = await supabase
+      .from("quotas")
+      .select(`
+        id,
+        quota_number,
+        group_id,
+        groups!inner (
+          id,
+          name,
+          description
+        )
+      `)
+      .eq('id', quotaId)
+      .single();
+
+    if (error) {
+      console.error('❌ [TEST] Erro ao buscar quota:', error);
+      return res.status(400).json({
+        success: false,
+        error: error.message,
+        details: error
+      });
+    }
+
+    console.log('✅ [TEST] Quota encontrada:', data);
+
+    res.json({
+      success: true,
+      quota: data
+    });
+
+  } catch (err) {
+    console.error('❌ [TEST] Erro no teste:', err);
+    res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
+});
+
+// Endpoint para listar contratos disponíveis para teste
+app.get('/api/test/contracts-list', async (req, res) => {
+  try {
+    console.log('🔍 [TEST] Listando contratos disponíveis...');
+    
+    const { data, error } = await supabase
+      .from("contracts")
+      .select(`
+        id,
+        contract_number,
+        quota_id,
+        created_at
+      `)
+      .order('id', { ascending: true })
+      .limit(10);
+
+    if (error) {
+      console.error('❌ [TEST] Erro ao listar contratos:', error);
+      return res.status(400).json({
+        success: false,
+        error: error.message,
+        details: error
+      });
+    }
+
+    console.log('✅ [TEST] Contratos encontrados:', data?.length || 0);
+
+    res.json({
+      success: true,
+      contracts: data || [],
+      count: data?.length || 0
+    });
+
+  } catch (err) {
+    console.error('❌ [TEST] Erro no teste:', err);
+    res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
+});
+
+// Endpoint para testar dados do contrato e quota
+app.get('/api/test/contract-quota/:contractId', async (req, res) => {
+  try {
+    const { contractId } = req.params;
+    
+    console.log(`🔍 [TEST] Testando dados do contrato ${contractId}...`);
+    
+    // Primeiro buscar dados básicos do contrato
+    const { data, error } = await supabase
+      .from("contracts")
+      .select(`
+        *,
+        clients!inner (
+          id,
+          full_name,
+          email,
+          phone,
+          cpf_cnpj,
+          address
+        ),
+        planos!inner (
+          id,
+          nome,
+          descricao,
+          comissao,
+          "commission-percentage"
+        ),
+        profiles!inner (
+          id,
+          full_name,
+          email,
+          phone,
+          commission_code
+        ),
+        invoices (
+          id,
+          invoice_code,
+          amount,
+          due_date,
+          status,
+          paid_at,
+          payment_link_pix,
+          payment_link_boleto
+        )
+      `)
+      .eq('id', contractId)
+      .single();
+
+    if (error) {
+      console.error('❌ [TEST] Erro ao buscar contrato:', error);
+      return res.status(400).json({
+        success: false,
+        error: error.message,
+        details: error
+      });
+    }
+
+    if (!data) {
+      return res.status(404).json({
+        success: false,
+        error: 'Contrato não encontrado'
+      });
+    }
+
+    // Buscar dados da quota separadamente
+    let quotaData = null;
+    if (data.quota_id) {
+      const { data: quota, error: quotaError } = await supabase
+        .from("quotas")
+        .select(`
+          id,
+          quota_number,
+          groups!inner (
+            id,
+            name,
+            description
+          )
+        `)
+        .eq('id', data.quota_id)
+        .single();
+
+      if (quotaError) {
+        console.error('❌ [TEST] Erro ao buscar quota:', quotaError);
+      } else {
+        quotaData = quota;
+        console.log('✅ [TEST] Quota encontrada:', quotaData);
+      }
+    }
+
+    console.log('✅ [TEST] Dados do contrato carregados:', {
+      contractId: data.id,
+      contractNumber: data.contract_number,
+      quotaId: data.quota_id,
+      quotaData: quotaData,
+      hasQuota: !!quotaData
+    });
+
+    res.json({
+      success: true,
+      contract: {
+        id: data.id,
+        contract_number: data.contract_number,
+        quota_id: data.quota_id,
+        quota: quotaData ? {
+          id: quotaData.id,
+          quota_number: quotaData.quota_number,
+          group: {
+            id: quotaData.groups?.id || 0,
+            name: quotaData.groups?.name || "Grupo não encontrado",
+            description: quotaData.groups?.description || "Sem descrição"
+          }
+        } : null,
+        client: {
+          full_name: data.clients?.full_name,
+          email: data.clients?.email
+        },
+        plan: {
+          name: data.planos?.nome,
+          commission_percentage: data.planos?.["commission-percentage"]
+        }
+      }
+    });
+
+  } catch (err) {
+    console.error('❌ [TEST] Erro no teste:', err);
+    res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
+});
+
 // Endpoint para teste manual do cronjob (sem autenticação para desenvolvimento)
 app.get('/api/cron/test-generate-invoices', async (req, res) => {
   try {
