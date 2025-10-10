@@ -426,20 +426,40 @@ const ContractViewOnly: React.FC = () => {
             }
             @media print {
               body {
-                font-size: 10px;
-                padding: 10px;
+                font-size: 12px;
+                padding: 15px;
+                margin: 0;
+              }
+              .header {
+                background-color: #f8f9fa !important;
+                border-bottom: 2px solid #dc2626 !important;
+                padding: 20px !important;
+                margin-bottom: 25px !important;
+                page-break-inside: avoid;
               }
               .header h1 {
-                font-size: 16px;
+                font-size: 20px !important;
+                color: #1f2937 !important;
+                margin: 10px 0 5px 0 !important;
+              }
+              .company-info {
+                font-size: 11px !important;
+                color: #374151 !important;
+                line-height: 1.4 !important;
+              }
+              .company-info strong {
+                font-size: 13px !important;
+                color: #1f2937 !important;
               }
               .contract-info h2 {
-                font-size: 12px;
+                font-size: 14px !important;
               }
               .client-info h3, .contract-details h3 {
-                font-size: 11px;
+                font-size: 12px !important;
               }
               .content {
-                font-size: 10px;
+                font-size: 11px !important;
+                line-height: 1.3 !important;
               }
             }
           </style>
@@ -486,16 +506,18 @@ const ContractViewOnly: React.FC = () => {
     const blob = new Blob([htmlContent], { type: "text/html" });
     const url = URL.createObjectURL(blob);
 
-    // Create a temporary link element and trigger download
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `Contrato_${contract?.contract_code || "documento"}.html`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    // Open print dialog with the HTML content
+    const printWindow = window.open(url, '_blank');
+    if (printWindow) {
+      printWindow.onload = () => {
+        printWindow.print();
+      };
+    }
 
-    // Clean up the URL object
-    URL.revokeObjectURL(url);
+    // Clean up the URL object after a delay
+    setTimeout(() => {
+      URL.revokeObjectURL(url);
+    }, 1000);
   };
 
   if (isLoading) {
