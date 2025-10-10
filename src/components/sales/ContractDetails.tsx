@@ -449,15 +449,6 @@ const ContractDetails: React.FC<ContractDetailsProps> = ({
             phone,
             commission_code
           ),
-          quotas (
-            id,
-            quota_number,
-            groups (
-              id,
-              name,
-              description
-            )
-          ),
           invoices (
             id,
             invoice_code,
@@ -482,15 +473,27 @@ const ContractDetails: React.FC<ContractDetailsProps> = ({
         throw new Error("Contrato não encontrado");
       }
 
-      console.log("Contract data loaded:", {
-        contractId: contractId,
-        quotaData: data.quotas,
-        groupData: data.quotas?.groups,
-        hasQuota: !!data.quotas,
-        quotaId: data.quotas?.id,
-        quotaNumber: data.quotas?.quota_number,
-        groupName: data.quotas?.groups?.name
-      });
+      // Buscar dados da quota separadamente
+      let quotaData = null;
+      if (data.quota_id) {
+        const { data: quota, error: quotaError } = await supabase
+          .from("quotas")
+          .select(`
+            id,
+            quota_number,
+            groups!inner (
+              id,
+              name,
+              description
+            )
+          `)
+          .eq('id', data.quota_id)
+          .single();
+
+        if (!quotaError) {
+          quotaData = quota;
+        }
+      }
 
       // Transform the data to match our interface
       const contractData: ContractData = {
@@ -535,14 +538,14 @@ const ContractDetails: React.FC<ContractDetailsProps> = ({
           phone: data.profiles?.phone,
           commission_code: data.profiles?.commission_code,
         },
-        quota: data.quotas
+        quota: quotaData
           ? {
-              id: data.quotas.id,
-              quota_number: data.quotas.quota_number,
+              id: quotaData.id,
+              quota_number: quotaData.quota_number,
               group: {
-                id: data.quotas.groups?.id || 0,
-                name: data.quotas.groups?.name || "Grupo não encontrado",
-                description: data.quotas.groups?.description || "Sem descrição",
+                id: quotaData.groups?.id || 0,
+                name: quotaData.groups?.name || "Grupo não encontrado",
+                description: quotaData.groups?.description,
               },
             }
           : null,
@@ -2078,14 +2081,18 @@ const ContractDetails: React.FC<ContractDetailsProps> = ({
                             <Badge
                               variant="outline"
                               className={
-                                invoice.status === "Pago"
-                                  ? "bg-green-100 text-green-800 hover:bg-green-100"
-                                  : invoice.status === "Vencido"
-                                    ? "bg-red-100 text-red-800 hover:bg-red-100"
-                                    : "bg-amber-100 text-amber-800 hover:bg-amber-100"
+                                invoice.status === "paid" || invoice.status === "Pago"
+                                  ? "bg-green-500 text-white hover:bg-green-600 border-green-500"
+                                  : invoice.status === "overdue" || invoice.status === "Vencido"
+                                    ? "bg-red-500 text-white hover:bg-red-600 border-red-500"
+                                    : "bg-yellow-500 text-white hover:bg-yellow-600 border-yellow-500"
                               }
                             >
-                              {invoice.status}
+                              {invoice.status === "paid" || invoice.status === "Pago"
+                                ? "PAGO"
+                                : invoice.status === "overdue" || invoice.status === "Vencido"
+                                  ? "VENCIDO"
+                                  : "PENDENTE"}
                             </Badge>
                           </TableCell>
                           <TableCell>

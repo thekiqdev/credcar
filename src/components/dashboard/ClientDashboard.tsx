@@ -541,15 +541,15 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({
                               variant="outline"
                               className={
                                 invoice.status === "paid"
-                                  ? "bg-green-100 text-green-800 hover:bg-green-100"
-                                  : invoice.status === "pending"
-                                    ? "bg-orange-100 text-orange-800 hover:bg-orange-100"
-                                    : "bg-red-100 text-red-800 hover:bg-red-100"
+                                  ? "bg-green-500 text-white hover:bg-green-600 border-green-500"
+                                  : invoice.status === "overdue"
+                                    ? "bg-red-500 text-white hover:bg-red-600 border-red-500"
+                                    : "bg-yellow-500 text-white hover:bg-yellow-600 border-yellow-500"
                               }
                             >
-                              {invoice.status === "paid" && "Pago"}
-                              {invoice.status === "pending" && "Pendente"}
-                              {invoice.status === "overdue" && "Em Atraso"}
+                              {invoice.status === "paid" && "PAGO"}
+                              {invoice.status === "pending" && "PENDENTE"}
+                              {invoice.status === "overdue" && "VENCIDO"}
                             </Badge>
                           </TableCell>
                           <TableCell>{invoice.paymentMethod || "-"}</TableCell>

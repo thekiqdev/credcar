@@ -4965,19 +4965,20 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                         </TableCell>
                                         <TableCell>
                                           <Badge
-                                            variant={
+                                            variant="outline"
+                                            className={
                                               invoice.status === "paid"
-                                                ? "default"
-                                                : invoice.status === "Pendente" || invoice.status === "pending"
-                                                  ? "outline"
-                                                  : "destructive"
+                                                ? "bg-green-500 text-white hover:bg-green-600 border-green-500"
+                                                : invoice.status === "overdue" || invoice.status === "Vencido"
+                                                  ? "bg-red-500 text-white hover:bg-red-600 border-red-500"
+                                                  : "bg-yellow-500 text-white hover:bg-yellow-600 border-yellow-500"
                                             }
                                           >
                                             {invoice.status === "paid"
-                                              ? "Pago"
-                                              : invoice.status === "Pendente" || invoice.status === "pending"
-                                                ? "Pendente"
-                                                : "Vencido"}
+                                              ? "PAGO"
+                                              : invoice.status === "overdue" || invoice.status === "Vencido"
+                                                ? "VENCIDO"
+                                                : "PENDENTE"}
                                           </Badge>
                                         </TableCell>
                                         <TableCell className="text-right">
