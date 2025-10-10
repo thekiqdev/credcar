@@ -482,10 +482,6 @@ const ContractDetails: React.FC<ContractDetailsProps> = ({
         throw new Error("Contrato não encontrado");
       }
 
-      console.log("📋 Dados do contrato carregados:", data);
-      console.log("📋 Dados da quota:", data.quotas);
-      console.log("📋 Dados do grupo:", data.quotas?.groups);
-
       // Transform the data to match our interface
       const contractData: ContractData = {
         id: data.id,
@@ -536,18 +532,10 @@ const ContractDetails: React.FC<ContractDetailsProps> = ({
               group: {
                 id: data.quotas.groups?.id || 0,
                 name: data.quotas.groups?.name || "Grupo não encontrado",
-                description: data.quotas.groups?.description || "Sem descrição",
+                description: data.quotas.groups?.description,
               },
             }
-          : {
-              id: 0,
-              quota_number: 0,
-              group: {
-                id: 0,
-                name: "Cota não associada",
-                description: "Este contrato não possui cota associada",
-              },
-            },
+          : null,
         invoices: data.invoices || [],
       };
 
@@ -1948,28 +1936,28 @@ const ContractDetails: React.FC<ContractDetailsProps> = ({
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="grid gap-4 md:grid-cols-3">
-                      <div>
-                        <Label className="text-sm font-medium">Grupo</Label>
-                        <p className="text-sm text-muted-foreground">
-                          {contract.quota?.group?.name || "Grupo não encontrado"}
-                        </p>
-                      </div>
-                      <div>
-                        <Label className="text-sm font-medium">
-                          Número da Cota
-                        </Label>
-                        <p className="text-sm text-muted-foreground">
-                          #{contract.quota?.quota_number || "N/A"}
-                        </p>
-                      </div>
-                      <div>
-                        <Label className="text-sm font-medium">
-                          Descrição do Grupo
-                        </Label>
-                        <p className="text-sm text-muted-foreground">
-                          {contract.quota?.group?.description || "Sem descrição"}
-                        </p>
-                      </div>
+                    <div>
+                      <Label className="text-sm font-medium">Grupo</Label>
+                      <p className="text-sm text-muted-foreground">
+                        {contract.quota?.group?.name || "Grupo não encontrado"}
+                      </p>
+                    </div>
+                    <div>
+                      <Label className="text-sm font-medium">
+                        Número da Cota
+                      </Label>
+                      <p className="text-sm text-muted-foreground">
+                        #{contract.quota?.quota_number?.toString().padStart(3, '0') || "N/A"}
+                      </p>
+                    </div>
+                    <div>
+                      <Label className="text-sm font-medium">
+                        Descrição do Grupo
+                      </Label>
+                      <p className="text-sm text-muted-foreground">
+                        {contract.quota?.group?.description || "Sem descrição"}
+                      </p>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
