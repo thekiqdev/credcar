@@ -1178,7 +1178,11 @@ const ContractDetails: React.FC<ContractDetailsProps> = ({
   const paidInvoicesValue = contract.invoices
     .filter(invoice => invoice.status === 'paid')
     .reduce((sum, invoice) => sum + (invoice.amount || 0), 0);
-  const remainingInvoicesValue = totalInvoicesValue - paidInvoicesValue;
+  
+  // Saldo devedor = todas as faturas futuras (não pagas + pendentes + vencidas)
+  const unpaidInvoicesValue = contract.invoices
+    .filter(invoice => invoice.status !== 'paid')
+    .reduce((sum, invoice) => sum + (invoice.amount || 0), 0);
 
   return (
     <div className="bg-background">
@@ -1718,7 +1722,7 @@ const ContractDetails: React.FC<ContractDetailsProps> = ({
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold text-orange-600">
-                    {formatCurrency(remainingInvoicesValue)}
+                    {formatCurrency(unpaidInvoicesValue)}
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">
                     Pendente de pagamento
@@ -1735,7 +1739,7 @@ const ContractDetails: React.FC<ContractDetailsProps> = ({
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold text-blue-600">
-                    {contract.invoices.filter(invoice => invoice.status === 'paid').length}/{contract.invoices.length}
+                    {String(contract.invoices.filter(invoice => invoice.status === 'paid').length).padStart(2, '0')}/{String(contract.invoices.length).padStart(2, '0')}
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">
                     {contract.invoices.length > 0 ? (
