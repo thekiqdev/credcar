@@ -530,9 +530,9 @@ const ContractDetails: React.FC<ContractDetailsProps> = ({
               id: data.quotas.id,
               quota_number: data.quotas.quota_number,
               group: {
-                id: data.quotas.groups?.id || 0,
-                name: data.quotas.groups?.name || "Grupo não encontrado",
-                description: data.quotas.groups?.description,
+                id: data.quotas.groups.id,
+                name: data.quotas.groups.name,
+                description: data.quotas.groups.description,
               },
             }
           : null,
