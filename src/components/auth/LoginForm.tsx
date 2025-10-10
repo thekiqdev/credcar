@@ -73,7 +73,7 @@ const LoginForm = ({ onLogin = () => {} }: LoginFormProps) => {
             contracts_count: 0,
             created_at: authResponse.user.created_at,
           };
-          
+
           authService.setCurrentUser(user);
           onLogin(email, password, 'Administrador');
           navigate("/admindashboard");
@@ -86,7 +86,7 @@ const LoginForm = ({ onLogin = () => {} }: LoginFormProps) => {
 
       // PASSO 2: Tentar REPRESENTANTES (tabela profiles)
       console.log("🔍 Trying profiles table (Representative system)...");
-      
+
       // Try to authenticate as representative
       console.log("Attempting representative login for:", email);
       const representative = await representativeService.authenticate(
@@ -191,9 +191,9 @@ const LoginForm = ({ onLogin = () => {} }: LoginFormProps) => {
               <div className="h-6 w-6 bg-white rounded-md"></div>
             </div>
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">CredCar</h1>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Cred Car Multimarcas</h1>
           <p className="text-gray-600">
-            Sistema de Gestão de Vendas e Comissões
+            Compra Programada
           </p>
         </div>
 

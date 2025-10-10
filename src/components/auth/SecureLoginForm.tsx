@@ -128,10 +128,10 @@ export const SecureLoginForm: React.FC = () => {
             </div>
           </div>
           <CardTitle className="text-2xl font-bold text-center">
-            CredCar Finance
+            Cred Car Multimarcas
           </CardTitle>
           <CardDescription className="text-center">
-            Faça login com suas credenciais
+            Compra Programada
           </CardDescription>
         </CardHeader>
         <CardContent>

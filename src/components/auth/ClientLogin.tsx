@@ -107,8 +107,8 @@ const ClientLogin = ({ onLogin = () => {} }: ClientLoginProps) => {
               <div className="h-6 w-6 bg-white rounded-md"></div>
             </div>
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">CredCar</h1>
-          <p className="text-gray-600">Acesso do Cliente</p>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Cred Car Multimarcas</h1>
+          <p className="text-gray-600">Compra Programada</p>
         </div>
 
         {/* Login Card */}

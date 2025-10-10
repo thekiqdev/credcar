@@ -311,7 +311,7 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
         <CardHeader className="text-center">
           <div className="flex items-center justify-center mb-4">
             <div className="h-8 w-8 rounded-md bg-red-600 mr-2"></div>
-            <h1 className="text-3xl font-bold text-red-600">CredCar</h1>
+            <h1 className="text-3xl font-bold text-red-600">Cred Car Multimarcas</h1>
           </div>
           <CardTitle className="text-2xl font-bold">
             {registrationStatus === "Pendente de Aprovação"
