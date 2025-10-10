@@ -1930,32 +1930,27 @@ const ContractDetails: React.FC<ContractDetailsProps> = ({
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <FileText className="h-5 w-5" />
+                    <Users className="h-5 w-5" />
                     Informações da Cota
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="grid gap-4 md:grid-cols-3">
+                  <div className="grid gap-4 md:grid-cols-2">
                     <div>
                       <Label className="text-sm font-medium">Grupo</Label>
                       <p className="text-sm text-muted-foreground">
                         {contract.quota.group.name}
                       </p>
+                      {contract.quota.group.description && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {contract.quota.group.description}
+                        </p>
+                      )}
                     </div>
                     <div>
-                      <Label className="text-sm font-medium">
-                        Número da Cota
-                      </Label>
+                      <Label className="text-sm font-medium">Cota</Label>
                       <p className="text-sm text-muted-foreground">
-                        {contract.quota.quota_number}
-                      </p>
-                    </div>
-                    <div>
-                      <Label className="text-sm font-medium">
-                        Descrição do Grupo
-                      </Label>
-                      <p className="text-sm text-muted-foreground">
-                        {contract.quota.group.description || "Sem descrição"}
+                        #{contract.quota.quota_number}
                       </p>
                     </div>
                   </div>
