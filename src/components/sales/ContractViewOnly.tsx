@@ -458,7 +458,6 @@ const ContractViewOnly: React.FC = () => {
             <div class="contract-details">
               <h3>Detalhes do Contrato</h3>
               <p><strong>Código:</strong> ${contract?.contract_code}</p>
-              <p><strong>Representante:</strong> ${contract?.representative.full_name}</p>
               <p><strong>Valor:</strong> ${formatCurrency(contract?.total_value || 0)}</p>
               <p><strong>Tabela de Comissão:</strong> ${contract?.commission_table.name}</p>
               <p><strong>Percentual:</strong> ${contract?.commission_table.commission_percentage}%</p>
@@ -653,10 +652,6 @@ const ContractViewOnly: React.FC = () => {
                   Informações do Contrato
                 </h3>
                 <div className="space-y-2 text-sm print:text-xs">
-                  <p>
-                    <strong>Representante:</strong>{" "}
-                    {contract.representative.full_name}
-                  </p>
                   <p>
                     <strong>Valor Total:</strong>{" "}
                     {formatCurrency(contract.total_value)}
