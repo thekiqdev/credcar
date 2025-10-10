@@ -255,7 +255,7 @@ const ContractCreationFlow: React.FC<ContractCreationFlowProps> = ({
             client_id: clientId, // Already a number
             commission_table_id: planId, // Usar o ID do plano selecionado
             id_faixa_de_credito: selectedCreditRange!.id, // Salvar ID da faixa de crédito
-            quota_id: selectedQuota!.id.toString(), // Add quota_id to link the contract to the quota
+            quota_id: selectedQuota!.id, // Salvar como integer, não string
             credit_amount: selectedCreditRange!.valor_credito.toString(),
             total_value: selectedCreditRange!.valor_credito.toString(),
             remaining_value: (
