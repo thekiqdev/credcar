@@ -1179,8 +1179,8 @@ const ContractDetails: React.FC<ContractDetailsProps> = ({
     .filter(invoice => invoice.status === 'paid')
     .reduce((sum, invoice) => sum + (invoice.amount || 0), 0);
   
-  // Saldo devedor = todas as faturas futuras (não pagas + pendentes + vencidas)
-  const unpaidInvoicesValue = contract.invoices
+  // Saldo devedor = todas as faturas futuras (pendentes + não pagas)
+  const futureInvoicesValue = contract.invoices
     .filter(invoice => invoice.status !== 'paid')
     .reduce((sum, invoice) => sum + (invoice.amount || 0), 0);
 
@@ -1722,7 +1722,7 @@ const ContractDetails: React.FC<ContractDetailsProps> = ({
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold text-orange-600">
-                    {formatCurrency(unpaidInvoicesValue)}
+                    {formatCurrency(futureInvoicesValue)}
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">
                     Pendente de pagamento
@@ -1739,13 +1739,13 @@ const ContractDetails: React.FC<ContractDetailsProps> = ({
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold text-blue-600">
-                    {String(contract.invoices.filter(invoice => invoice.status === 'paid').length).padStart(2, '0')}/{String(contract.invoices.length).padStart(2, '0')}
+                    {contract.invoices.filter(invoice => invoice.status === 'paid').length.toString().padStart(2, '0')}/{contract.total_installments}
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">
-                    {contract.invoices.length > 0 ? (
+                    {contract.total_installments > 0 ? (
                       (
                         (contract.invoices.filter(invoice => invoice.status === 'paid').length /
-                          contract.invoices.length) *
+                          contract.total_installments) *
                         100
                       ).toFixed(0)
                     ) : '0'}
