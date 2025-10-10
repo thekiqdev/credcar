@@ -366,16 +366,27 @@ const ContractViewOnly: React.FC = () => {
             .header {
               text-align: center;
               border-bottom: 2px solid #dc2626;
-              padding-bottom: 15px;
-              margin-bottom: 20px;
+              padding-bottom: 20px;
+              margin-bottom: 25px;
+              background-color: #f8f9fa;
+              padding: 20px;
+              border-radius: 8px;
             }
             .header h1 {
-              font-size: 18px;
-              margin: 10px 0;
+              font-size: 24px;
+              margin: 10px 0 5px 0;
+              color: #1f2937;
+              font-weight: bold;
             }
             .company-info {
-              font-size: 11px;
+              font-size: 12px;
               margin-bottom: 15px;
+              color: #374151;
+              line-height: 1.5;
+            }
+            .company-info strong {
+              font-size: 14px;
+              color: #1f2937;
             }
             .contract-info {
               background-color: #f8f9fa;
@@ -435,14 +446,13 @@ const ContractViewOnly: React.FC = () => {
         </head>
         <body>
           <div class="header">
-            ${generalSettings?.logo_url ? `<img src="${generalSettings.logo_url}" alt="Logo" style="height: 50px; margin-bottom: 8px;">` : ""}
+            ${generalSettings?.logo_url ? `<img src="${generalSettings.logo_url}" alt="Logo" style="height: 60px; margin-bottom: 10px;">` : ""}
             <h1>${generalSettings?.system_name || "CredCar"}</h1>
             <div class="company-info">
               <strong>${generalSettings?.company_name || "CredCar Soluções Financeiras"}</strong><br>
-              CNPJ: ${generalSettings?.company_cnpj || "12.345.678/0001-90"}<br>
-              ${generalSettings?.company_address || "Rua das Empresas, 123 - Centro - São Paulo/SP"}<br>
-              Tel: ${generalSettings?.company_phone || "(11) 3000-0000"} | Email: ${generalSettings?.company_email || "contato@credcar.com.br"}<br>
-              <strong style="font-size: 16px; color: #dc2626;">Valor de Contrato: ${formatCurrency(contract?.total_value || 0)}</strong>
+              📄 CNPJ: ${generalSettings?.company_cnpj || "12.345.678/0001-90"}<br>
+              📍 ${generalSettings?.company_address || "Rua das Empresas, 123 - Centro - São Paulo/SP"}<br>
+              📞 Tel: ${generalSettings?.company_phone || "(11) 3000-0000"} | ✉️ Email: ${generalSettings?.company_email || "contato@credcar.com.br"}
             </div>
           </div>
           
