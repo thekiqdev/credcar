@@ -1565,7 +1565,7 @@ export const dashboardService = {
       const pendingCommission = validContracts.reduce((sum, contract) => {
         if (contract?.status === "Ativo" || contract?.status === "Concluído") {
           const commissionRate =
-            contract?.planos?.comissao || 4; // Default 4%
+            contract?.planos?.["commission-percentage"] || 4; // Default 4%
           const contractValue = parseFloat(contract?.total_value || "0") || 0;
           return sum + contractValue * (commissionRate / 100);
         }
@@ -1602,7 +1602,7 @@ export const dashboardService = {
             | "cancelled",
           commission:
             (parseFloat(contract?.total_value || "0") || 0) *
-            ((contract?.planos?.comissao || 4) / 100),
+            ((contract?.planos?.["commission-percentage"] || 4) / 100),
         };
       });
 

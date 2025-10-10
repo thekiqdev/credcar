@@ -58,6 +58,7 @@ import {
   contractService,
   clientService,
 } from "@/lib/supabase";
+import { commissionService } from "@/lib/commission.service";
 import ContractCreationFlow from "@/components/sales/ContractCreationFlow";
 import ContractDetails from "@/components/sales/ContractDetails";
 
@@ -206,7 +207,7 @@ const RepresentativeDashboard: React.FC<RepresentativeDashboardProps> = ({
             },
           );
           setMyContracts(dashboardData.myContracts || []);
-          setCommissionHistory(dashboardData.commissionHistory || []);
+          // Commission history will be loaded when tab is activated
         }
 
         // Load clients data
@@ -263,6 +264,33 @@ const RepresentativeDashboard: React.FC<RepresentativeDashboardProps> = ({
     loadDashboardData();
     });
   }, [navigate, currentUser && currentUser.id, showContractFlow]); // Add navigate and showContractFlow as dependency to reload when contract is created
+
+  // Carregar histórico de comissões quando a aba "commission" for ativada
+  useEffect(() => {
+    const loadCommissionHistory = async () => {
+      if (activeTab === "commission" && currentUser?.id) {
+        try {
+          const history = await commissionService.getCommissionHistory(
+            currentUser.id
+          );
+          setCommissionHistory(
+            history.map((item) => ({
+              id: item.id,
+              contract: item.contract,
+              date: item.date,
+              value: item.value,
+              status: item.status === "paid" ? "paid" : "pending",
+              dueDate: item.dueDate,
+            }))
+          );
+        } catch (error) {
+          console.error("Erro ao carregar histórico de comissões:", error);
+        }
+      }
+    };
+
+    loadCommissionHistory();
+  }, [activeTab, currentUser?.id]);
 
   const salesProgress =
     (performanceData.totalSales / performanceData.targetSales) * 100;
