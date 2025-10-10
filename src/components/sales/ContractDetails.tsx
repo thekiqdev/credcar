@@ -439,7 +439,7 @@ const ContractDetails: React.FC<ContractDetailsProps> = ({
             id,
             nome,
             descricao,
-            comissao
+            commission_percentage
           ),
           profiles!inner (
             id,
@@ -513,7 +513,7 @@ const ContractDetails: React.FC<ContractDetailsProps> = ({
           id: data.planos?.id || 0,
           name: data.planos?.nome || "Plano não encontrado",
           commission_percentage:
-            data.planos?.comissao || 0,
+            data.planos?.commission_percentage || 0,
           payment_details: data.planos?.descricao || "",
           payment_installments: 1, // Default value since planos doesn't have this field
         },
