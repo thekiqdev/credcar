@@ -1169,41 +1169,24 @@ const ContractDetails: React.FC<ContractDetailsProps> = ({
     );
   }
 
-  const commissionValue =
-    contract.total_value *
-    (contract.commission_table.commission_percentage / 100);
+  // Calculate commission value (default 4% if not specified)
+  const commissionPercentage = contract.commission_table.commission_percentage || 4;
+  const commissionValue = contract.total_value * (commissionPercentage / 100);
 
-  // Calcular total de todas as faturas
-  const calculateTotalInvoicesValue = () => {
-    if (!contract?.invoices || contract.invoices.length === 0) {
-      return 0;
-    }
-    return contract.invoices.reduce((total, invoice) => {
-      const value = parseFloat(invoice.value) || 0;
-      return total + value;
+  // Calculate total value of all installments (for remaining balance calculation)
+  const totalInstallmentsValue = contract.invoices.reduce((total, invoice) => {
+    return total + (invoice.value || 0);
+  }, 0);
+
+  // Calculate paid amount from invoices
+  const paidAmount = contract.invoices
+    .filter(invoice => invoice.status === 'paid')
+    .reduce((total, invoice) => {
+      return total + (invoice.value || 0);
     }, 0);
-  };
 
-  // Calcular total pago (faturas com status paid/Pago)
-  const calculatePaidInvoicesValue = () => {
-    if (!contract?.invoices || contract.invoices.length === 0) {
-      return 0;
-    }
-    return contract.invoices
-      .filter(invoice => 
-        invoice.status === 'paid' || 
-        invoice.status === 'Pago'
-      )
-      .reduce((total, invoice) => {
-        const value = parseFloat(invoice.value) || 0;
-        return total + value;
-      }, 0);
-  };
-
-  // Calcular saldo devedor (total de todas faturas - valor pago)
-  const calculateRemainingInvoicesValue = () => {
-    return calculateTotalInvoicesValue() - calculatePaidInvoicesValue();
-  };
+  // Calculate remaining balance based on total installments value
+  const remainingBalance = totalInstallmentsValue - paidAmount;
 
   return (
     <div className="bg-background">
@@ -1726,7 +1709,7 @@ const ContractDetails: React.FC<ContractDetailsProps> = ({
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold text-blue-600">
-                    {formatCurrency(calculatePaidInvoicesValue())}
+                    {formatCurrency(paidAmount)}
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">
                     Já quitado pelo cliente
@@ -1743,7 +1726,7 @@ const ContractDetails: React.FC<ContractDetailsProps> = ({
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold text-orange-600">
-                    {formatCurrency(calculateRemainingInvoicesValue())}
+                    {formatCurrency(remainingBalance)}
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">
                     Pendente de pagamento
@@ -1932,8 +1915,7 @@ const ContractDetails: React.FC<ContractDetailsProps> = ({
                         {formatCurrency(commissionValue)}
                       </div>
                       <p className="text-xs text-purple-700 mt-1">
-                        {contract.commission_table.commission_percentage}% do
-                        valor do contrato
+                        {commissionPercentage}% do valor do contrato
                       </p>
                       <p className="text-xs text-purple-600 mt-1">
                         Tabela: {contract.commission_table.name}
@@ -2450,7 +2432,7 @@ const ContractDetails: React.FC<ContractDetailsProps> = ({
                   <div>
                     <Label className="text-sm font-medium">Percentual</Label>
                     <p className="text-sm text-muted-foreground mt-1">
-                      {contract.commission_table.commission_percentage}%
+                      {commissionPercentage}%
                     </p>
                   </div>
                   <div>
@@ -2643,7 +2625,7 @@ const ContractDetails: React.FC<ContractDetailsProps> = ({
                     {/* Editor Container with Merge Fields Panel */}
                     <div className="flex gap-4">
                       <div className={showMergeFields ? "flex-1" : "w-full"}>
-                        <Editor
+                    <Editor
                       apiKey="46lebzjws4vt4ywtma8d15683tj61n80shufdxg1spuuwpbm"
                       onInit={(evt, editor) => {
                         editorRef.current = editor;
