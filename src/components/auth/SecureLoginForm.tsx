@@ -226,15 +226,6 @@ export const SecureLoginForm: React.FC = () => {
               Registrar como Representante
             </button>
           </div>
-
-          <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg">
-            <p className="text-sm text-green-800 font-medium text-center">
-              🔒 Login Seguro e Criptografado
-            </p>
-            <p className="text-xs text-green-600 text-center mt-1">
-              Sistema híbrido: Admins via Supabase Auth, Representantes via Profiles
-            </p>
-          </div>
         </CardContent>
       </Card>
     </div>
