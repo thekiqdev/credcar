@@ -1913,7 +1913,7 @@ const ContractDetails: React.FC<ContractDetailsProps> = ({
                         {formatCurrency(commissionValue)}
                       </div>
                       <p className="text-xs text-purple-700 mt-1">
-                        {commissionPercentage}% do valor do contrato
+                        {commissionPercentage}% da comissão
                       </p>
                       <p className="text-xs text-purple-600 mt-1">
                         Tabela: {contract.commission_table.name}
