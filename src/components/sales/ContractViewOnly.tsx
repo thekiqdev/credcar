@@ -458,9 +458,7 @@ const ContractViewOnly: React.FC = () => {
             <div class="contract-details">
               <h3>Detalhes do Contrato</h3>
               <p><strong>Código:</strong> ${contract?.contract_code}</p>
-              <p><strong>Valor:</strong> ${formatCurrency(contract?.total_value || 0)}</p>
-              <p><strong>Tabela de Comissão:</strong> ${contract?.commission_table.name}</p>
-              <p><strong>Percentual:</strong> ${contract?.commission_table.commission_percentage}%</p>
+              <p><strong>Valor de Contrato:</strong> <span style="font-size: 16px; font-weight: bold; color: #dc2626;">${formatCurrency(contract?.total_value || 0)}</span></p>
               <p><strong>Status:</strong> ${contract?.status}</p>
               <p><strong>Data de Criação:</strong> ${formatDate(contract?.created_at || "")}</p>
             </div>
@@ -653,16 +651,10 @@ const ContractViewOnly: React.FC = () => {
                 </h3>
                 <div className="space-y-2 text-sm print:text-xs">
                   <p>
-                    <strong>Valor Total:</strong>{" "}
-                    {formatCurrency(contract.total_value)}
-                  </p>
-                  <p>
-                    <strong>Tabela de Comissão:</strong>{" "}
-                    {contract.commission_table.name}
-                  </p>
-                  <p>
-                    <strong>Percentual:</strong>{" "}
-                    {contract.commission_table.commission_percentage}%
+                    <strong>Valor de Contrato:</strong>{" "}
+                    <span className="text-lg font-bold text-red-600">
+                      {formatCurrency(contract.total_value)}
+                    </span>
                   </p>
                 </div>
               </div>
