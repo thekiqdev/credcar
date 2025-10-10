@@ -449,10 +449,10 @@ const ContractDetails: React.FC<ContractDetailsProps> = ({
             phone,
             commission_code
           ),
-          quotas (
+          quotas!left (
             id,
             quota_number,
-            groups (
+            groups!left (
               id,
               name,
               description
@@ -529,14 +529,14 @@ const ContractDetails: React.FC<ContractDetailsProps> = ({
           phone: data.profiles?.phone,
           commission_code: data.profiles?.commission_code,
         },
-        quota: data.quotas
+        quota: data.quotas && data.quotas.id
           ? {
               id: data.quotas.id,
               quota_number: data.quotas.quota_number,
               group: {
                 id: data.quotas.groups?.id || 0,
                 name: data.quotas.groups?.name || "Grupo não encontrado",
-                description: data.quotas.groups?.description,
+                description: data.quotas.groups?.description || "Sem descrição",
               },
             }
           : null,
