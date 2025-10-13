@@ -254,10 +254,11 @@ class CommissionService {
   }
 
   /**
-   * Obter pagamentos de comissões aprovadas para relatório administrativo
+   * Obter relatório de comissões apenas para representantes com solicitações aprovadas
    */
-  async getCommissionPayments(): Promise<any[]> {
+  async getCommissionPaymentsReport(): Promise<any[]> {
     try {
+      // Buscar apenas representantes que têm solicitações aprovadas
       const { data: withdrawals, error } = await supabase
         .from("withdrawal_requests")
         .select(`
@@ -282,20 +283,63 @@ class CommissionService {
         throw new Error(`Erro ao buscar pagamentos: ${error.message}`);
       }
 
-      return (withdrawals || []).map((withdrawal) => ({
-        id: withdrawal.id,
-        requestCode: withdrawal.request_code,
-        representativeId: withdrawal.profiles?.id || "",
-        representativeName: withdrawal.profiles?.full_name || "N/A",
-        representativeEmail: withdrawal.profiles?.email || "N/A",
-        requestedValue: withdrawal.requested_value,
-        requestedAt: withdrawal.requested_at,
-        processedAt: withdrawal.processed_at,
-        paymentStatus: withdrawal.payment_status || "Não Pago",
-        paymentDate: withdrawal.payment_date || null,
+      // Agrupar por representante
+      const representativeMap = new Map();
+      
+      (withdrawals || []).forEach((withdrawal) => {
+        const repId = withdrawal.profiles?.id;
+        if (!repId) return;
+
+        if (!representativeMap.has(repId)) {
+          representativeMap.set(repId, {
+            representativeId: repId,
+            representativeName: withdrawal.profiles?.full_name || "N/A",
+            representativeEmail: withdrawal.profiles?.email || "N/A",
+            totalCommission: 0,
+            paidCommission: 0,
+            pendingCommission: 0,
+            contractsCount: 0,
+            withdrawals: []
+          });
+        }
+
+        const rep = representativeMap.get(repId);
+        rep.totalCommission += withdrawal.requested_value || 0;
+        rep.withdrawals.push(withdrawal);
+
+        if (withdrawal.payment_status === "Pago") {
+          rep.paidCommission += withdrawal.requested_value || 0;
+        } else {
+          rep.pendingCommission += withdrawal.requested_value || 0;
+        }
+      });
+
+      // Converter para array e calcular contratos
+      const result = Array.from(representativeMap.values());
+      
+      // Para cada representante, buscar contagem de contratos
+      for (const rep of result) {
+        const { data: contracts } = await supabase
+          .from("contracts")
+          .select("id")
+          .eq("representative_id", rep.representativeId)
+          .in("status", ["Ativo", "Concluído"]);
+        
+        rep.contractsCount = contracts?.length || 0;
+      }
+
+      return result.map(rep => ({
+        id: rep.representativeId,
+        representative: rep.representativeName,
+        period: new Date().toLocaleDateString("pt-BR", { month: "long", year: "numeric" }),
+        totalCommission: rep.totalCommission,
+        paidCommission: rep.paidCommission,
+        pendingCommission: rep.pendingCommission,
+        contracts: rep.contractsCount,
+        withdrawals: rep.withdrawals
       }));
     } catch (error) {
-      console.error("Erro em getCommissionPayments:", error);
+      console.error("Erro em getCommissionPaymentsReport:", error);
       return [];
     }
   }

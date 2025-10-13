@@ -499,7 +499,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const loadCommissionPayments = async () => {
     try {
       console.log("Loading commission payments...");
-      const payments = await commissionService.getCommissionPayments();
+      const payments = await commissionService.getCommissionPaymentsReport();
       console.log("Commission payments loaded:", payments);
       setCommissionPayments(payments);
     } catch (error) {
@@ -4412,7 +4412,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   <CardHeader>
                     <CardTitle>Relatórios de Comissão</CardTitle>
                     <CardDescription>
-                      Resumo das comissões por representante no período atual
+                      Solicitações aprovadas por representante - apenas representantes com comissões aprovadas
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
@@ -4431,82 +4431,99 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {commissionReports.map((report) => (
-                          <TableRow key={report.id}>
-                            <TableCell className="font-medium">
-                              {report.representative}
-                            </TableCell>
-                            <TableCell>{report.period}</TableCell>
-                            <TableCell>
-                              {new Intl.NumberFormat("pt-BR", {
-                                style: "currency",
-                                currency: "BRL",
-                              }).format(report.totalCommission)}
-                            </TableCell>
-                            <TableCell>
-                              {new Intl.NumberFormat("pt-BR", {
-                                style: "currency",
-                                currency: "BRL",
-                              }).format(report.paidCommission)}
-                            </TableCell>
-                            <TableCell>
-                              {new Intl.NumberFormat("pt-BR", {
-                                style: "currency",
-                                currency: "BRL",
-                              }).format(report.pendingCommission)}
-                            </TableCell>
-                            <TableCell>{report.contracts}</TableCell>
-                            <TableCell>
-                              {/* Buscar pagamento correspondente para este representante */}
-                              {(() => {
-                                const payment = commissionPayments.find(p => p.representativeId === report.id);
-                                if (payment) {
-                                  return (
-                                    <Badge
-                                      variant="outline"
-                                      className={
-                                        payment.paymentStatus === "Pago"
-                                          ? "bg-green-500 text-white hover:bg-green-600 border-green-500"
-                                          : "bg-yellow-500 text-white hover:bg-yellow-600 border-yellow-500"
-                                      }
-                                    >
-                                      {payment.paymentStatus}
-                                    </Badge>
-                                  );
-                                }
-                                return <span className="text-gray-500">N/A</span>;
-                              })()}
-                            </TableCell>
-                            <TableCell>
-                              {(() => {
-                                const payment = commissionPayments.find(p => p.representativeId === report.id);
-                                if (payment && payment.paymentStatus === "Pago" && payment.paymentDate) {
-                                  return new Date(payment.paymentDate).toLocaleDateString("pt-BR");
-                                } else if (payment && payment.paymentStatus === "Não Pago") {
-                                  return (
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() => {
-                                        setSelectedPayment(payment);
-                                        setPaymentDate(new Date().toISOString().split('T')[0]);
-                                        setIsPaymentDialogOpen(true);
-                                      }}
-                                    >
-                                      Marcar como Pago
-                                    </Button>
-                                  );
-                                }
-                                return <span className="text-gray-500">-</span>;
-                              })()}
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <Button variant="outline" size="sm">
-                                <Eye className="h-4 w-4" />
-                              </Button>
+                        {commissionPayments.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={9} className="text-center py-8 text-gray-500">
+                              Nenhuma solicitação aprovada encontrada
                             </TableCell>
                           </TableRow>
-                        ))}
+                        ) : (
+                          commissionPayments.map((payment) => (
+                            <TableRow key={payment.id}>
+                              <TableCell className="font-medium">
+                                {payment.representative}
+                              </TableCell>
+                              <TableCell>{payment.period}</TableCell>
+                              <TableCell>
+                                {new Intl.NumberFormat("pt-BR", {
+                                  style: "currency",
+                                  currency: "BRL",
+                                }).format(payment.totalCommission)}
+                              </TableCell>
+                              <TableCell>
+                                {new Intl.NumberFormat("pt-BR", {
+                                  style: "currency",
+                                  currency: "BRL",
+                                }).format(payment.paidCommission)}
+                              </TableCell>
+                              <TableCell>
+                                {new Intl.NumberFormat("pt-BR", {
+                                  style: "currency",
+                                  currency: "BRL",
+                                }).format(payment.pendingCommission)}
+                              </TableCell>
+                              <TableCell>{payment.contracts}</TableCell>
+                              <TableCell>
+                                {/* Verificar se tem alguma solicitação não paga */}
+                                {(() => {
+                                  const hasUnpaid = payment.withdrawals.some(w => w.payment_status === "Não Pago");
+                                  const hasPaid = payment.withdrawals.some(w => w.payment_status === "Pago");
+                                  
+                                  if (hasPaid && !hasUnpaid) {
+                                    return (
+                                      <Badge
+                                        variant="outline"
+                                        className="bg-green-500 text-white hover:bg-green-600 border-green-500"
+                                      >
+                                        Pago
+                                      </Badge>
+                                    );
+                                  } else if (hasUnpaid) {
+                                    return (
+                                      <Badge
+                                        variant="outline"
+                                        className="bg-yellow-500 text-white hover:bg-yellow-600 border-yellow-500"
+                                      >
+                                        Não Pago
+                                      </Badge>
+                                    );
+                                  }
+                                  return <span className="text-gray-500">-</span>;
+                                })()}
+                              </TableCell>
+                              <TableCell>
+                                {(() => {
+                                  const unpaidWithdrawal = payment.withdrawals.find(w => w.payment_status === "Não Pago");
+                                  const paidWithdrawal = payment.withdrawals.find(w => w.payment_status === "Pago");
+                                  
+                                  if (paidWithdrawal && paidWithdrawal.payment_date) {
+                                    return new Date(paidWithdrawal.payment_date).toLocaleDateString("pt-BR");
+                                  } else if (unpaidWithdrawal) {
+                                    return (
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => {
+                                          setSelectedPayment(unpaidWithdrawal);
+                                          setPaymentDate(new Date().toISOString().split('T')[0]);
+                                          setIsPaymentDialogOpen(true);
+                                        }}
+                                      >
+                                        Marcar como Pago
+                                      </Button>
+                                    );
+                                  }
+                                  return <span className="text-gray-500">-</span>;
+                                })()}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <Button variant="outline" size="sm">
+                                  <Eye className="h-4 w-4" />
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        )}
                       </TableBody>
                     </Table>
                   </CardContent>
