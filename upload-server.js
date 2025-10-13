@@ -495,6 +495,158 @@ const validateFile = (req, res, next) => {
   next();
 };
 
+// Rota para upload de contrato representante
+app.post('/api/upload-representative-contract', upload.single('file'), validateFile, (req, res) => {
+  try {
+    console.log('📤 Recebendo upload de contrato representante...');
+    console.log('📋 Body:', req.body);
+    console.log('📁 File:', req.file);
+    
+    const { representativeId, cpfCnpj } = req.body;
+    
+    console.log('🔍 Representative ID:', representativeId);
+    console.log('👤 CPF/CNPJ:', cpfCnpj);
+    console.log('📏 File Size:', req.file.size, 'bytes');
+    console.log('📄 MIME Type:', req.file.mimetype);
+    
+    if (!representativeId || !cpfCnpj) {
+      console.log('❌ Dados obrigatórios faltando:', { representativeId, cpfCnpj });
+      return res.status(400).json({ error: 'ID do representante e CPF/CNPJ são obrigatórios' });
+    }
+
+    // Validação específica para contrato representante
+    const allowedTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+    const maxSize = 10 * 1024 * 1024; // 10MB
+
+    if (!allowedTypes.includes(req.file.mimetype)) {
+      return res.status(400).json({ 
+        error: 'Tipo de arquivo não permitido. Formatos aceitos: PDF, DOC, DOCX.' 
+      });
+    }
+
+    if (req.file.size > maxSize) {
+      return res.status(400).json({ 
+        error: 'Arquivo muito grande. Tamanho máximo: 10MB' 
+      });
+    }
+
+    // Criar estrutura de pastas: documentos/cpf/contrato-representante/
+    const baseDir = path.join(__dirname, 'documentos');
+    const sanitizedCpfCnpj = cpfCnpj.replace(/[^a-zA-Z0-9]/g, '');
+    const contractDir = path.join(baseDir, sanitizedCpfCnpj, 'contrato-representante');
+    
+    console.log('🔍 Contract Directory:', contractDir);
+    
+    // Criar diretório se não existir
+    fs.mkdirSync(contractDir, { recursive: true });
+    
+    // Gerar nome único para o arquivo
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const fileExtension = path.extname(req.file.originalname);
+    const fileName = `contrato-representante-${timestamp}${fileExtension}`;
+    const finalFilePath = path.join(contractDir, fileName);
+    
+    console.log('🔍 Final File Path:', finalFilePath);
+    
+    // Mover arquivo do temp para o local final
+    fs.renameSync(req.file.path, finalFilePath);
+    console.log('✅ Arquivo de contrato movido com sucesso!');
+
+    // Gerar URL de download
+    const downloadUrl = `http://localhost:${PORT}/api/download-file?path=${encodeURIComponent(path.relative(baseDir, finalFilePath))}`;
+
+    const fileInfo = {
+      originalName: req.file.originalname,
+      filename: fileName,
+      filePath: finalFilePath,
+      downloadUrl: downloadUrl,
+      size: req.file.size,
+      mimetype: req.file.mimetype,
+      representativeId: representativeId,
+      cpfCnpj: cpfCnpj,
+      uploadedAt: new Date().toISOString()
+    };
+
+    console.log('📊 Contract File Info:', fileInfo);
+
+    res.json({
+      success: true,
+      message: 'Contrato enviado com sucesso',
+      data: fileInfo
+    });
+  } catch (error) {
+    console.error('❌ Erro no upload de contrato:', error);
+    res.status(500).json({ error: error.message || 'Erro interno do servidor' });
+  }
+});
+
+// Rota para deletar contrato representante
+app.delete('/api/delete-representative-contract', async (req, res) => {
+  try {
+    const { representativeId, cpfCnpj } = req.body;
+    
+    console.log('🗑️ Deletando contrato representante...');
+    console.log('🔍 Representative ID:', representativeId);
+    console.log('👤 CPF/CNPJ:', cpfCnpj);
+    
+    if (!representativeId || !cpfCnpj) {
+      return res.status(400).json({ error: 'ID do representante e CPF/CNPJ são obrigatórios' });
+    }
+
+    // Construir caminho do arquivo
+    const baseDir = path.join(__dirname, 'documentos');
+    const sanitizedCpfCnpj = cpfCnpj.replace(/[^a-zA-Z0-9]/g, '');
+    const contractDir = path.join(baseDir, sanitizedCpfCnpj, 'contrato-representante');
+    
+    console.log('🔍 Contract Directory:', contractDir);
+    
+    // Verificar se o diretório existe
+    if (!fs.existsSync(contractDir)) {
+      return res.status(404).json({ error: 'Contrato não encontrado' });
+    }
+    
+    // Listar arquivos no diretório
+    const files = fs.readdirSync(contractDir);
+    const contractFiles = files.filter(file => file.startsWith('contrato-representante-'));
+    
+    if (contractFiles.length === 0) {
+      return res.status(404).json({ error: 'Contrato não encontrado' });
+    }
+    
+    // Deletar todos os arquivos de contrato (pode haver múltiplos)
+    let deletedCount = 0;
+    for (const file of contractFiles) {
+      const filePath = path.join(contractDir, file);
+      try {
+        fs.unlinkSync(filePath);
+        deletedCount++;
+        console.log('✅ Arquivo deletado:', file);
+      } catch (error) {
+        console.error('❌ Erro ao deletar arquivo:', file, error);
+      }
+    }
+    
+    // Se não há mais arquivos, deletar o diretório
+    const remainingFiles = fs.readdirSync(contractDir);
+    if (remainingFiles.length === 0) {
+      fs.rmdirSync(contractDir);
+      console.log('✅ Diretório de contrato removido');
+    }
+    
+    console.log(`✅ ${deletedCount} arquivo(s) de contrato deletado(s)`);
+    
+    res.json({
+      success: true,
+      message: `${deletedCount} arquivo(s) de contrato deletado(s) com sucesso`,
+      deletedCount: deletedCount
+    });
+    
+  } catch (error) {
+    console.error('❌ Erro ao deletar contrato:', error);
+    res.status(500).json({ error: error.message || 'Erro interno do servidor' });
+  }
+});
+
 // Rota para upload de documentos
 app.post('/api/upload-document', upload.single('file'), validateFile, (req, res) => {
   try {

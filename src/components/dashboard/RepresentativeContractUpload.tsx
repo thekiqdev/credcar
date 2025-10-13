@@ -13,7 +13,6 @@ import {
   AlertCircle 
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
-import { storageService, STORAGE_BUCKETS } from '@/lib/storage';
 
 interface RepresentativeContractUploadProps {
   representativeId: string;
@@ -54,29 +53,29 @@ const RepresentativeContractUpload: React.FC<RepresentativeContractUploadProps> 
     setUploadSuccess(false);
 
     try {
-      // Create folder structure: contrato-representante/
-      const folderPath = `contrato-representante`;
-      
-      // Generate unique filename
-      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-      const fileExtension = file.name.split('.').pop();
-      const fileName = `contrato-representante-${timestamp}.${fileExtension}`;
-      const filePath = `${folderPath}/${fileName}`;
+      // Create FormData for upload
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('representativeId', representativeId);
+      formData.append('cpfCnpj', representativeCpfCnpj);
 
-      console.log('📁 Uploading contract to:', filePath);
+      console.log('📁 Uploading contract to local server...');
 
-      // Upload file using the storage service
-      const downloadLink = await storageService.uploadFile(
-        STORAGE_BUCKETS.REPRESENTATIVE_DOCUMENTS,
-        filePath,
-        file,
-        {
-          cacheControl: '3600',
-          upsert: false
-        }
-      );
+      // Upload file to local server
+      const response = await fetch('http://localhost:3001/api/upload-representative-contract', {
+        method: 'POST',
+        body: formData,
+      });
 
-      console.log('✅ File uploaded successfully');
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Erro no upload');
+      }
+
+      const result = await response.json();
+      console.log('✅ File uploaded successfully:', result);
+
+      const downloadLink = result.data.downloadUrl;
       console.log('🔗 Download link:', downloadLink);
 
       // Update profiles table with contract_profile
@@ -110,15 +109,27 @@ const RepresentativeContractUpload: React.FC<RepresentativeContractUploadProps> 
     if (!contractProfile) return;
 
     try {
-      // Extract file path from URL
-      const url = new URL(contractProfile);
-      const pathParts = url.pathname.split('/');
-      const filePath = pathParts.slice(pathParts.indexOf('representative-documents') + 1).join('/');
+      console.log('🗑️ Deleting contract from local server...');
 
-      console.log('🗑️ Deleting contract file:', filePath);
+      // Delete file from local server
+      const response = await fetch('http://localhost:3001/api/delete-representative-contract', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          representativeId: representativeId,
+          cpfCnpj: representativeCpfCnpj
+        }),
+      });
 
-      // Delete file using the storage service
-      await storageService.deleteFile(STORAGE_BUCKETS.REPRESENTATIVE_DOCUMENTS, filePath);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Erro ao deletar arquivo');
+      }
+
+      const result = await response.json();
+      console.log('✅ Contract deleted successfully:', result);
 
       // Remove contract_profile from database
       const { error: updateError } = await supabase
@@ -131,7 +142,7 @@ const RepresentativeContractUpload: React.FC<RepresentativeContractUploadProps> 
         throw new Error(`Erro ao atualizar perfil: ${updateError.message}`);
       }
 
-      console.log('✅ Contract deleted successfully');
+      console.log('✅ Profile updated - contract removed');
       onContractUploaded('');
 
     } catch (error) {
