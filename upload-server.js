@@ -495,6 +495,54 @@ const validateFile = (req, res, next) => {
   next();
 };
 
+// Endpoint para verificar migração contract_profile
+app.get('/api/test-contract-profile-migration', async (req, res) => {
+  try {
+    console.log('🔍 Testando migração contract_profile...');
+    
+    // Tentar fazer um SELECT na coluna contract_profile
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id, contract_profile')
+      .limit(1);
+
+    if (error) {
+      if (error.code === '42703') {
+        console.log('❌ Coluna contract_profile não existe');
+        res.json({
+          success: false,
+          message: 'Coluna contract_profile não existe na tabela profiles',
+          error: error.message,
+          needsMigration: true
+        });
+      } else {
+        console.log('❌ Erro ao verificar coluna:', error);
+        res.json({
+          success: false,
+          message: 'Erro ao verificar coluna contract_profile',
+          error: error.message,
+          needsMigration: false
+        });
+      }
+    } else {
+      console.log('✅ Coluna contract_profile existe');
+      res.json({
+        success: true,
+        message: 'Coluna contract_profile existe na tabela profiles',
+        data: data,
+        needsMigration: false
+      });
+    }
+  } catch (error) {
+    console.error('❌ Erro no teste de migração:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erro interno do servidor',
+      error: error.message
+    });
+  }
+});
+
 // Rota para upload de contrato representante
 app.post('/api/upload-representative-contract', upload.single('file'), validateFile, (req, res) => {
   try {
