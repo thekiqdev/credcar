@@ -41,6 +41,7 @@ export interface Representative {
   commission_code?: string;
   role: string;
   status: Database["public"]["Enums"]["user_status"];
+  contract_profile?: string;
 
   total_sales: number;
   contracts_count: number;
@@ -126,6 +127,7 @@ export const representativeService = {
       total_sales: 0,
       contracts_count: 0,
       updated_at: data.created_at,
+      contract_profile: data.contract_profile,
     };
   },
 

@@ -6,6 +6,7 @@ import {
   documentService,
 } from "../../lib/supabase";
 import DocumentApproval from "./DocumentApproval";
+import RepresentativeContractUpload from "./RepresentativeContractUpload";
 import { Database } from "../../types/supabase";
 import {
   Card,
@@ -94,6 +95,7 @@ const RepresentativeProfile: React.FC<RepresentativeProfileProps> = () => {
   const [contractToDelete, setContractToDelete] = React.useState(null);
   const [documents, setDocuments] = useState<any[]>([]);
   const [isLoadingDocuments, setIsLoadingDocuments] = useState(false);
+  const [contractProfile, setContractProfile] = useState<string | null>(null);
 
   // Load representative data
   useEffect(() => {
@@ -107,6 +109,7 @@ const RepresentativeProfile: React.FC<RepresentativeProfileProps> = () => {
         if (data) {
           setAccountStatus(data.status);
           setEditData(data);
+          setContractProfile(data.contract_profile || null);
           // Load documents
           await loadDocuments(id);
         }
@@ -320,6 +323,14 @@ const RepresentativeProfile: React.FC<RepresentativeProfileProps> = () => {
       // Here you would make the API call to delete the contract
       setIsDeleteContractDialogOpen(false);
       setContractToDelete(null);
+    }
+  };
+
+  const handleContractUploaded = (downloadLink: string) => {
+    setContractProfile(downloadLink || null);
+    // Update representative data if needed
+    if (representative) {
+      setRepresentative({ ...representative, contract_profile: downloadLink || null });
     }
   };
 
@@ -614,6 +625,14 @@ const RepresentativeProfile: React.FC<RepresentativeProfileProps> = () => {
               loadDocuments(id);
             }
           }}
+        />
+
+        {/* Representative Contract Upload Section */}
+        <RepresentativeContractUpload
+          representativeId={id || ''}
+          representativeCpfCnpj={representative?.cnpj || ''}
+          contractProfile={contractProfile || undefined}
+          onContractUploaded={handleContractUploaded}
         />
 
         {/* All Contracts - Full Width */}

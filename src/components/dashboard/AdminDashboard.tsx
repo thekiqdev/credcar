@@ -16,7 +16,6 @@ import { systemConfigService } from "../../lib/system-config.service";
 import { asaasService } from "../../lib/asaas.service";
 import { commissionService } from "../../lib/commission.service";
 import WithdrawalManagement from "../admin/WithdrawalManagement";
-import RepresentativeContractUpload from "../admin/RepresentativeContractUpload";
 import { withdrawalService } from "../../lib/withdrawal.service";
 import { formatDateBR, isDateOverdue } from "../../lib/date-utils";
 import WebhookTester from "./WebhookTester";
@@ -129,7 +128,6 @@ import {
   User,
   Key,
   Copy,
-  Upload,
 } from "lucide-react";
 import ContractCreationFlow from "@/components/sales/ContractCreationFlow";
 import ContractTemplateManagement from "@/components/sales/ContractTemplateManagement";
@@ -561,8 +559,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [selectedContractForStatusChange, setSelectedContractForStatusChange] =
     useState<any>(null);
   const [newContractStatus, setNewContractStatus] = useState<string>("");
-  const [isContractUploadOpen, setIsContractUploadOpen] = useState(false);
-  const [selectedRepresentativeForContract, setSelectedRepresentativeForContract] = useState<any>(null);
 
   // Clients state
   const [allClients, setAllClients] = useState([]);
@@ -1943,12 +1939,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const handleChangePassword = (rep: Representative) => {
     setRepresentativeForPasswordChange(rep);
     setIsPasswordChangeDialogOpen(true);
-  };
-
-  const handleUploadContract = (rep: Representative) => {
-    console.log("Uploading contract for:", rep.name);
-    setSelectedRepresentativeForContract(rep);
-    setIsContractUploadOpen(true);
   };
 
   const handlePasswordUpdate = async () => {
@@ -4021,21 +4011,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                       className="h-8 w-8 p-0 text-blue-600 hover:text-blue-800 border-blue-200 hover:bg-blue-50"
                                     >
                                       <Key className="h-4 w-4" />
-                                    </Button>
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() => {
-                                        console.log(
-                                          "Upload contract button clicked for:",
-                                          rep.name,
-                                        );
-                                        handleUploadContract(rep);
-                                      }}
-                                      title="Enviar contrato de representação"
-                                      className="h-8 w-8 p-0 text-green-600 hover:text-green-800 border-green-200 hover:bg-green-50"
-                                    >
-                                      <Upload className="h-4 w-4" />
                                     </Button>
                                     <Button
                                       variant="outline"
@@ -7602,31 +7577,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 Alterar Senha
               </Button>
             </DialogFooter>
-          </DialogContent>
-        </Dialog>
-
-        {/* Contract Upload Dialog */}
-        <Dialog
-          open={isContractUploadOpen}
-          onOpenChange={setIsContractUploadOpen}
-        >
-          <DialogContent className="sm:max-w-[600px]">
-            <DialogHeader>
-              <DialogTitle>Enviar Contrato de Representação</DialogTitle>
-              <DialogDescription>
-                Envie o contrato de representação comercial para {selectedRepresentativeForContract?.name}.
-              </DialogDescription>
-            </DialogHeader>
-            {selectedRepresentativeForContract && (
-              <RepresentativeContractUpload
-                representativeId={selectedRepresentativeForContract.id}
-                representativeName={selectedRepresentativeForContract.name}
-                onUploadComplete={() => {
-                  setIsContractUploadOpen(false);
-                  setSelectedRepresentativeForContract(null);
-                }}
-              />
-            )}
           </DialogContent>
         </Dialog>
 
