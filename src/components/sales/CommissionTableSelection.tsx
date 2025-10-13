@@ -38,6 +38,10 @@ const CommissionTableSelection: React.FC<CommissionTableSelectionProps> = ({
     currentUser?.role === "Administrador" ||
     adminEmails.includes(currentUser?.email?.toLowerCase() || "");
 
+  // Debug: Log user info to console
+  console.log("Current user:", currentUser);
+  console.log("Is admin:", isAdmin);
+
   useEffect(() => {
     fetchCommissionPlans();
   }, []);
@@ -45,18 +49,23 @@ const CommissionTableSelection: React.FC<CommissionTableSelectionProps> = ({
   const fetchCommissionPlans = async () => {
     try {
       const data = await commissionPlansService.getAll();
+      console.log("All plans fetched:", data);
+      
       // Filter active plans and apply visibility rules
       let filteredPlans = data.filter((plan) => plan.ativo !== false);
+      console.log("Active plans:", filteredPlans);
 
-      // If user is admin, show all plans (public and private)
       // If user is not admin, only show public plans
       if (!isAdmin) {
+        console.log("User is not admin, filtering private plans");
         filteredPlans = filteredPlans.filter(
           (plan) => plan.visibility !== "privado",
         );
+      } else {
+        console.log("User is admin, showing all plans including private ones");
       }
-      // If isAdmin = true, show all plans (don't filter by visibility)
 
+      console.log("Final filtered plans:", filteredPlans);
       setPlans(filteredPlans);
     } catch (error) {
       console.error("Error fetching commission plans:", error);
