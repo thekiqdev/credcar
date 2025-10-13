@@ -33,14 +33,12 @@ const CommissionTableSelection: React.FC<CommissionTableSelectionProps> = ({
 
   // Get current user to check role
   const currentUser = authService.getCurrentUser();
-  const adminEmails = ["admin@credicar.com", "admin@credcar.com"];
+  const adminEmails = ["admin@credicar.com", "admin@credcar.com", "admin@agenciadev.com"];
   const isAdmin =
     currentUser?.role === "Administrador" ||
-    adminEmails.includes(currentUser?.email?.toLowerCase() || "");
-
-  // Debug: Log user info to console
-  console.log("Current user:", currentUser);
-  console.log("Is admin:", isAdmin);
+    currentUser?.role === "admin" ||
+    adminEmails.includes(currentUser?.email?.toLowerCase() || "") ||
+    (currentUser?.email && currentUser.email.toLowerCase().includes("admin"));
 
   useEffect(() => {
     fetchCommissionPlans();
@@ -50,6 +48,8 @@ const CommissionTableSelection: React.FC<CommissionTableSelectionProps> = ({
     try {
       const data = await commissionPlansService.getAll();
       console.log("All plans fetched:", data);
+      console.log("Current user:", currentUser);
+      console.log("Is admin:", isAdmin);
       
       // Filter active plans and apply visibility rules
       let filteredPlans = data.filter((plan) => plan.ativo !== false);
@@ -57,15 +57,14 @@ const CommissionTableSelection: React.FC<CommissionTableSelectionProps> = ({
 
       // If user is not admin, only show public plans
       if (!isAdmin) {
-        console.log("User is not admin, filtering private plans");
         filteredPlans = filteredPlans.filter(
           (plan) => plan.visibility !== "privado",
         );
+        console.log("Filtered plans for non-admin:", filteredPlans);
       } else {
-        console.log("User is admin, showing all plans including private ones");
+        console.log("Admin user - showing all plans including private ones");
       }
 
-      console.log("Final filtered plans:", filteredPlans);
       setPlans(filteredPlans);
     } catch (error) {
       console.error("Error fetching commission plans:", error);
