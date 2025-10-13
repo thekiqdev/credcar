@@ -4485,11 +4485,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                     onClick={() => {
                                       setSelectedPayment({
                                         id: payment.withdrawalId,
-                                        request_code: payment.requestCode,
-                                        requested_value: payment.totalCommission,
-                                        representative_id: payment.representativeId,
-                                        payment_status: payment.paymentStatus,
-                                        payment_date: payment.paymentDate
+                                        requestCode: payment.requestCode,
+                                        requestedValue: payment.totalCommission,
+                                        representativeId: payment.representativeId,
+                                        representativeName: payment.representative,
+                                        paymentStatus: payment.paymentStatus,
+                                        paymentDate: payment.paymentDate,
+                                        processedAt: payment.processedAt
                                       });
                                       setPaymentDate(new Date().toISOString().split('T')[0]);
                                       setIsPaymentDialogOpen(true);
@@ -4526,13 +4528,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     {selectedPayment && (
                       <div className="space-y-4">
                         <div className="bg-gray-50 p-4 rounded-lg">
-                          <p><strong>Código:</strong> {selectedPayment.requestCode}</p>
-                          <p><strong>Representante:</strong> {selectedPayment.representativeName}</p>
+                          <p><strong>Código:</strong> {selectedPayment.requestCode || "N/A"}</p>
+                          <p><strong>Representante:</strong> {selectedPayment.representativeName || "N/A"}</p>
                           <p><strong>Valor:</strong> {new Intl.NumberFormat("pt-BR", {
                             style: "currency",
                             currency: "BRL",
-                          }).format(selectedPayment.requestedValue)}</p>
-                          <p><strong>Data de Aprovação:</strong> {new Date(selectedPayment.processedAt).toLocaleDateString("pt-BR")}</p>
+                          }).format(selectedPayment.requestedValue || 0)}</p>
+                          <p><strong>Data de Aprovação:</strong> {selectedPayment.processedAt ? new Date(selectedPayment.processedAt).toLocaleDateString("pt-BR") : "N/A"}</p>
                         </div>
                         <div>
                           <Label htmlFor="payment-date">Data do Pagamento *</Label>
@@ -4541,6 +4543,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                             type="date"
                             value={paymentDate}
                             onChange={(e) => setPaymentDate(e.target.value)}
+                            required
                           />
                         </div>
                       </div>
