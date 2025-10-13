@@ -383,7 +383,7 @@ const WithdrawalManagement: React.FC<WithdrawalManagementProps> = ({ onClose }) 
                           </div>
                         ) : (
                           <span className="text-sm text-gray-500">
-                            -
+                            {withdrawal.status === "Aprovado" ? "Processado" : "Rejeitado"}
                           </span>
                         )}
                       </TableCell>

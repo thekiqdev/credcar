@@ -48,12 +48,14 @@ const CommissionTableSelection: React.FC<CommissionTableSelectionProps> = ({
       // Filter active plans and apply visibility rules
       let filteredPlans = data.filter((plan) => plan.ativo !== false);
 
+      // If user is admin, show all plans (public and private)
       // If user is not admin, only show public plans
       if (!isAdmin) {
         filteredPlans = filteredPlans.filter(
           (plan) => plan.visibility !== "privado",
         );
       }
+      // If isAdmin = true, show all plans (don't filter by visibility)
 
       setPlans(filteredPlans);
     } catch (error) {
