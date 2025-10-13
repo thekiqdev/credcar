@@ -4412,7 +4412,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   <CardHeader>
                     <CardTitle>Relatórios de Comissão</CardTitle>
                     <CardDescription>
-                      Solicitações aprovadas por representante - apenas representantes com comissões aprovadas
+                      Histórico individual de solicitações aprovadas - cada solicitação em uma linha separada
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
@@ -4464,70 +4464,42 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                               </TableCell>
                               <TableCell>{payment.contracts}</TableCell>
                               <TableCell>
-                                {/* Verificar se tem alguma solicitação não paga */}
-                                {(() => {
-                                  const hasUnpaid = payment.withdrawals.some(w => w.payment_status === "Não Pago");
-                                  const hasPaid = payment.withdrawals.some(w => w.payment_status === "Pago");
-                                  
-                                  if (hasPaid && !hasUnpaid) {
-                                    return (
-                                      <Badge
-                                        variant="outline"
-                                        className="bg-green-500 text-white hover:bg-green-600 border-green-500"
-                                      >
-                                        Pago
-                                      </Badge>
-                                    );
-                                  } else if (hasUnpaid) {
-                                    return (
-                                      <Badge
-                                        variant="outline"
-                                        className="bg-yellow-500 text-white hover:bg-yellow-600 border-yellow-500"
-                                      >
-                                        Não Pago
-                                      </Badge>
-                                    );
+                                <Badge
+                                  variant="outline"
+                                  className={
+                                    payment.paymentStatus === "Pago"
+                                      ? "bg-green-500 text-white hover:bg-green-600 border-green-500"
+                                      : "bg-yellow-500 text-white hover:bg-yellow-600 border-yellow-500"
                                   }
-                                  return <span className="text-gray-500">-</span>;
-                                })()}
+                                >
+                                  {payment.paymentStatus}
+                                </Badge>
                               </TableCell>
                               <TableCell>
-                                {(() => {
-                                  // Buscar todas as solicitações não pagas deste representante
-                                  const unpaidWithdrawals = payment.withdrawals.filter(w => w.payment_status === "Não Pago");
-                                  const paidWithdrawals = payment.withdrawals.filter(w => w.payment_status === "Pago");
-                                  
-                                  // Se tem solicitações pagas, mostrar a data da mais recente
-                                  if (paidWithdrawals.length > 0) {
-                                    const mostRecentPaid = paidWithdrawals.sort((a, b) => 
-                                      new Date(b.payment_date || 0).getTime() - new Date(a.payment_date || 0).getTime()
-                                    )[0];
-                                    
-                                    if (mostRecentPaid.payment_date) {
-                                      return new Date(mostRecentPaid.payment_date).toLocaleDateString("pt-BR");
-                                    }
-                                  }
-                                  
-                                  // Se tem solicitações não pagas, mostrar botão para a primeira
-                                  if (unpaidWithdrawals.length > 0) {
-                                    const firstUnpaid = unpaidWithdrawals[0];
-                                    return (
-                                      <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => {
-                                          setSelectedPayment(firstUnpaid);
-                                          setPaymentDate(new Date().toISOString().split('T')[0]);
-                                          setIsPaymentDialogOpen(true);
-                                        }}
-                                      >
-                                        Marcar como Pago
-                                      </Button>
-                                    );
-                                  }
-                                  
-                                  return <span className="text-gray-500">-</span>;
-                                })()}
+                                {payment.paymentStatus === "Pago" && payment.paymentDate ? (
+                                  new Date(payment.paymentDate).toLocaleDateString("pt-BR")
+                                ) : payment.paymentStatus === "Não Pago" ? (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => {
+                                      setSelectedPayment({
+                                        id: payment.withdrawalId,
+                                        request_code: payment.requestCode,
+                                        requested_value: payment.totalCommission,
+                                        representative_id: payment.representativeId,
+                                        payment_status: payment.paymentStatus,
+                                        payment_date: payment.paymentDate
+                                      });
+                                      setPaymentDate(new Date().toISOString().split('T')[0]);
+                                      setIsPaymentDialogOpen(true);
+                                    }}
+                                  >
+                                    Marcar como Pago
+                                  </Button>
+                                ) : (
+                                  <span className="text-gray-500">-</span>
+                                )}
                               </TableCell>
                               <TableCell className="text-right">
                                 <Button variant="outline" size="sm">

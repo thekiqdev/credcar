@@ -254,11 +254,11 @@ class CommissionService {
   }
 
   /**
-   * Obter relatório de comissões apenas para representantes com solicitações aprovadas
+   * Obter relatório de comissões - cada solicitação como linha individual
    */
   async getCommissionPaymentsReport(): Promise<any[]> {
     try {
-      // Buscar apenas representantes que têm solicitações aprovadas
+      // Buscar todas as solicitações aprovadas individualmente
       const { data: withdrawals, error } = await supabase
         .from("withdrawal_requests")
         .select(`
@@ -283,61 +283,40 @@ class CommissionService {
         throw new Error(`Erro ao buscar pagamentos: ${error.message}`);
       }
 
-      // Agrupar por representante
-      const representativeMap = new Map();
+      // Retornar cada solicitação como uma linha individual
+      const result = [];
       
-      (withdrawals || []).forEach((withdrawal) => {
+      for (const withdrawal of (withdrawals || [])) {
         const repId = withdrawal.profiles?.id;
-        if (!repId) return;
+        if (!repId) continue;
 
-        if (!representativeMap.has(repId)) {
-          representativeMap.set(repId, {
-            representativeId: repId,
-            representativeName: withdrawal.profiles?.full_name || "N/A",
-            representativeEmail: withdrawal.profiles?.email || "N/A",
-            totalCommission: 0,
-            paidCommission: 0,
-            pendingCommission: 0,
-            contractsCount: 0,
-            withdrawals: []
-          });
-        }
-
-        const rep = representativeMap.get(repId);
-        rep.totalCommission += withdrawal.requested_value || 0;
-        rep.withdrawals.push(withdrawal);
-
-        if (withdrawal.payment_status === "Pago") {
-          rep.paidCommission += withdrawal.requested_value || 0;
-        } else {
-          rep.pendingCommission += withdrawal.requested_value || 0;
-        }
-      });
-
-      // Converter para array e calcular contratos
-      const result = Array.from(representativeMap.values());
-      
-      // Para cada representante, buscar contagem de contratos
-      for (const rep of result) {
+        // Buscar contagem de contratos para este representante
         const { data: contracts } = await supabase
           .from("contracts")
           .select("id")
-          .eq("representative_id", rep.representativeId)
+          .eq("representative_id", repId)
           .in("status", ["Ativo", "Concluído"]);
         
-        rep.contractsCount = contracts?.length || 0;
+        result.push({
+          id: withdrawal.id, // ID da solicitação individual
+          withdrawalId: withdrawal.id, // Para referência
+          representativeId: repId,
+          representative: withdrawal.profiles?.full_name || "N/A",
+          representativeEmail: withdrawal.profiles?.email || "N/A",
+          period: new Date().toLocaleDateString("pt-BR", { month: "long", year: "numeric" }),
+          totalCommission: withdrawal.requested_value || 0, // Valor desta solicitação específica
+          paidCommission: withdrawal.payment_status === "Pago" ? (withdrawal.requested_value || 0) : 0,
+          pendingCommission: withdrawal.payment_status === "Não Pago" ? (withdrawal.requested_value || 0) : 0,
+          contracts: contracts?.length || 0,
+          paymentStatus: withdrawal.payment_status || "Não Pago",
+          paymentDate: withdrawal.payment_date,
+          requestedAt: withdrawal.requested_at,
+          processedAt: withdrawal.processed_at,
+          requestCode: withdrawal.request_code
+        });
       }
 
-      return result.map(rep => ({
-        id: rep.representativeId,
-        representative: rep.representativeName,
-        period: new Date().toLocaleDateString("pt-BR", { month: "long", year: "numeric" }),
-        totalCommission: rep.totalCommission,
-        paidCommission: rep.paidCommission,
-        pendingCommission: rep.pendingCommission,
-        contracts: rep.contractsCount,
-        withdrawals: rep.withdrawals
-      }));
+      return result;
     } catch (error) {
       console.error("Erro em getCommissionPaymentsReport:", error);
       return [];
