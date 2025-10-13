@@ -600,8 +600,9 @@ app.post('/api/upload-representative-contract', upload.single('file'), validateF
     fs.renameSync(req.file.path, finalFilePath);
     console.log('✅ Arquivo de contrato movido com sucesso!');
 
-    // Gerar URL de download
-    const downloadUrl = `http://localhost:${PORT}/api/download-file?path=${encodeURIComponent(path.relative(baseDir, finalFilePath))}`;
+    // Gerar URL de download (usar barras normais para URLs)
+    const relativePath = path.relative(baseDir, finalFilePath).replace(/\\/g, '/');
+    const downloadUrl = `http://localhost:${PORT}/api/download-file?path=${encodeURIComponent(relativePath)}`;
 
     const fileInfo = {
       originalName: req.file.originalname,
@@ -931,22 +932,37 @@ app.get('/api/download-file', (req, res) => {
       return res.status(400).json({ error: 'Caminho do arquivo é obrigatório' });
     }
 
-    const fullPath = path.resolve(filePath);
+    // Decodificar o caminho e converter barras para o sistema operacional
+    const decodedPath = decodeURIComponent(filePath);
+    const normalizedPath = decodedPath.replace(/\//g, path.sep);
+    
+    // Construir o caminho completo relativo ao diretório de documentos
+    const documentsDir = path.resolve(__dirname, 'documentos');
+    const fullPath = path.join(documentsDir, normalizedPath);
+    
+    console.log('🔍 Download request:');
+    console.log('  Original path:', filePath);
+    console.log('  Decoded path:', decodedPath);
+    console.log('  Normalized path:', normalizedPath);
+    console.log('  Documents dir:', documentsDir);
+    console.log('  Full path:', fullPath);
     
     // Verificar se o arquivo existe
     if (!fs.existsSync(fullPath)) {
+      console.log('❌ Arquivo não encontrado:', fullPath);
       return res.status(404).json({ error: 'Arquivo não encontrado' });
     }
 
     // Verificar se o arquivo está dentro do diretório de documentos
-    const documentsDir = path.resolve(__dirname, 'documentos');
     if (!fullPath.startsWith(documentsDir)) {
+      console.log('❌ Acesso negado - arquivo fora do diretório de documentos');
       return res.status(403).json({ error: 'Acesso negado' });
     }
 
+    console.log('✅ Arquivo encontrado, iniciando download:', fullPath);
     res.download(fullPath);
   } catch (error) {
-    console.error('Erro no download:', error);
+    console.error('❌ Erro no download:', error);
     res.status(500).json({ error: 'Erro interno do servidor' });
   }
 });
