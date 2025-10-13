@@ -1572,12 +1572,12 @@ export const dashboardService = {
         return sum;
       }, 0);
 
-      // Get all withdrawals (pending and approved) to subtract from available balance
+      // Get all withdrawals (pending + approved) to subtract from available balance
       const { data: allWithdrawals, error: withdrawalsError } = await supabase
         .from("withdrawal_requests")
-        .select("requested_value, status")
+        .select("requested_value")
         .eq("representative_id", representativeId)
-        .in("status", ["Pendente", "Aprovado"]);
+        .in("status", ["Pendente", "Aprovado"]); // Incluir pendentes também
 
       if (withdrawalsError) {
         console.error("Error fetching withdrawals:", withdrawalsError);
@@ -1588,7 +1588,7 @@ export const dashboardService = {
         0
       );
 
-      // Available balance = total commission - all withdrawals (pending + approved)
+      // Available balance = total commission - withdrawn amount (pendentes + aprovadas)
       const pendingCommission = Math.max(0, totalCommission - withdrawnAmount);
 
       // Format contracts for display

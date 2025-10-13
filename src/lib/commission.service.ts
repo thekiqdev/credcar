@@ -169,41 +169,23 @@ class CommissionService {
         0
       );
 
-      // Buscar todas as solicitações (pendentes e aprovadas) para calcular saldo disponível
-      const { data: allWithdrawals, error: withdrawalsError } = await supabase
+      // Buscar comissões pagas (withdrawal_requests aprovados)
+      const { data: withdrawals, error: withdrawalsError } = await supabase
         .from("withdrawal_requests")
-        .select("requested_value, status")
+        .select("amount, status")
         .eq("representative_id", representativeId)
-        .in("status", ["Pendente", "Aprovado"]);
+        .eq("status", "approved");
 
       if (withdrawalsError) {
         console.error("Erro ao buscar withdrawals:", withdrawalsError);
       }
 
-      const totalWithdrawn = (allWithdrawals || []).reduce(
-        (sum, w) => sum + (w.requested_value || 0),
+      const paidCommission = (withdrawals || []).reduce(
+        (sum, withdrawal) => sum + parseFloat(withdrawal.amount || "0"),
         0
       );
 
-      // Buscar apenas solicitações pagas para calcular comissão paga
-      const { data: paidWithdrawals, error: paidWithdrawalsError } = await supabase
-        .from("withdrawal_requests")
-        .select("requested_value")
-        .eq("representative_id", representativeId)
-        .eq("status", "Aprovado")
-        .eq("payment_status", "Pago");
-
-      if (paidWithdrawalsError) {
-        console.error("Erro ao buscar withdrawals pagos:", paidWithdrawalsError);
-      }
-
-      const paidCommission = (paidWithdrawals || []).reduce(
-        (sum, w) => sum + (w.requested_value || 0),
-        0
-      );
-
-      // Saldo disponível = total de comissões - todas as solicitações (pendentes + aprovadas)
-      const pendingCommission = Math.max(0, totalCommission - totalWithdrawn);
+      const pendingCommission = totalCommission - paidCommission;
 
       return {
         representativeId: representative.id,
