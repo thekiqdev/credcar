@@ -21,11 +21,13 @@ interface CommissionPlan {
 interface CommissionTableSelectionProps {
   onTableSelect: (plan: CommissionPlan) => void;
   onBack?: () => void;
+  isAdminMode?: boolean;
 }
 
 const CommissionTableSelection: React.FC<CommissionTableSelectionProps> = ({
   onTableSelect,
   onBack,
+  isAdminMode = false,
 }) => {
   const [plans, setPlans] = useState<CommissionPlan[]>([]);
   const [selectedPlan, setSelectedPlan] = useState<CommissionPlan | null>(null);
@@ -35,6 +37,7 @@ const CommissionTableSelection: React.FC<CommissionTableSelectionProps> = ({
   const currentUser = authService.getCurrentUser();
   const adminEmails = ["admin@credicar.com", "admin@credcar.com", "admin@agenciadev.com"];
   const isAdmin =
+    isAdminMode || // Se está no modo admin, sempre mostrar planos privados
     currentUser?.role === "Administrador" ||
     currentUser?.role === "admin" ||
     adminEmails.includes(currentUser?.email?.toLowerCase() || "") ||
@@ -49,6 +52,7 @@ const CommissionTableSelection: React.FC<CommissionTableSelectionProps> = ({
       const data = await commissionPlansService.getAll();
       console.log("All plans fetched:", data);
       console.log("Current user:", currentUser);
+      console.log("Is admin mode:", isAdminMode);
       console.log("Is admin:", isAdmin);
       
       // Filter active plans and apply visibility rules

@@ -393,6 +393,7 @@ const ContractCreationFlow: React.FC<ContractCreationFlowProps> = ({
             onBack={
               isAdminMode ? handleBackToRepresentativeSelection : undefined
             }
+            isAdminMode={isAdminMode}
           />
         </div>
       )}
