@@ -12,6 +12,8 @@ export interface WithdrawalRequest {
   processed_at: string | null;
   rejection_reason: string | null;
   invoice_url: string;
+  payment_status: "Não Pago" | "Pago";
+  payment_date: string | null;
 }
 
 class WithdrawalService {
@@ -165,6 +167,7 @@ class WithdrawalService {
           status: "Aprovado" as Database["public"]["Enums"]["withdrawal_status"],
           processed_at: new Date().toISOString(),
           invoice_url: invoiceUrl,
+          payment_status: "Não Pago" as const,
         })
         .eq("id", withdrawalId)
         .select()
@@ -221,6 +224,40 @@ class WithdrawalService {
       return data as WithdrawalRequest;
     } catch (error) {
       console.error("Erro em rejectWithdrawal:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Marcar solicitação como paga (admin)
+   */
+  async markAsPaid(
+    withdrawalId: number,
+    paymentDate: string
+  ): Promise<WithdrawalRequest> {
+    try {
+      const { data, error } = await supabase
+        .from("withdrawal_requests")
+        .update({
+          payment_status: "Pago" as const,
+          payment_date: paymentDate,
+        })
+        .eq("id", withdrawalId)
+        .select()
+        .single();
+
+      if (error) {
+        console.error("Erro ao marcar como pago:", error);
+        throw new Error(`Erro ao marcar como pago: ${error.message}`);
+      }
+
+      if (!data) {
+        throw new Error("Nenhum dado retornado após marcar como pago");
+      }
+
+      return data as WithdrawalRequest;
+    } catch (error) {
+      console.error("Erro em markAsPaid:", error);
       throw error;
     }
   }

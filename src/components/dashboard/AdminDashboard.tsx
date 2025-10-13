@@ -16,6 +16,7 @@ import { systemConfigService } from "../../lib/system-config.service";
 import { asaasService } from "../../lib/asaas.service";
 import { commissionService } from "../../lib/commission.service";
 import WithdrawalManagement from "../admin/WithdrawalManagement";
+import { withdrawalService } from "../../lib/withdrawal.service";
 import { formatDateBR, isDateOverdue } from "../../lib/date-utils";
 import WebhookTester from "./WebhookTester";
 
@@ -390,6 +391,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     description: "",
   });
   const [commissionReports, setCommissionReports] = useState([]);
+  const [commissionPayments, setCommissionPayments] = useState([]);
+  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
+  const [selectedPayment, setSelectedPayment] = useState(null);
+  const [paymentDate, setPaymentDate] = useState("");
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [isRepresentativeModalOpen, setIsRepresentativeModalOpen] =
     useState(false);
   const [selectedRepresentativeForModal, setSelectedRepresentativeForModal] =
@@ -489,6 +495,24 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     timestamp: number | null;
   } | null>(null);
   const [isLoadingCronTest, setIsLoadingCronTest] = useState(false);
+
+  const loadCommissionPayments = async () => {
+    try {
+      console.log("Loading commission payments...");
+      const payments = await commissionService.getCommissionPayments();
+      console.log("Commission payments loaded:", payments);
+      setCommissionPayments(payments);
+    } catch (error) {
+      console.error("Error loading commission payments:", error);
+    }
+  };
+
+  // Carregar pagamentos quando a seção de commission-reports for ativada
+  useEffect(() => {
+    if (activeSection === "commission-reports") {
+      loadCommissionPayments();
+    }
+  }, [activeSection]);
 
   // Carregar todas as faturas quando a seção de invoices for ativada
   useEffect(() => {
@@ -710,6 +734,33 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       setCommissionReports(formattedReports);
     } catch (error) {
       console.error("Error loading commission reports:", error);
+    }
+  };
+
+  const handleMarkAsPaid = async () => {
+    if (!selectedPayment || !paymentDate) {
+      alert("Por favor, selecione uma data de pagamento");
+      return;
+    }
+
+    try {
+      setIsProcessingPayment(true);
+      await withdrawalService.markAsPaid(selectedPayment.id, paymentDate);
+      
+      // Recarregar dados
+      await loadCommissionPayments();
+      
+      // Fechar dialog
+      setIsPaymentDialogOpen(false);
+      setSelectedPayment(null);
+      setPaymentDate("");
+      
+      alert(`✅ Pagamento marcado como realizado em ${new Date(paymentDate).toLocaleDateString("pt-BR")}!`);
+    } catch (error) {
+      console.error("Erro ao marcar como pago:", error);
+      alert("❌ Erro ao marcar como pago. Tente novamente.");
+    } finally {
+      setIsProcessingPayment(false);
     }
   };
 
@@ -4374,6 +4425,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           <TableHead>Pago</TableHead>
                           <TableHead>Pendente</TableHead>
                           <TableHead>Contratos</TableHead>
+                          <TableHead>Status Pagamento</TableHead>
+                          <TableHead>Data Pagamento</TableHead>
                           <TableHead className="text-right">Ações</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -4403,6 +4456,50 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                               }).format(report.pendingCommission)}
                             </TableCell>
                             <TableCell>{report.contracts}</TableCell>
+                            <TableCell>
+                              {/* Buscar pagamento correspondente para este representante */}
+                              {(() => {
+                                const payment = commissionPayments.find(p => p.representativeId === report.id);
+                                if (payment) {
+                                  return (
+                                    <Badge
+                                      variant="outline"
+                                      className={
+                                        payment.paymentStatus === "Pago"
+                                          ? "bg-green-500 text-white hover:bg-green-600 border-green-500"
+                                          : "bg-yellow-500 text-white hover:bg-yellow-600 border-yellow-500"
+                                      }
+                                    >
+                                      {payment.paymentStatus}
+                                    </Badge>
+                                  );
+                                }
+                                return <span className="text-gray-500">N/A</span>;
+                              })()}
+                            </TableCell>
+                            <TableCell>
+                              {(() => {
+                                const payment = commissionPayments.find(p => p.representativeId === report.id);
+                                if (payment && payment.paymentStatus === "Pago" && payment.paymentDate) {
+                                  return new Date(payment.paymentDate).toLocaleDateString("pt-BR");
+                                } else if (payment && payment.paymentStatus === "Não Pago") {
+                                  return (
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => {
+                                        setSelectedPayment(payment);
+                                        setPaymentDate(new Date().toISOString().split('T')[0]);
+                                        setIsPaymentDialogOpen(true);
+                                      }}
+                                    >
+                                      Marcar como Pago
+                                    </Button>
+                                  );
+                                }
+                                return <span className="text-gray-500">-</span>;
+                              })()}
+                            </TableCell>
                             <TableCell className="text-right">
                               <Button variant="outline" size="sm">
                                 <Eye className="h-4 w-4" />
@@ -4414,6 +4511,60 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     </Table>
                   </CardContent>
                 </Card>
+
+                {/* Modal para marcar como pago */}
+                <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Marcar Comissão como Paga</DialogTitle>
+                      <DialogDescription>
+                        Confirme a data em que a comissão foi efetivamente paga.
+                      </DialogDescription>
+                    </DialogHeader>
+                    {selectedPayment && (
+                      <div className="space-y-4">
+                        <div className="bg-gray-50 p-4 rounded-lg">
+                          <p><strong>Código:</strong> {selectedPayment.requestCode}</p>
+                          <p><strong>Representante:</strong> {selectedPayment.representativeName}</p>
+                          <p><strong>Valor:</strong> {new Intl.NumberFormat("pt-BR", {
+                            style: "currency",
+                            currency: "BRL",
+                          }).format(selectedPayment.requestedValue)}</p>
+                          <p><strong>Data de Aprovação:</strong> {new Date(selectedPayment.processedAt).toLocaleDateString("pt-BR")}</p>
+                        </div>
+                        <div>
+                          <Label htmlFor="payment-date">Data do Pagamento *</Label>
+                          <Input
+                            id="payment-date"
+                            type="date"
+                            value={paymentDate}
+                            onChange={(e) => setPaymentDate(e.target.value)}
+                          />
+                        </div>
+                      </div>
+                    )}
+                    <DialogFooter>
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          setIsPaymentDialogOpen(false);
+                          setSelectedPayment(null);
+                          setPaymentDate("");
+                        }}
+                        disabled={isProcessingPayment}
+                      >
+                        Cancelar
+                      </Button>
+                      <Button
+                        onClick={handleMarkAsPaid}
+                        disabled={isProcessingPayment || !paymentDate}
+                        className="bg-green-600 hover:bg-green-700"
+                      >
+                        {isProcessingPayment ? "Processando..." : "Marcar como Pago"}
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
               </div>
             )}
 

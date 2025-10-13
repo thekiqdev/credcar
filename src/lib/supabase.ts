@@ -1628,7 +1628,7 @@ export const dashboardService = {
       // Get withdrawal requests for commission history
       const { data: withdrawals, error: withdrawalsError } = await supabase
         .from("withdrawal_requests")
-        .select("*")
+        .select("*, payment_status, payment_date")
         .eq("representative_id", representativeId)
         .order("requested_at", { ascending: false });
 
@@ -1692,6 +1692,9 @@ export const dashboardService = {
                 : ("pending" as const),
           dueDate: processedDate,
           type: "withdrawal",
+          approvalDate: processedDate,
+          paymentStatus: withdrawal?.payment_status || "Não Pago",
+          paymentDate: withdrawal?.payment_date ? new Date(withdrawal.payment_date).toLocaleDateString("pt-BR") : null,
         });
       });
 

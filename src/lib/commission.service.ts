@@ -252,6 +252,53 @@ class CommissionService {
       };
     }
   }
+
+  /**
+   * Obter pagamentos de comissões aprovadas para relatório administrativo
+   */
+  async getCommissionPayments(): Promise<any[]> {
+    try {
+      const { data: withdrawals, error } = await supabase
+        .from("withdrawal_requests")
+        .select(`
+          id,
+          request_code,
+          requested_value,
+          requested_at,
+          processed_at,
+          payment_status,
+          payment_date,
+          profiles!inner (
+            id,
+            full_name,
+            email
+          )
+        `)
+        .eq("status", "Aprovado")
+        .order("processed_at", { ascending: false });
+
+      if (error) {
+        console.error("Erro ao buscar pagamentos de comissões:", error);
+        throw new Error(`Erro ao buscar pagamentos: ${error.message}`);
+      }
+
+      return (withdrawals || []).map((withdrawal) => ({
+        id: withdrawal.id,
+        requestCode: withdrawal.request_code,
+        representativeId: withdrawal.profiles?.id || "",
+        representativeName: withdrawal.profiles?.full_name || "N/A",
+        representativeEmail: withdrawal.profiles?.email || "N/A",
+        requestedValue: withdrawal.requested_value,
+        requestedAt: withdrawal.requested_at,
+        processedAt: withdrawal.processed_at,
+        paymentStatus: withdrawal.payment_status,
+        paymentDate: withdrawal.payment_date,
+      }));
+    } catch (error) {
+      console.error("Erro em getCommissionPayments:", error);
+      return [];
+    }
+  }
 }
 
 export const commissionService = new CommissionService();

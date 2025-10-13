@@ -1067,11 +1067,13 @@ const RepresentativeDashboard: React.FC<RepresentativeDashboardProps> = ({
                       <Table>
                         <TableHeader>
                           <TableRow>
-                            <TableHead>Contrato</TableHead>
-                            <TableHead>Data</TableHead>
+                            <TableHead>Código</TableHead>
+                            <TableHead>Data Solicitação</TableHead>
                             <TableHead>Valor</TableHead>
-                            <TableHead>Vencimento</TableHead>
-                            <TableHead>Status</TableHead>
+                            <TableHead>Status Solicitação</TableHead>
+                            <TableHead>Data Aprovação</TableHead>
+                            <TableHead>Status Pagamento</TableHead>
+                            <TableHead>Data Pagamento</TableHead>
                             <TableHead className="text-right">Ações</TableHead>
                           </TableRow>
                         </TableHeader>
@@ -1085,23 +1087,54 @@ const RepresentativeDashboard: React.FC<RepresentativeDashboardProps> = ({
                               <TableCell>
                                 R$ {commission.value.toLocaleString("pt-BR")}
                               </TableCell>
-                              <TableCell>{commission.dueDate || "-"}</TableCell>
                               <TableCell>
                                 {commission.status === "paid" && (
                                   <Badge
                                     variant="outline"
-                                    className="bg-green-100 text-green-800 hover:bg-green-100"
+                                    className="bg-green-500 text-white hover:bg-green-600 border-green-500"
                                   >
-                                    Pago
+                                    Aprovado
                                   </Badge>
                                 )}
                                 {commission.status === "pending" && (
                                   <Badge
                                     variant="outline"
-                                    className="bg-amber-100 text-amber-800 hover:bg-amber-100"
+                                    className="bg-yellow-500 text-white hover:bg-yellow-600 border-yellow-500"
                                   >
                                     Pendente
                                   </Badge>
+                                )}
+                                {commission.status === "rejected" && (
+                                  <Badge
+                                    variant="outline"
+                                    className="bg-red-500 text-white hover:bg-red-600 border-red-500"
+                                  >
+                                    Rejeitado
+                                  </Badge>
+                                )}
+                              </TableCell>
+                              <TableCell>{commission.approvalDate || "-"}</TableCell>
+                              <TableCell>
+                                {commission.type === "withdrawal" && commission.paymentStatus ? (
+                                  <Badge
+                                    variant="outline"
+                                    className={
+                                      commission.paymentStatus === "Pago"
+                                        ? "bg-green-500 text-white hover:bg-green-600 border-green-500"
+                                        : "bg-yellow-500 text-white hover:bg-yellow-600 border-yellow-500"
+                                    }
+                                  >
+                                    {commission.paymentStatus}
+                                  </Badge>
+                                ) : (
+                                  <span className="text-gray-500">-</span>
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                {commission.type === "withdrawal" && commission.paymentDate ? (
+                                  commission.paymentDate
+                                ) : (
+                                  <span className="text-gray-500">-</span>
                                 )}
                               </TableCell>
                               <TableCell className="text-right">
