@@ -2457,6 +2457,74 @@ app.get('/api/cron/test-generate-invoices', async (req, res) => {
   }
 });
 
+// Endpoint para testar se cliente existe no ASAAS
+app.get('/api/test/asaas-customer/:customerId', async (req, res) => {
+  try {
+    const { customerId } = req.params;
+    console.log(`🔍 Verificando cliente ASAAS: ${customerId}`);
+    
+    // Buscar configuração do ASAAS
+    const { data: configs, error: configError } = await supabase
+      .from('system_config')
+      .select('key, value')
+      .eq('category', 'asaas');
+    
+    if (configError) {
+      throw new Error(`Erro ao buscar configuração ASAAS: ${configError.message}`);
+    }
+    
+    const configMap = {};
+    configs.forEach(config => {
+      configMap[config.key] = config.value;
+    });
+    
+    const apiKey = configMap['asaas.api.key'];
+    const environment = configMap['asaas.environment'] || 'sandbox';
+    const baseUrl = environment === 'sandbox' 
+      ? 'https://sandbox.asaas.com/api/v3' 
+      : 'https://www.asaas.com/api/v3';
+    
+    console.log(`🔧 Configuração ASAAS: Environment=${environment}, BaseUrl=${baseUrl}`);
+    
+    // Fazer requisição direta para o ASAAS
+    const response = await fetch(`${baseUrl}/customers/${customerId}`, {
+      method: 'GET',
+      headers: {
+        'access_token': apiKey,
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    if (response.ok) {
+      const customer = await response.json();
+      console.log('✅ Cliente encontrado no ASAAS:', customer);
+      res.json({
+        success: true,
+        message: 'Cliente encontrado no ASAAS',
+        customer: customer,
+        environment: environment
+      });
+    } else {
+      const errorData = await response.text();
+      console.log('❌ Cliente não encontrado no ASAAS:', errorData);
+      res.json({
+        success: false,
+        message: 'Cliente não encontrado no ASAAS',
+        customerId: customerId,
+        environment: environment,
+        error: errorData
+      });
+    }
+  } catch (error) {
+    console.error('❌ Erro ao verificar cliente ASAAS:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erro ao verificar cliente ASAAS',
+      error: error.message
+    });
+  }
+});
+
 // Iniciar servidor
 app.listen(PORT, () => {
   console.log(`🚀 Servidor de upload rodando na porta ${PORT}`);

@@ -120,10 +120,34 @@ class AsaasInvoiceService {
         };
       }
 
-      // 2. Verificar se cliente tem ID do ASAAS, se não tiver, criar automaticamente
-      if (!client.asaas_customer_id) {
+      // 2. Verificar se cliente tem ID do ASAAS válido
+      let customerId = client.asaas_customer_id;
+      let needsCustomerUpdate = false;
+
+      if (!customerId) {
         console.log(`🔄 Cliente não possui ID do ASAAS. Criando cliente automaticamente...`);
-        
+        needsCustomerUpdate = true;
+      } else {
+        // Verificar se o cliente existe no ASAAS
+        console.log(`🔍 Verificando se cliente ${customerId} existe no ASAAS...`);
+        try {
+          const { asaasService } = await import('./asaas.service');
+          const existingCustomer = await asaasService.getCustomerById(customerId);
+          
+          if (!existingCustomer) {
+            console.log(`⚠️ Cliente ${customerId} não existe no ASAAS. Recriando...`);
+            needsCustomerUpdate = true;
+          } else {
+            console.log(`✅ Cliente ${customerId} existe no ASAAS`);
+          }
+        } catch (error) {
+          console.log(`⚠️ Erro ao verificar cliente ${customerId} no ASAAS:`, error);
+          console.log(`🔄 Recriando cliente automaticamente...`);
+          needsCustomerUpdate = true;
+        }
+      }
+
+      if (needsCustomerUpdate) {
         const { asaasService } = await import('./asaas.service');
         const customer = await asaasService.createOrFindCustomer({
           name: client.full_name,
@@ -151,6 +175,7 @@ class AsaasInvoiceService {
         } else {
           console.log(`✅ Cliente atualizado com ID do ASAAS: ${customer.id}`);
           client.asaas_customer_id = customer.id;
+          customerId = customer.id;
         }
       }
 
@@ -190,7 +215,7 @@ class AsaasInvoiceService {
 
       // Estrutura simplificada baseada na documentação ASAAS
       const asaasInvoiceData = {
-        customer: client.asaas_customer_id,
+        customer: customerId,
         billingType: 'PIX',
         value: localInvoice.amount,
         dueDate: dueDate,
