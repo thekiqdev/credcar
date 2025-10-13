@@ -255,6 +255,7 @@ class CommissionService {
 
   /**
    * Obter pagamentos de comissões aprovadas para relatório administrativo
+   * NOTA: Este método requer que a migration seja aplicada primeiro
    */
   async getCommissionPayments(): Promise<any[]> {
     try {
@@ -266,8 +267,6 @@ class CommissionService {
           requested_value,
           requested_at,
           processed_at,
-          payment_status,
-          payment_date,
           profiles!inner (
             id,
             full_name,
@@ -291,8 +290,8 @@ class CommissionService {
         requestedValue: withdrawal.requested_value,
         requestedAt: withdrawal.requested_at,
         processedAt: withdrawal.processed_at,
-        paymentStatus: withdrawal.payment_status,
-        paymentDate: withdrawal.payment_date,
+        paymentStatus: "Não Pago", // Default até migration ser aplicada
+        paymentDate: null, // Default até migration ser aplicada
       }));
     } catch (error) {
       console.error("Erro em getCommissionPayments:", error);

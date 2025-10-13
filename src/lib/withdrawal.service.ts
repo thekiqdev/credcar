@@ -12,8 +12,8 @@ export interface WithdrawalRequest {
   processed_at: string | null;
   rejection_reason: string | null;
   invoice_url: string;
-  payment_status: "Não Pago" | "Pago";
-  payment_date: string | null;
+  payment_status?: "Não Pago" | "Pago"; // Opcional até migration ser aplicada
+  payment_date?: string | null; // Opcional até migration ser aplicada
 }
 
 class WithdrawalService {
@@ -167,7 +167,6 @@ class WithdrawalService {
           status: "Aprovado" as Database["public"]["Enums"]["withdrawal_status"],
           processed_at: new Date().toISOString(),
           invoice_url: invoiceUrl,
-          payment_status: "Não Pago" as const,
         })
         .eq("id", withdrawalId)
         .select()
@@ -182,7 +181,14 @@ class WithdrawalService {
         throw new Error("Nenhum dado retornado após aprovar solicitação");
       }
 
-      return data as WithdrawalRequest;
+      // Adicionar campos padrão se não existirem (até migration ser aplicada)
+      const result = {
+        ...data,
+        payment_status: "Não Pago" as const,
+        payment_date: null,
+      } as WithdrawalRequest;
+
+      return result;
     } catch (error) {
       console.error("Erro em approveWithdrawal:", error);
       throw error;
@@ -230,12 +236,14 @@ class WithdrawalService {
 
   /**
    * Marcar solicitação como paga (admin)
+   * NOTA: Este método requer que a migration seja aplicada primeiro
    */
   async markAsPaid(
     withdrawalId: number,
     paymentDate: string
   ): Promise<WithdrawalRequest> {
     try {
+      // Tentar atualizar com os novos campos
       const { data, error } = await supabase
         .from("withdrawal_requests")
         .update({
@@ -247,6 +255,10 @@ class WithdrawalService {
         .single();
 
       if (error) {
+        // Se der erro porque as colunas não existem, retornar erro informativo
+        if (error.message.includes("payment_status") || error.message.includes("Could not find")) {
+          throw new Error("Migration não aplicada: Execute o SQL em apply-payment-tracking-migration.sql no Supabase SQL Editor");
+        }
         console.error("Erro ao marcar como pago:", error);
         throw new Error(`Erro ao marcar como pago: ${error.message}`);
       }
