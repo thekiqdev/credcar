@@ -128,6 +128,7 @@ const RepresentativeDashboard: React.FC<RepresentativeDashboardProps> = ({
   const [isProcessing, setIsProcessing] = React.useState(false);
   const [activeTab, setActiveTab] = React.useState("dashboard");
   const [showContractFlow, setShowContractFlow] = React.useState(false);
+  const [contractProfile, setContractProfile] = React.useState<string | null>(null);
   const [selectedContractId, setSelectedContractId] = React.useState<
     string | null
   >(null);
@@ -233,6 +234,26 @@ const RepresentativeDashboard: React.FC<RepresentativeDashboardProps> = ({
         } catch (statsError) {
           console.error("Error loading client stats:", statsError);
           setClientStats({ totalClients: 0, newClientsThisMonth: 0 });
+        }
+
+        // Load contract profile
+        try {
+          const { supabase } = await import("../../lib/supabase");
+          const { data: profile, error: profileError } = await supabase
+            .from("profiles")
+            .select("contract_profile")
+            .eq("id", currentUser.id)
+            .single();
+          
+          if (profileError) {
+            console.error("Error loading contract profile:", profileError);
+          } else {
+            console.log("Contract profile loaded:", profile?.contract_profile);
+            setContractProfile(profile?.contract_profile || null);
+          }
+        } catch (contractError) {
+          console.error("Error loading contract profile:", contractError);
+          setContractProfile(null);
         }
       } catch (err) {
         console.error("Error loading dashboard data:", err);
@@ -554,6 +575,14 @@ const RepresentativeDashboard: React.FC<RepresentativeDashboardProps> = ({
             >
               <Users className="mr-2 h-4 w-4" />
               Meus Clientes
+            </Button>
+            <Button
+              variant={activeTab === "contract-profile" ? "default" : "ghost"}
+              className="w-full justify-start"
+              onClick={() => setActiveTab("contract-profile")}
+            >
+              <FileText className="mr-2 h-4 w-4" />
+              Contrato Representante
             </Button>
           </nav>
         </aside>
@@ -1330,6 +1359,66 @@ const RepresentativeDashboard: React.FC<RepresentativeDashboardProps> = ({
                           <Calculator className="mr-2 h-4 w-4" />
                           Criar Primeiro Contrato
                         </Button>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+
+          {/* Contract Profile Tab */}
+          {!showContractFlow &&
+            !isLoading &&
+            !error &&
+            activeTab === "contract-profile" && (
+              <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-2xl font-bold">Contrato Representante</h2>
+                </div>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Contrato de Representação</CardTitle>
+                    <CardDescription>
+                      Visualize e baixe seu contrato de representação comercial.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {contractProfile ? (
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between p-4 bg-green-50 border border-green-200 rounded-lg">
+                          <div className="flex items-center space-x-3">
+                            <FileText className="h-8 w-8 text-green-600" />
+                            <div>
+                              <p className="font-medium text-green-800">
+                                Contrato Disponível
+                              </p>
+                              <p className="text-sm text-green-600">
+                                Seu contrato de representação está disponível para download
+                              </p>
+                            </div>
+                          </div>
+                          <Button
+                            onClick={() => window.open(contractProfile, '_blank')}
+                            className="bg-green-600 hover:bg-green-700"
+                          >
+                            <Download className="mr-2 h-4 w-4" />
+                            Baixar Contrato
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-center py-8">
+                        <FileText className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
+                        <p className="text-lg font-medium mb-2">
+                          Contrato não disponível
+                        </p>
+                        <p className="text-muted-foreground mb-4">
+                          Seu contrato de representação ainda não foi enviado pelo administrador.
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          Entre em contato com a administração para mais informações.
+                        </p>
                       </div>
                     )}
                   </CardContent>
