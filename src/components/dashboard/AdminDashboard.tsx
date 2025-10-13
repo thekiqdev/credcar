@@ -17,6 +17,7 @@ import { asaasService } from "../../lib/asaas.service";
 import { commissionService } from "../../lib/commission.service";
 import WithdrawalManagement from "../admin/WithdrawalManagement";
 import { withdrawalService } from "../../lib/withdrawal.service";
+import PlanDebugTest from "../debug/PlanDebugTest";
 import { formatDateBR, isDateOverdue } from "../../lib/date-utils";
 import WebhookTester from "./WebhookTester";
 
@@ -4108,6 +4109,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
             {activeSection === "contracts" && (
               <div className="space-y-6">
+                {/* Debug Component - Remove after fixing */}
+                <PlanDebugTest />
+                
                 <div className="flex items-center justify-between">
                   <div>
                     <h1 className="text-2xl font-bold tracking-tight">
