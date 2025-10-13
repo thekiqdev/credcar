@@ -4493,18 +4493,30 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                               </TableCell>
                               <TableCell>
                                 {(() => {
-                                  const unpaidWithdrawal = payment.withdrawals.find(w => w.payment_status === "Não Pago");
-                                  const paidWithdrawal = payment.withdrawals.find(w => w.payment_status === "Pago");
+                                  // Buscar todas as solicitações não pagas deste representante
+                                  const unpaidWithdrawals = payment.withdrawals.filter(w => w.payment_status === "Não Pago");
+                                  const paidWithdrawals = payment.withdrawals.filter(w => w.payment_status === "Pago");
                                   
-                                  if (paidWithdrawal && paidWithdrawal.payment_date) {
-                                    return new Date(paidWithdrawal.payment_date).toLocaleDateString("pt-BR");
-                                  } else if (unpaidWithdrawal) {
+                                  // Se tem solicitações pagas, mostrar a data da mais recente
+                                  if (paidWithdrawals.length > 0) {
+                                    const mostRecentPaid = paidWithdrawals.sort((a, b) => 
+                                      new Date(b.payment_date || 0).getTime() - new Date(a.payment_date || 0).getTime()
+                                    )[0];
+                                    
+                                    if (mostRecentPaid.payment_date) {
+                                      return new Date(mostRecentPaid.payment_date).toLocaleDateString("pt-BR");
+                                    }
+                                  }
+                                  
+                                  // Se tem solicitações não pagas, mostrar botão para a primeira
+                                  if (unpaidWithdrawals.length > 0) {
+                                    const firstUnpaid = unpaidWithdrawals[0];
                                     return (
                                       <Button
                                         variant="outline"
                                         size="sm"
                                         onClick={() => {
-                                          setSelectedPayment(unpaidWithdrawal);
+                                          setSelectedPayment(firstUnpaid);
                                           setPaymentDate(new Date().toISOString().split('T')[0]);
                                           setIsPaymentDialogOpen(true);
                                         }}
@@ -4513,6 +4525,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                       </Button>
                                     );
                                   }
+                                  
                                   return <span className="text-gray-500">-</span>;
                                 })()}
                               </TableCell>
