@@ -966,6 +966,72 @@ app.get('/api/download-file', (req, res) => {
   }
 });
 
+// Rota para visualizar arquivos (abrir no navegador)
+app.get('/api/view-file', (req, res) => {
+  try {
+    const { path: filePath } = req.query;
+    
+    console.log('👁️ View request received');
+    console.log('🔍 Query path:', filePath);
+    
+    if (!filePath) {
+      console.log('❌ No file path provided');
+      return res.status(400).json({ error: 'Caminho do arquivo é obrigatório' });
+    }
+
+    // Decodificar o path e converter barras para o sistema operacional
+    const decodedPath = decodeURIComponent(filePath);
+    const normalizedPath = decodedPath.replace(/\//g, path.sep);
+    const fullPath = path.resolve(__dirname, 'documentos', normalizedPath);
+    
+    console.log('🔍 Decoded path:', decodedPath);
+    console.log('🔍 Normalized path:', normalizedPath);
+    console.log('🔍 Full path:', fullPath);
+    
+    // Verificar se o arquivo existe
+    if (!fs.existsSync(fullPath)) {
+      console.log('❌ File not found:', fullPath);
+      return res.status(404).json({ error: 'Arquivo não encontrado' });
+    }
+
+    // Verificar se o arquivo está dentro do diretório de documentos
+    const documentsDir = path.resolve(__dirname, 'documentos');
+    if (!fullPath.startsWith(documentsDir)) {
+      console.log('❌ Access denied - file outside documents directory');
+      return res.status(403).json({ error: 'Acesso negado' });
+    }
+
+    // Detectar tipo de arquivo
+    const ext = path.extname(fullPath).toLowerCase();
+    let contentType = 'application/octet-stream';
+    
+    const mimeTypes = {
+      '.pdf': 'application/pdf',
+      '.jpg': 'image/jpeg',
+      '.jpeg': 'image/jpeg',
+      '.png': 'image/png',
+      '.gif': 'image/gif',
+      '.doc': 'application/msword',
+      '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    };
+    
+    contentType = mimeTypes[ext] || contentType;
+    
+    console.log('✅ File found, serving for view:', fullPath);
+    console.log('📄 Content-Type:', contentType);
+    
+    // Definir headers para visualização inline
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Content-Disposition', 'inline');
+    
+    // Enviar arquivo
+    res.sendFile(fullPath);
+  } catch (error) {
+    console.error('❌ Erro na visualização:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
 // Rota para deletar arquivo
 app.delete('/api/delete-file', (req, res) => {
   try {

@@ -228,11 +228,25 @@ const DocumentApproval: React.FC<DocumentApprovalProps> = ({
     try {
       console.log('📥 Iniciando download:', fileUrl);
       
-      // Extrair nome do arquivo da URL
-      const fileName = fileUrl.split('/').pop() || `${documentType}.pdf`;
+      // Extrair apenas o caminho relativo do file_url
+      let relativePath = fileUrl;
       
-      // Fazer download do arquivo
-      const response = await fetch(`https://sistema.credcarmultimarcas.com.br/api/download-file?path=${encodeURIComponent(fileUrl)}`);
+      // Se contém caminho do servidor de produção, extrair apenas a parte após 'documentos/'
+      if (fileUrl.includes('/var/www/CredCar-Finance/documentos/')) {
+        relativePath = fileUrl.split('/var/www/CredCar-Finance/documentos/')[1];
+      } else if (fileUrl.includes('documentos/')) {
+        // Se contém 'documentos/', pegar apenas a parte após isso
+        relativePath = fileUrl.split('documentos/')[1];
+      }
+      
+      console.log('🔍 Original file_url:', fileUrl);
+      console.log('🔍 Extracted relative path:', relativePath);
+      
+      // Extrair nome do arquivo da URL
+      const fileName = relativePath.split('/').pop() || `${documentType}.pdf`;
+      
+      // Fazer download do arquivo usando o servidor local
+      const response = await fetch(`http://localhost:3001/api/download-file?path=${encodeURIComponent(relativePath)}`);
       
       if (!response.ok) {
         throw new Error('Erro ao baixar arquivo');
@@ -254,6 +268,50 @@ const DocumentApproval: React.FC<DocumentApprovalProps> = ({
     } catch (error) {
       console.error('❌ Erro no download:', error);
       alert('Erro ao baixar documento. Tente novamente.');
+    }
+  };
+
+  const handleViewDocument = (fileUrl: string, documentType: string) => {
+    try {
+      console.log('👁️ Visualizando documento:', fileUrl);
+      
+      // Extrair apenas o caminho relativo do file_url
+      // Se o file_url contém caminho completo do servidor, extrair apenas a parte relativa
+      let relativePath = fileUrl;
+      
+      // Se contém caminho do servidor de produção, extrair apenas a parte após 'documentos/'
+      if (fileUrl.includes('/var/www/CredCar-Finance/documentos/')) {
+        relativePath = fileUrl.split('/var/www/CredCar-Finance/documentos/')[1];
+      } else if (fileUrl.includes('documentos/')) {
+        // Se contém 'documentos/', pegar apenas a parte após isso
+        relativePath = fileUrl.split('documentos/')[1];
+      }
+      
+      console.log('🔍 Original file_url:', fileUrl);
+      console.log('🔍 Extracted relative path:', relativePath);
+      
+      // Extrair extensão do arquivo
+      const ext = relativePath.split('.').pop()?.toLowerCase();
+      const viewableTypes = ['pdf', 'jpg', 'jpeg', 'png', 'gif'];
+      
+      // Verificar se o tipo de arquivo é visualizável
+      if (!ext || !viewableTypes.includes(ext)) {
+        alert('Tipo de arquivo inválido para visualização. Apenas PDF e imagens podem ser visualizados.');
+        return;
+      }
+      
+      // Construir URL de visualização usando o caminho relativo
+      const viewUrl = `http://localhost:3001/api/view-file?path=${encodeURIComponent(relativePath)}`;
+      
+      console.log('🔗 View URL:', viewUrl);
+      
+      // Abrir em nova aba
+      window.open(viewUrl, '_blank');
+      
+      console.log('✅ Documento aberto em nova aba');
+    } catch (error) {
+      console.error('❌ Erro ao visualizar documento:', error);
+      alert('Erro ao visualizar documento. Tente novamente.');
     }
   };
 
@@ -367,6 +425,18 @@ const DocumentApproval: React.FC<DocumentApprovalProps> = ({
                       {/* Ações apenas para documentos enviados */}
                       {doc.id !== 0 && (
                         <>
+                          {/* Visualizar */}
+                          {doc.file_url && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleViewDocument(doc.file_url, doc.document_type)}
+                              title="Visualizar documento"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          )}
+                          
                           {/* Download */}
                           {doc.file_url && (
                             <Button
@@ -456,6 +526,18 @@ const DocumentApproval: React.FC<DocumentApprovalProps> = ({
                       {/* Ações apenas para documentos enviados */}
                       {doc.id !== 0 && (
                         <>
+                          {/* Visualizar */}
+                          {doc.file_url && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleViewDocument(doc.file_url, doc.document_type)}
+                              title="Visualizar documento"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          )}
+                          
                           {/* Download */}
                           {doc.file_url && (
                             <Button
