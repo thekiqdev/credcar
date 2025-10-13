@@ -1483,7 +1483,7 @@ async function createInvoiceInAsaasInline(invoice) {
     const { data: configs, error: configError } = await supabase
       .from('system_config')
       .select('key, value')
-      .in('key', ['asaas.api.key', 'asaas.api.url']);
+      .in('key', ['asaas.api.key', 'asaas.environment']);
     
     if (configError) {
       return {
@@ -1504,8 +1504,11 @@ async function createInvoiceInAsaasInline(invoice) {
       };
     }
     
-    const asaasUrl = asaasConfig['asaas.api.url'] || 'https://sandbox.asaas.com/api/v3';
-    console.log(`🌐 [ASAAS] Usando URL ASAAS: ${asaasUrl}`);
+    const environment = asaasConfig['asaas.environment'] || 'sandbox';
+    const asaasUrl = environment === 'sandbox' 
+      ? 'https://sandbox.asaas.com/api/v3' 
+      : 'https://www.asaas.com/api/v3';
+    console.log(`🌐 [ASAAS] Usando URL ASAAS: ${asaasUrl} (Environment: ${environment})`);
 
     // 3. Verificar se cliente tem ID do ASAAS, se não tiver, criar automaticamente
     let customerId = client.asaas_customer_id;
