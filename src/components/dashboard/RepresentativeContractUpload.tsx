@@ -13,6 +13,7 @@ import {
   AlertCircle 
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { storageService, STORAGE_BUCKETS } from '@/lib/storage';
 
 interface RepresentativeContractUploadProps {
   representativeId: string;
@@ -53,8 +54,8 @@ const RepresentativeContractUpload: React.FC<RepresentativeContractUploadProps> 
     setUploadSuccess(false);
 
     try {
-      // Create folder structure: documentos/cpf/contrato-representante/
-      const folderPath = `documentos/${representativeCpfCnpj}/contrato-representante`;
+      // Create folder structure: contrato-representante/
+      const folderPath = `contrato-representante`;
       
       // Generate unique filename
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
@@ -64,27 +65,18 @@ const RepresentativeContractUpload: React.FC<RepresentativeContractUploadProps> 
 
       console.log('📁 Uploading contract to:', filePath);
 
-      // Upload file to Supabase Storage
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('documents')
-        .upload(filePath, file, {
+      // Upload file using the storage service
+      const downloadLink = await storageService.uploadFile(
+        STORAGE_BUCKETS.REPRESENTATIVE_DOCUMENTS,
+        filePath,
+        file,
+        {
           cacheControl: '3600',
           upsert: false
-        });
+        }
+      );
 
-      if (uploadError) {
-        console.error('❌ Upload error:', uploadError);
-        throw new Error(`Erro no upload: ${uploadError.message}`);
-      }
-
-      console.log('✅ File uploaded successfully:', uploadData);
-
-      // Get public URL
-      const { data: urlData } = supabase.storage
-        .from('documents')
-        .getPublicUrl(filePath);
-
-      const downloadLink = urlData.publicUrl;
+      console.log('✅ File uploaded successfully');
       console.log('🔗 Download link:', downloadLink);
 
       // Update profiles table with contract_profile
@@ -121,19 +113,12 @@ const RepresentativeContractUpload: React.FC<RepresentativeContractUploadProps> 
       // Extract file path from URL
       const url = new URL(contractProfile);
       const pathParts = url.pathname.split('/');
-      const filePath = pathParts.slice(pathParts.indexOf('documents') + 1).join('/');
+      const filePath = pathParts.slice(pathParts.indexOf('representative-documents') + 1).join('/');
 
       console.log('🗑️ Deleting contract file:', filePath);
 
-      // Delete file from storage
-      const { error: deleteError } = await supabase.storage
-        .from('documents')
-        .remove([filePath]);
-
-      if (deleteError) {
-        console.error('❌ Delete error:', deleteError);
-        throw new Error(`Erro ao deletar arquivo: ${deleteError.message}`);
-      }
+      // Delete file using the storage service
+      await storageService.deleteFile(STORAGE_BUCKETS.REPRESENTATIVE_DOCUMENTS, filePath);
 
       // Remove contract_profile from database
       const { error: updateError } = await supabase
