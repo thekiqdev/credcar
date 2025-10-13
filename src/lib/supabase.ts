@@ -1642,21 +1642,11 @@ export const dashboardService = {
         });
       }
 
-      // Build commission history with both contracts and withdrawals
+      // Build commission history with only withdrawals (not contract commissions)
       const commissionHistory: any[] = [];
       
-      // Add contract commissions
-      formattedContracts.forEach((contract) => {
-        commissionHistory.push({
-          id: `contract-${contract.id}`,
-          contract: contract.contractNumber,
-          date: contract.date,
-          value: contract.commission,
-          status: "pending" as const,
-          dueDate: undefined,
-          type: "contract",
-        });
-      });
+      // Note: Contract commissions are not shown in commission history
+      // Only withdrawal requests should appear here
       
       // Add withdrawal history
       const validWithdrawals = Array.isArray(withdrawals) ? withdrawals : [];
