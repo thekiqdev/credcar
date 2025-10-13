@@ -1626,19 +1626,19 @@ export const dashboardService = {
       });
 
       // Get withdrawal requests for commission history
-      const { data: withdrawals, error: withdrawalsError } = await supabase
+      const { data: withdrawals, error: commissionHistoryWithdrawalsError } = await supabase
         .from("withdrawal_requests")
         .select("*, payment_status, payment_date")
         .eq("representative_id", representativeId)
         .order("requested_at", { ascending: false });
 
-      if (withdrawalsError) {
-        console.error("Error fetching withdrawals:", withdrawalsError);
+      if (commissionHistoryWithdrawalsError) {
+        console.error("Error fetching withdrawals:", commissionHistoryWithdrawalsError);
         console.error("Withdrawal error details:", {
-          code: withdrawalsError.code,
-          message: withdrawalsError.message,
-          details: withdrawalsError.details,
-          hint: withdrawalsError.hint,
+          code: commissionHistoryWithdrawalsError.code,
+          message: commissionHistoryWithdrawalsError.message,
+          details: commissionHistoryWithdrawalsError.details,
+          hint: commissionHistoryWithdrawalsError.hint,
         });
       }
 
