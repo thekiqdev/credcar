@@ -112,12 +112,30 @@ const ContractDetails: React.FC<ContractDetailsProps> = ({
   const currentUser = authService.getCurrentUser();
   const isAdmin = currentUser?.role === "Administrador";
   const isRepresentative = currentUser?.role === "Representante";
+  
+  console.log('👤 User info:', {
+    currentUser,
+    isAdmin,
+    isRepresentative,
+    userRole: currentUser?.role
+  });
+  
   const canEditOrDelete =
     contract &&
     ((isRepresentative &&
       (contract.status === "Pendente" || contract.status === "Reprovado") &&
       contract.representative.id === currentUser?.id) ||
      (isAdmin && (contract.status === "Pendente" || contract.status === "Reprovado" || contract.status === "Em Análise")));
+     
+  console.log('🔐 canEditOrDelete calculation:', {
+    contract: !!contract,
+    isRepresentative,
+    isAdmin,
+    contractStatus: contract?.status,
+    representativeId: contract?.representative?.id,
+    currentUserId: currentUser?.id,
+    canEditOrDelete
+  });
 
   useEffect(() => {
     if (!contractId) {
