@@ -89,7 +89,9 @@ const QuotaSelection: React.FC<QuotaSelectionProps> = ({
   const checkUserRole = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
+      console.log("🔍 QuotaSelection - User:", user?.id);
       if (!user) {
+        console.log("❌ QuotaSelection - No user found");
         setIsAdmin(false);
         return;
       }
@@ -100,7 +102,10 @@ const QuotaSelection: React.FC<QuotaSelectionProps> = ({
         .eq("id", user.id)
         .single();
 
-      setIsAdmin(profile?.user_type === "admin");
+      console.log("👤 QuotaSelection - User Type:", profile?.user_type);
+      const adminStatus = profile?.user_type === "admin";
+      console.log("🔐 QuotaSelection - Is Admin:", adminStatus);
+      setIsAdmin(adminStatus);
     } catch (error) {
       console.error("Error checking user role:", error);
       setIsAdmin(false);
@@ -272,29 +277,32 @@ const QuotaSelection: React.FC<QuotaSelectionProps> = ({
                     <SelectValue placeholder="Selecione um grupo" />
                   </SelectTrigger>
                   <SelectContent>
-                    {groups.map((group) => (
-                      <SelectItem 
-                        key={group.id} 
-                        value={group.id.toString()}
-                        disabled={group.is_private && !isAdmin}
-                      >
-                        <div className="flex flex-col">
-                          <span className={`font-medium ${group.is_private && !isAdmin ? 'text-gray-400' : ''}`}>
-                            {group.name}
-                            {group.is_private && (
-                              <Badge variant="outline" className="ml-2 text-xs text-orange-600">
-                                Privado
-                              </Badge>
-                            )}
-                          </span>
-                          <span className={`text-sm ${group.is_private && !isAdmin ? 'text-gray-400' : 'text-gray-500'}`}>
-                            {group.available_quotas} disponíveis de{" "}
-                            {group.total_quotas}
-                            {group.is_private && !isAdmin && " (Somente Admin)"}
-                          </span>
-                        </div>
-                      </SelectItem>
-                    ))}
+                    {groups.map((group) => {
+                      const isDisabled = group.is_private && !isAdmin;
+                      console.log(`📦 Group: ${group.name}, is_private: ${group.is_private}, isAdmin: ${isAdmin}, disabled: ${isDisabled}`);
+                      return (
+                        <SelectItem 
+                          key={group.id} 
+                          value={group.id.toString()}
+                          disabled={isDisabled}
+                        >
+                          <div className="flex flex-col">
+                            <span className={`font-medium ${isDisabled ? 'text-gray-400' : ''}`}>
+                              {group.name}
+                              {group.is_private && (
+                                <Badge variant="outline" className="ml-2 text-xs text-orange-600">
+                                  Privado
+                                </Badge>
+                              )}
+                            </span>
+                            <span className={`text-sm ${isDisabled ? 'text-gray-400' : 'text-gray-500'}`}>
+                              {group.available_quotas} disponíveis de{" "}
+                              {group.total_quotas}
+                            </span>
+                          </div>
+                        </SelectItem>
+                      );
+                    })}
                   </SelectContent>
                 </Select>
 
