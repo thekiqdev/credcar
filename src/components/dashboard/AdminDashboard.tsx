@@ -128,6 +128,7 @@ import {
   User,
   Key,
   Copy,
+  Pencil,
 } from "lucide-react";
 import ContractCreationFlow from "@/components/sales/ContractCreationFlow";
 import ContractTemplateManagement from "@/components/sales/ContractTemplateManagement";
@@ -194,6 +195,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     name: "",
     description: "",
     totalQuotas: 10,
+    isPrivate: false,
   });
   const [selectedQuota, setSelectedQuota] = useState(null);
   const [isAssignQuotaDialogOpen, setIsAssignQuotaDialogOpen] = useState(false);
@@ -5562,6 +5564,22 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                   placeholder="10"
                                 />
                               </div>
+                              <div className="flex items-center space-x-2">
+                                <input
+                                  type="checkbox"
+                                  id="group-is-private"
+                                  checked={newGroup.isPrivate}
+                                  onChange={(e) =>
+                                    setNewGroup({
+                                      ...newGroup,
+                                      isPrivate: e.target.checked,
+                                    })
+                                  }
+                                />
+                                <Label htmlFor="group-is-private">
+                                  Grupo Privado (somente admin pode selecionar)
+                                </Label>
+                              </div>
                             </div>
                             <DialogFooter>
                               <Button
@@ -5572,6 +5590,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                     name: "",
                                     description: "",
                                     totalQuotas: 10,
+                                    isPrivate: false,
                                   });
                                 }}
                               >
@@ -5593,6 +5612,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                           name: newGroup.name,
                                           description: newGroup.description,
                                           total_quotas: newGroup.totalQuotas,
+                                          is_private: newGroup.isPrivate,
                                         })
                                         .select()
                                         .single();
@@ -5626,6 +5646,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                       name: "",
                                       description: "",
                                       totalQuotas: 10,
+                                      isPrivate: false,
                                     });
                                     alert("Grupo criado com sucesso!");
                                   } catch (error) {
@@ -5664,6 +5685,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                     <TableHead>Total Cotas</TableHead>
                                     <TableHead>Disponíveis</TableHead>
                                     <TableHead>Ocupadas</TableHead>
+                                    <TableHead>Privado</TableHead>
                                     <TableHead className="text-right">
                                       Ações
                                     </TableHead>
@@ -5697,8 +5719,36 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                           {group.occupied_quotas}
                                         </Badge>
                                       </TableCell>
+                                      <TableCell>
+                                        {group.is_private ? (
+                                          <Badge
+                                            variant="outline"
+                                            className="text-orange-600"
+                                          >
+                                            Sim
+                                          </Badge>
+                                        ) : (
+                                          <Badge
+                                            variant="outline"
+                                            className="text-gray-600"
+                                          >
+                                            Não
+                                          </Badge>
+                                        )}
+                                      </TableCell>
                                       <TableCell className="text-right">
                                         <div className="flex gap-2 justify-end">
+                                          <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => {
+                                              setEditingGroup(group);
+                                              setIsEditGroupDialogOpen(true);
+                                            }}
+                                            title="Editar Grupo"
+                                          >
+                                            <Pencil className="h-4 w-4" />
+                                          </Button>
                                           <Button
                                             variant="outline"
                                             size="sm"
@@ -5753,7 +5803,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                   {groups.length === 0 && (
                                     <TableRow>
                                       <TableCell
-                                        colSpan={6}
+                                        colSpan={7}
                                         className="text-center py-8 text-muted-foreground"
                                       >
                                         Nenhum grupo encontrado. Crie seu
@@ -9188,6 +9238,112 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
               </Button>
               <Button
                 onClick={saveInstallmentsChanges}
+                className="bg-red-600 hover:bg-red-700"
+              >
+                Salvar Alterações
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Edit Group Dialog */}
+        <Dialog
+          open={isEditGroupDialogOpen}
+          onOpenChange={setIsEditGroupDialogOpen}
+        >
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Editar Grupo</DialogTitle>
+              <DialogDescription>
+                Edite as informações do grupo selecionado.
+              </DialogDescription>
+            </DialogHeader>
+            {editingGroup && (
+              <div className="grid gap-4 py-4">
+                <div>
+                  <Label htmlFor="edit-group-name">Nome do Grupo *</Label>
+                  <Input
+                    id="edit-group-name"
+                    value={editingGroup.name}
+                    onChange={(e) =>
+                      setEditingGroup({
+                        ...editingGroup,
+                        name: e.target.value,
+                      })
+                    }
+                    placeholder="Nome do grupo"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="edit-group-description">Descrição</Label>
+                  <Input
+                    id="edit-group-description"
+                    value={editingGroup.description || ""}
+                    onChange={(e) =>
+                      setEditingGroup({
+                        ...editingGroup,
+                        description: e.target.value,
+                      })
+                    }
+                    placeholder="Descrição do grupo"
+                  />
+                </div>
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="edit-group-is-private"
+                    checked={editingGroup.is_private || false}
+                    onChange={(e) =>
+                      setEditingGroup({
+                        ...editingGroup,
+                        is_private: e.target.checked,
+                      })
+                    }
+                  />
+                  <Label htmlFor="edit-group-is-private">
+                    Grupo Privado (somente admin pode selecionar)
+                  </Label>
+                </div>
+              </div>
+            )}
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setIsEditGroupDialogOpen(false);
+                  setEditingGroup(null);
+                }}
+              >
+                Cancelar
+              </Button>
+              <Button
+                onClick={async () => {
+                  try {
+                    if (!editingGroup?.name.trim()) {
+                      alert("Nome do grupo é obrigatório");
+                      return;
+                    }
+
+                    const { error } = await supabase
+                      .from("groups")
+                      .update({
+                        name: editingGroup.name,
+                        description: editingGroup.description,
+                        is_private: editingGroup.is_private,
+                      })
+                      .eq("id", editingGroup.id);
+
+                    if (error) throw error;
+
+                    await loadGroups();
+                    setIsEditGroupDialogOpen(false);
+                    setEditingGroup(null);
+                    alert("Grupo atualizado com sucesso!");
+                  } catch (error) {
+                    console.error("Error updating group:", error);
+                    alert("Erro ao atualizar grupo. Tente novamente.");
+                  }
+                }}
                 className="bg-red-600 hover:bg-red-700"
               >
                 Salvar Alterações
