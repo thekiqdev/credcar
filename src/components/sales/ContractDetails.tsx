@@ -3115,24 +3115,40 @@ const ContractDetails: React.FC<ContractDetailsProps> = ({
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() =>
-                                window.open(document.url, "_blank")
-                              }
-                            >
-                              <Eye className="mr-2 h-4 w-4" />
-                              Visualizar
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
                               onClick={() => {
-                                const link = document.createElement("a");
-                                link.href = document.url;
-                                link.download = document.name;
-                                link.click();
+                                // Extract relative path from the full URL
+                                let relativePath = document.url;
+                                
+                                // If it's a full URL, extract the path parameter
+                                if (document.url.includes('?path=')) {
+                                  const urlParams = new URLSearchParams(document.url.split('?')[1]);
+                                  relativePath = urlParams.get('path') || '';
+                                } else if (document.url.includes('/documentos/')) {
+                                  // Extract path after /documentos/
+                                  relativePath = document.url.split('/documentos/')[1];
+                                }
+
+                                // Decode the path
+                                relativePath = decodeURIComponent(relativePath);
+
+                                // Replace backslashes with forward slashes
+                                relativePath = relativePath.replace(/\\/g, '/');
+
+                                console.log('📥 Downloading document:', relativePath);
+
+                                // Determine base URL based on environment
+                                const hostname = window.location.hostname;
+                                const baseUrl = hostname === 'localhost' 
+                                  ? 'http://localhost:3001' 
+                                  : 'https://sistema.credcarmultimarcas.com.br';
+
+                                // Download the file
+                                const downloadUrl = `${baseUrl}/api/download-file?path=${encodeURIComponent(relativePath)}`;
+                                window.open(downloadUrl, '_blank');
                               }}
                             >
-                              <Download className="h-4 w-4" />
+                              <Download className="mr-2 h-4 w-4" />
+                              Baixar
                             </Button>
                             {isAdmin && (
                               <Button
