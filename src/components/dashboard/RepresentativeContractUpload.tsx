@@ -10,7 +10,8 @@ import {
   Download, 
   Trash2, 
   CheckCircle,
-  AlertCircle 
+  AlertCircle,
+  Eye 
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
@@ -105,6 +106,50 @@ const RepresentativeContractUpload: React.FC<RepresentativeContractUploadProps> 
     }
   };
 
+  const handleViewContract = () => {
+    if (!contractProfile) return;
+
+    // Extract relative path from the full URL
+    let relativePath = contractProfile;
+    
+    // If it's a full URL, extract the path parameter
+    if (contractProfile.includes('?path=')) {
+      const urlParams = new URLSearchParams(contractProfile.split('?')[1]);
+      relativePath = urlParams.get('path') || '';
+    } else if (contractProfile.includes('/documentos/')) {
+      // Extract path after /documentos/
+      relativePath = contractProfile.split('/documentos/')[1];
+    }
+
+    // Decode the path
+    relativePath = decodeURIComponent(relativePath);
+
+    // Replace backslashes with forward slashes
+    relativePath = relativePath.replace(/\\/g, '/');
+
+    console.log('👁️ Viewing contract:', relativePath);
+
+    // Determine base URL based on environment
+    const hostname = window.location.hostname;
+    const baseUrl = hostname === 'localhost' 
+      ? 'http://localhost:3001' 
+      : 'https://sistema.credcarmultimarcas.com.br';
+
+    // Check file type
+    const fileExtension = relativePath.split('.').pop()?.toLowerCase();
+    const viewableTypes = ['pdf'];
+
+    if (viewableTypes.includes(fileExtension || '')) {
+      // Open viewable files in new tab
+      const viewUrl = `${baseUrl}/api/view-file?path=${encodeURIComponent(relativePath)}`;
+      window.open(viewUrl, '_blank');
+    } else {
+      // For non-viewable files (DOC, DOCX), download them
+      const downloadUrl = `${baseUrl}/api/download-file?path=${encodeURIComponent(relativePath)}`;
+      window.open(downloadUrl, '_blank');
+    }
+  };
+
   const handleDeleteContract = async () => {
     if (!contractProfile) return;
 
@@ -184,11 +229,20 @@ const RepresentativeContractUpload: React.FC<RepresentativeContractUploadProps> 
               <Button
                 variant="outline"
                 size="sm"
+                onClick={handleViewContract}
+                className="flex-1"
+              >
+                <Eye className="h-4 w-4 mr-2" />
+                Visualizar
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={() => window.open(contractProfile, '_blank')}
                 className="flex-1"
               >
                 <Download className="h-4 w-4 mr-2" />
-                Baixar Contrato
+                Baixar
               </Button>
               <Button
                 variant="outline"
@@ -196,8 +250,7 @@ const RepresentativeContractUpload: React.FC<RepresentativeContractUploadProps> 
                 onClick={handleDeleteContract}
                 className="text-red-600 hover:text-red-700 hover:bg-red-50"
               >
-                <Trash2 className="h-4 w-4 mr-2" />
-                Remover
+                <Trash2 className="h-4 w-4" />
               </Button>
             </div>
           </div>
