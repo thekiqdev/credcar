@@ -180,6 +180,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     null,
   );
   const [isContractModalOpen, setIsContractModalOpen] = useState(false);
+  const [isContractEditMode, setIsContractEditMode] = useState(false);
 
   // Groups and Quotas state
   const [groups, setGroups] = useState([]);
@@ -1643,17 +1644,22 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   const handleViewContract = (contractId: string) => {
     setSelectedContractId(contractId);
+    setIsContractEditMode(false);
     setIsContractModalOpen(true);
   };
 
   const handleEditContract = (contractId: string) => {
+    console.log('🔧 AdminDashboard - handleEditContract called with contractId:', contractId);
     setSelectedContractId(contractId);
+    setIsContractEditMode(true);
     setIsContractModalOpen(true);
+    console.log('🔧 AdminDashboard - isContractEditMode set to true');
   };
 
   const handleCloseContractModal = () => {
     setIsContractModalOpen(false);
     setSelectedContractId(null);
+    setIsContractEditMode(false);
     // Refresh contracts data when modal closes
     loadAllContracts();
   };
@@ -7846,6 +7852,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 <ContractDetails
                   contractId={selectedContractId}
                   onBack={handleCloseContractModal}
+                  isEditMode={isContractEditMode}
                 />
               )}
             </div>

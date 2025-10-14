@@ -72,7 +72,10 @@ import {
 const ContractDetails: React.FC<ContractDetailsProps> = ({
   contractId: propContractId,
   onBack,
+  isEditMode: propIsEditMode = false,
 }) => {
+  console.log('📋 ContractDetails rendered with propIsEditMode:', propIsEditMode);
+  
   const { id: paramContractId } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const contractId = propContractId || paramContractId;
@@ -140,15 +143,21 @@ const ContractDetails: React.FC<ContractDetailsProps> = ({
 
   // Check if edit mode should be enabled after contract is loaded
   useEffect(() => {
+    console.log('🔍 ContractDetails useEffect - contract:', !!contract, 'canEditOrDelete:', canEditOrDelete, 'propIsEditMode:', propIsEditMode);
+    
     if (contract && canEditOrDelete) {
-      // Check if edit mode is requested via URL parameter
+      // Check if edit mode is requested via URL parameter or prop
       const urlParams = new URLSearchParams(window.location.search);
       const editParam = urlParams.get("edit");
-      if (editParam === "true") {
+      console.log('🔍 URL edit param:', editParam, 'propIsEditMode:', propIsEditMode);
+      
+      if (editParam === "true" || propIsEditMode) {
+        console.log('✅ Setting edit mode to true and calling handleEditContent');
         setIsEditMode(true);
+        handleEditContent();
       }
     }
-  }, [contract, canEditOrDelete]);
+  }, [contract, canEditOrDelete, propIsEditMode]);
 
   const loadAvailableTemplates = async () => {
     try {
