@@ -1649,13 +1649,19 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const handleEditContract = (contractId: string) => {
     setSelectedContractId(contractId);
     setIsContractModalOpen(true);
-    // Navigate to contract details with edit mode
-    navigate(`/contracts/${contractId}?edit=true`);
+    // Add edit parameter to URL to trigger edit mode
+    const currentUrl = new URL(window.location.href);
+    currentUrl.searchParams.set('edit', 'true');
+    window.history.replaceState({}, '', currentUrl.toString());
   };
 
   const handleCloseContractModal = () => {
     setIsContractModalOpen(false);
     setSelectedContractId(null);
+    // Remove edit parameter from URL when modal closes
+    const currentUrl = new URL(window.location.href);
+    currentUrl.searchParams.delete('edit');
+    window.history.replaceState({}, '', currentUrl.toString());
     // Refresh contracts data when modal closes
     loadAllContracts();
   };
@@ -4444,28 +4450,28 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         ) : (
                           commissionPayments.map((payment) => (
                             <TableRow key={payment.id}>
-                              <TableCell className="font-medium">
+                            <TableCell className="font-medium">
                                 {payment.representative}
-                              </TableCell>
+                            </TableCell>
                               <TableCell>{payment.period}</TableCell>
-                              <TableCell>
-                                {new Intl.NumberFormat("pt-BR", {
-                                  style: "currency",
-                                  currency: "BRL",
+                            <TableCell>
+                              {new Intl.NumberFormat("pt-BR", {
+                                style: "currency",
+                                currency: "BRL",
                                 }).format(payment.totalCommission)}
-                              </TableCell>
-                              <TableCell>
-                                {new Intl.NumberFormat("pt-BR", {
-                                  style: "currency",
-                                  currency: "BRL",
+                            </TableCell>
+                            <TableCell>
+                              {new Intl.NumberFormat("pt-BR", {
+                                style: "currency",
+                                currency: "BRL",
                                 }).format(payment.paidCommission)}
-                              </TableCell>
-                              <TableCell>
-                                {new Intl.NumberFormat("pt-BR", {
-                                  style: "currency",
-                                  currency: "BRL",
+                            </TableCell>
+                            <TableCell>
+                              {new Intl.NumberFormat("pt-BR", {
+                                style: "currency",
+                                currency: "BRL",
                                 }).format(payment.pendingCommission)}
-                              </TableCell>
+                            </TableCell>
                               <TableCell>{payment.contracts}</TableCell>
                               <TableCell>
                                 <Badge
@@ -4507,12 +4513,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                   <span className="text-gray-500">-</span>
                                 )}
                               </TableCell>
-                              <TableCell className="text-right">
-                                <Button variant="outline" size="sm">
-                                  <Eye className="h-4 w-4" />
-                                </Button>
-                              </TableCell>
-                            </TableRow>
+                            <TableCell className="text-right">
+                              <Button variant="outline" size="sm">
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
                           ))
                         )}
                       </TableBody>
@@ -4540,7 +4546,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           }).format(selectedPayment.requestedValue || 0)}</p>
                           <p><strong>Data de Aprovação:</strong> {selectedPayment.processedAt ? new Date(selectedPayment.processedAt).toLocaleDateString("pt-BR") : "N/A"}</p>
                         </div>
-                        <div>
+                  <div>
                           <Label htmlFor="payment-date">Data do Pagamento *</Label>
                           <Input
                             id="payment-date"
@@ -4549,12 +4555,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                             onChange={(e) => setPaymentDate(e.target.value)}
                             required
                           />
-                        </div>
-                      </div>
+                  </div>
+                </div>
                     )}
                     <DialogFooter>
-                      <Button
-                        variant="outline"
+                                  <Button
+                                    variant="outline"
                         onClick={() => {
                           setIsPaymentDialogOpen(false);
                           setSelectedPayment(null);
@@ -4563,19 +4569,19 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         disabled={isProcessingPayment}
                       >
                         Cancelar
-                      </Button>
-                      <Button
+                                  </Button>
+                                  <Button
                         onClick={handleMarkAsPaid}
                         disabled={isProcessingPayment || !paymentDate}
                         className="bg-green-600 hover:bg-green-700"
                       >
                         {isProcessingPayment ? "Processando..." : "Marcar como Pago"}
-                      </Button>
+                                  </Button>
                     </DialogFooter>
                   </DialogContent>
                 </Dialog>
-              </div>
-            )}
+                                </div>
+                              )}
 
             {activeSection === "withdrawals" && (
               <WithdrawalManagement />
@@ -7843,6 +7849,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
           onOpenChange={setIsContractModalOpen}
         >
           <DialogContent className="max-w-[95vw] max-h-[95vh] overflow-hidden p-0">
+            <DialogHeader className="sr-only">
+              <DialogTitle>Detalhes do Contrato</DialogTitle>
+              <DialogDescription>
+                Visualização e edição dos detalhes do contrato selecionado
+              </DialogDescription>
+            </DialogHeader>
             <div className="h-[95vh] overflow-y-auto">
               {selectedContractId && (
                 <ContractDetails
