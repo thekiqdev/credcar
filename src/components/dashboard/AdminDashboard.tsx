@@ -1647,7 +1647,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   };
 
   const handleEditContract = (contractId: string) => {
-    navigate(`/contracts/${contractId}?edit=true`);
+    navigate(`/contract/${contractId}?edit=true`);
   };
 
   const handleCloseContractModal = () => {
