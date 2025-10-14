@@ -118,30 +118,12 @@ const ContractDetails: React.FC<{
   const isAdmin = currentUser?.role === "Administrador" || isAdminMode;
   const isRepresentative = currentUser?.role === "Representante";
   
-  console.log('👤 User info:', {
-    currentUser,
-    isAdmin,
-    isRepresentative,
-    userRole: currentUser?.role,
-    isAdminMode
-  });
-  
   const canEditOrDelete =
     contract &&
     ((isRepresentative &&
       (contract.status === "Pendente" || contract.status === "Reprovado") &&
       contract.representative.id === currentUser?.id) ||
      (isAdmin && (contract.status === "Pendente" || contract.status === "Reprovado" || contract.status === "Em Análise")));
-     
-  console.log('🔐 canEditOrDelete calculation:', {
-    contract: !!contract,
-    isRepresentative,
-    isAdmin,
-    contractStatus: contract?.status,
-    representativeId: contract?.representative?.id,
-    currentUserId: currentUser?.id,
-    canEditOrDelete
-  });
 
   useEffect(() => {
     if (!contractId) {
@@ -165,21 +147,11 @@ const ContractDetails: React.FC<{
 
   // Check if edit mode should be enabled after contract is loaded
   useEffect(() => {
-    console.log('🔍 useEffect edit mode check:', {
-      contract: !!contract,
-      canEditOrDelete,
-      contractId: contract?.id,
-      contractStatus: contract?.status
-    });
-    
     if (contract && canEditOrDelete) {
       // Check if edit mode is requested via URL parameter
       const urlParams = new URLSearchParams(window.location.search);
       const editParam = urlParams.get("edit");
-      console.log('🔍 URL params:', { editParam, fullUrl: window.location.href });
-      
       if (editParam === "true") {
-        console.log('🔧 Edit mode detected from URL, activating editor...');
         setIsEditMode(true);
         handleEditContent();
       }
@@ -811,12 +783,6 @@ const ContractDetails: React.FC<{
 
   const handleEditContent = () => {
     const currentContent = contract?.contract_content || "";
-    console.log('🔧 handleEditContent called:', {
-      contentLength: currentContent.length,
-      isEditMode,
-      isEditingContent,
-      contractId: contract?.id
-    });
     setEditedContent(currentContent);
     setIsEditingContent(true);
     setIsEditMode(true);
@@ -1591,7 +1557,7 @@ const ContractDetails: React.FC<{
             )}
 
             {/* Representative Actions */}
-            {canEditOrDelete && (
+            {canEditOrDelete && !isAdmin && (
               <div className="flex gap-2">
                 <Button
                   variant="outline"
@@ -1610,48 +1576,6 @@ const ContractDetails: React.FC<{
                   <Edit className="mr-2 h-4 w-4" />
                   {isEditMode ? "Cancelar Edição" : "Editar"}
                 </Button>
-
-                <Dialog
-                  open={isDeleteDialogOpen}
-                  onOpenChange={setIsDeleteDialogOpen}
-                >
-                  <DialogTrigger asChild>
-                    <Button variant="destructive" size="sm">
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      Excluir
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Excluir Contrato</DialogTitle>
-                      <DialogDescription>
-                        Tem certeza que deseja excluir o contrato{" "}
-                        {contract.contract_code}? Esta ação não pode ser
-                        desfeita.
-                        <br />
-                        <br />
-                        <strong>Nota:</strong> Você só pode excluir contratos
-                        com status Pendente ou Reprovado.
-                      </DialogDescription>
-                    </DialogHeader>
-                    <DialogFooter>
-                      <Button
-                        variant="outline"
-                        onClick={() => setIsDeleteDialogOpen(false)}
-                        disabled={isProcessing}
-                      >
-                        Cancelar
-                      </Button>
-                      <Button
-                        variant="destructive"
-                        onClick={handleDeleteContract}
-                        disabled={isProcessing}
-                      >
-                        {isProcessing ? "Excluindo..." : "Excluir Contrato"}
-                      </Button>
-                    </DialogFooter>
-                  </DialogContent>
-                </Dialog>
               </div>
             )}
           </div>
