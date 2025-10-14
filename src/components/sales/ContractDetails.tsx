@@ -101,6 +101,7 @@ const ContractDetails: React.FC<ContractDetailsProps> = ({
   );
   const [newDocumentType, setNewDocumentType] = useState('');
   const [isUploadingDocument, setIsUploadingDocument] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isSignatureModalOpen, setIsSignatureModalOpen] = useState(false);
   const [signatureBlockData, setSignatureBlockData] = useState({
     signatoryName: "",
@@ -309,14 +310,9 @@ const ContractDetails: React.FC<ContractDetailsProps> = ({
     }
   };
 
-  const handleDocumentUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
-
-    if (!newDocumentType.trim()) {
-      alert('Por favor, informe o tipo do documento');
-      return;
-    }
 
     // Validate file type
     const allowedTypes = [
@@ -334,12 +330,28 @@ const ContractDetails: React.FC<ContractDetailsProps> = ({
     
     if (!allowedTypes.includes(file.type)) {
       alert('Tipo de arquivo não permitido. Use PDF, DOC, DOCX, JPG, PNG, MP3, WAV ou M4A.');
+      event.target.value = '';
       return;
     }
 
     // Validate file size (max 10MB)
     if (file.size > 10 * 1024 * 1024) {
       alert('Arquivo muito grande. Tamanho máximo: 10MB.');
+      event.target.value = '';
+      return;
+    }
+
+    setSelectedFile(file);
+  };
+
+  const handleDocumentUpload = async () => {
+    if (!selectedFile) {
+      alert('Por favor, selecione um arquivo');
+      return;
+    }
+
+    if (!newDocumentType.trim()) {
+      alert('Por favor, informe o tipo do documento');
       return;
     }
 
@@ -349,7 +361,7 @@ const ContractDetails: React.FC<ContractDetailsProps> = ({
 
       // Create FormData for upload
       const formData = new FormData();
-      formData.append('file', file);
+      formData.append('file', selectedFile);
       formData.append('contractId', contractId || '');
       formData.append('documentType', newDocumentType);
 
@@ -394,7 +406,7 @@ const ContractDetails: React.FC<ContractDetailsProps> = ({
       
       // Reset form
       setNewDocumentType('');
-      event.target.value = '';
+      setSelectedFile(null);
       
       alert('Documento anexado com sucesso!');
 
@@ -2995,12 +3007,17 @@ const ContractDetails: React.FC<ContractDetailsProps> = ({
                             id="document-file"
                             type="file"
                             accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.mp3,.wav,.m4a"
-                            onChange={handleDocumentUpload}
+                            onChange={handleFileSelect}
                             disabled={isUploadingDocument}
                           />
                           <p className="text-xs text-muted-foreground mt-1">
                             Formatos aceitos: PDF, DOC, DOCX, JPG, PNG, MP3, WAV, M4A (máx. 10MB)
                           </p>
+                          {selectedFile && (
+                            <p className="text-sm text-green-600 mt-2">
+                              ✅ Arquivo selecionado: {selectedFile.name}
+                            </p>
+                          )}
                         </div>
                       </div>
                       <DialogFooter>
@@ -3008,10 +3025,25 @@ const ContractDetails: React.FC<ContractDetailsProps> = ({
                           variant="outline"
                           onClick={() => {
                             setNewDocumentType('');
+                            setSelectedFile(null);
                             setIsUploadingDocument(false);
                           }}
                         >
                           Cancelar
+                        </Button>
+                        <Button
+                          onClick={handleDocumentUpload}
+                          disabled={isUploadingDocument || !selectedFile || !newDocumentType.trim()}
+                          className="bg-red-600 hover:bg-red-700"
+                        >
+                          {isUploadingDocument ? (
+                            <>
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                              Enviando...
+                            </>
+                          ) : (
+                            'Enviar'
+                          )}
                         </Button>
                       </DialogFooter>
                     </DialogContent>
