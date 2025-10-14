@@ -4,6 +4,7 @@ import {
   representativeService,
   Representative,
   documentService,
+  supabase,
 } from "../../lib/supabase";
 import DocumentApproval from "./DocumentApproval";
 import RepresentativeContractUpload from "./RepresentativeContractUpload";
