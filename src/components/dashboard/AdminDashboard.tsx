@@ -7860,6 +7860,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 <ContractDetails
                   contractId={selectedContractId}
                   onBack={handleCloseContractModal}
+                  isAdminMode={true}
                 />
               )}
             </div>

@@ -69,9 +69,14 @@ import {
   ContractDetailsProps,
 } from "@/types/supabase";
 
-const ContractDetails: React.FC<ContractDetailsProps> = ({
+const ContractDetails: React.FC<{
+  contractId?: string;
+  onBack?: () => void;
+  isAdminMode?: boolean;
+}> = ({
   contractId: propContractId,
   onBack,
+  isAdminMode = false,
 }) => {
   const { id: paramContractId } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -110,14 +115,15 @@ const ContractDetails: React.FC<ContractDetailsProps> = ({
   const editorRef = useRef<any>(null);
 
   const currentUser = authService.getCurrentUser();
-  const isAdmin = currentUser?.role === "Administrador";
+  const isAdmin = currentUser?.role === "Administrador" || isAdminMode;
   const isRepresentative = currentUser?.role === "Representante";
   
   console.log('👤 User info:', {
     currentUser,
     isAdmin,
     isRepresentative,
-    userRole: currentUser?.role
+    userRole: currentUser?.role,
+    isAdminMode
   });
   
   const canEditOrDelete =
