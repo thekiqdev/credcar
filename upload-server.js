@@ -696,6 +696,96 @@ app.delete('/api/delete-representative-contract', async (req, res) => {
   }
 });
 
+// Rota para upload de documentos de contratos
+app.post('/api/upload-contract-document', upload.single('file'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'Nenhum arquivo enviado' });
+    }
+
+    const { contractId, documentType } = req.body;
+    
+    console.log('📁 Upload de documento de contrato iniciado...');
+    console.log('📋 Contract ID:', contractId);
+    console.log('📄 Document Type:', documentType);
+    console.log('📎 File:', req.file.originalname, '(', req.file.size, 'bytes)');
+
+    if (!contractId || !documentType) {
+      return res.status(400).json({ error: 'ID do contrato e tipo do documento são obrigatórios' });
+    }
+
+    // Validar tipo de arquivo
+    const allowedTypes = [
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'image/jpeg',
+      'image/jpg',
+      'image/png',
+      'audio/mpeg',
+      'audio/wav',
+      'audio/mp4',
+      'audio/m4a'
+    ];
+
+    if (!allowedTypes.includes(req.file.mimetype)) {
+      return res.status(400).json({ error: 'Tipo de arquivo não permitido' });
+    }
+
+    // Validar tamanho (máx 10MB)
+    if (req.file.size > 10 * 1024 * 1024) {
+      return res.status(400).json({ error: 'Arquivo muito grande. Máximo: 10MB' });
+    }
+
+    // Criar estrutura de pastas: documentos/contratos/{contractId}/documentos/
+    const baseDir = path.join(__dirname, 'documentos');
+    const contractDir = path.join(baseDir, 'contratos', contractId, 'documentos');
+    
+    // Garantir que o diretório existe
+    if (!fs.existsSync(contractDir)) {
+      fs.mkdirSync(contractDir, { recursive: true });
+      console.log('📁 Diretório criado:', contractDir);
+    }
+
+    // Gerar nome único para o arquivo
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const fileExtension = path.extname(req.file.originalname);
+    const fileName = `documento-${timestamp}${fileExtension}`;
+    const finalFilePath = path.join(contractDir, fileName);
+
+    // Mover arquivo para local final
+    fs.renameSync(req.file.path, finalFilePath);
+    console.log('✅ Documento movido com sucesso!');
+
+    // Gerar URL de download
+    const relativePath = path.relative(baseDir, finalFilePath).replace(/\\/g, '/');
+    const downloadUrl = `http://localhost:${PORT}/api/download-file?path=${encodeURIComponent(relativePath)}`;
+
+    const fileInfo = {
+      originalName: req.file.originalname,
+      filename: fileName,
+      filePath: finalFilePath,
+      downloadUrl: downloadUrl,
+      size: req.file.size,
+      mimetype: req.file.mimetype,
+      contractId: contractId,
+      documentType: documentType,
+      uploadedAt: new Date().toISOString()
+    };
+
+    console.log('📊 Contract Document Info:', fileInfo);
+
+    res.json({
+      success: true,
+      message: 'Documento anexado com sucesso',
+      data: fileInfo
+    });
+  } catch (error) {
+    console.error('❌ Erro no upload de documento:', error);
+    res.status(500).json({ error: error.message || 'Erro interno do servidor' });
+  }
+});
+
 // Rota para upload de documentos
 app.post('/api/upload-document', upload.single('file'), validateFile, (req, res) => {
   try {

@@ -99,6 +99,8 @@ const ContractDetails: React.FC<ContractDetailsProps> = ({
   const [isDeletingDocument, setIsDeletingDocument] = useState<string | null>(
     null,
   );
+  const [newDocumentType, setNewDocumentType] = useState('');
+  const [isUploadingDocument, setIsUploadingDocument] = useState(false);
   const [isSignatureModalOpen, setIsSignatureModalOpen] = useState(false);
   const [signatureBlockData, setSignatureBlockData] = useState({
     signatoryName: "",
@@ -304,6 +306,103 @@ const ContractDetails: React.FC<ContractDetailsProps> = ({
       alert(`Erro ao excluir documento: ${errorMessage}`);
     } finally {
       setIsDeletingDocument(null);
+    }
+  };
+
+  const handleDocumentUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!newDocumentType.trim()) {
+      alert('Por favor, informe o tipo do documento');
+      return;
+    }
+
+    // Validate file type
+    const allowedTypes = [
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'image/jpeg',
+      'image/jpg',
+      'image/png',
+      'audio/mpeg',
+      'audio/wav',
+      'audio/mp4',
+      'audio/m4a'
+    ];
+    
+    if (!allowedTypes.includes(file.type)) {
+      alert('Tipo de arquivo não permitido. Use PDF, DOC, DOCX, JPG, PNG, MP3, WAV ou M4A.');
+      return;
+    }
+
+    // Validate file size (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      alert('Arquivo muito grande. Tamanho máximo: 10MB.');
+      return;
+    }
+
+    try {
+      setIsUploadingDocument(true);
+      console.log('📁 Uploading document to local server...');
+
+      // Create FormData for upload
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('contractId', contractId || '');
+      formData.append('documentType', newDocumentType);
+
+      // Determine base URL based on environment
+      const hostname = window.location.hostname;
+      const baseUrl = hostname === 'localhost' 
+        ? 'http://localhost:3001' 
+        : 'https://sistema.credcarmultimarcas.com.br';
+
+      // Upload file to local server
+      const response = await fetch(`${baseUrl}/api/upload-contract-document`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Erro no upload');
+      }
+
+      const result = await response.json();
+      console.log('✅ Document uploaded successfully:', result);
+
+      // Save document info to database
+      const { error: dbError } = await supabase
+        .from('contract_documents')
+        .insert({
+          contract_id: parseInt(contractId || '0'),
+          document_type: newDocumentType,
+          document_url: result.data.downloadUrl
+        });
+
+      if (dbError) {
+        console.error('❌ Database error:', dbError);
+        throw new Error(`Erro ao salvar documento no banco: ${dbError.message}`);
+      }
+
+      console.log('✅ Document saved to database');
+      
+      // Reload documents
+      await loadContractDocuments();
+      
+      // Reset form
+      setNewDocumentType('');
+      event.target.value = '';
+      
+      alert('Documento anexado com sucesso!');
+
+    } catch (error) {
+      console.error('❌ Document upload error:', error);
+      alert(error instanceof Error ? error.message : 'Erro desconhecido');
+    } finally {
+      setIsUploadingDocument(false);
     }
   };
 
@@ -2855,14 +2954,69 @@ const ContractDetails: React.FC<ContractDetailsProps> = ({
           <TabsContent value="documents" className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <FileText className="h-5 w-5" />
-                  Documentos do Contrato
-                </CardTitle>
-                <CardDescription>
-                  Documentos anexados e relacionados ao contrato, incluindo
-                  assinaturas e documentos de identificação.
-                </CardDescription>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <FileText className="h-5 w-5" />
+                      Documentos do Contrato
+                    </CardTitle>
+                    <CardDescription>
+                      Documentos anexados e relacionados ao contrato, incluindo
+                      assinaturas e documentos de identificação.
+                    </CardDescription>
+                  </div>
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <Button className="bg-red-600 hover:bg-red-700">
+                        <Upload className="h-4 w-4 mr-2" />
+                        Anexar Documento
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Anexar Documento ao Contrato</DialogTitle>
+                        <DialogDescription>
+                          Faça upload de documentos relacionados ao contrato (PDF, DOC, DOCX, imagens, áudio).
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="space-y-4">
+                        <div>
+                          <Label htmlFor="document-type">Tipo do Documento</Label>
+                          <Input
+                            id="document-type"
+                            placeholder="Ex: Comprovante de Renda, RG, CPF, Áudio de Confirmação"
+                            value={newDocumentType}
+                            onChange={(e) => setNewDocumentType(e.target.value)}
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="document-file">Arquivo</Label>
+                          <Input
+                            id="document-file"
+                            type="file"
+                            accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.mp3,.wav,.m4a"
+                            onChange={handleDocumentUpload}
+                            disabled={isUploadingDocument}
+                          />
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Formatos aceitos: PDF, DOC, DOCX, JPG, PNG, MP3, WAV, M4A (máx. 10MB)
+                          </p>
+                        </div>
+                      </div>
+                      <DialogFooter>
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            setNewDocumentType('');
+                            setIsUploadingDocument(false);
+                          }}
+                        >
+                          Cancelar
+                        </Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
+                </div>
               </CardHeader>
               <CardContent>
                 {isLoadingDocuments ? (
