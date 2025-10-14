@@ -1647,7 +1647,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   };
 
   const handleEditContract = (contractId: string) => {
-    navigate(`/contract/${contractId}?edit=true`);
+    setSelectedContractId(contractId);
+    setIsContractModalOpen(true);
+    // Navigate to contract details with edit mode
+    navigate(`/contracts/${contractId}?edit=true`);
   };
 
   const handleCloseContractModal = () => {
