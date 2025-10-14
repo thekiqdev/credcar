@@ -781,6 +781,7 @@ const ContractDetails: React.FC<ContractDetailsProps> = ({
     );
     setEditedContent(currentContent);
     setIsEditingContent(true);
+    setIsEditMode(true);
   };
 
   // Função para inserir campos de mesclagem
@@ -1539,7 +1540,14 @@ const ContractDetails: React.FC<ContractDetailsProps> = ({
                   variant="outline"
                   size="sm"
                   onClick={() => {
-                    setIsEditMode(!isEditMode);
+                    if (!isEditMode) {
+                      // Entrar no modo de edição
+                      handleEditContent();
+                    } else {
+                      // Cancelar edição
+                      setIsEditMode(false);
+                      setIsEditingContent(false);
+                    }
                   }}
                 >
                   <Edit className="mr-2 h-4 w-4" />
