@@ -172,7 +172,7 @@ class CommissionService {
       // Buscar comissões pagas (withdrawal_requests aprovados)
       const { data: withdrawals, error: withdrawalsError } = await supabase
         .from("withdrawal_requests")
-        .select("amount, status")
+        .select("requested_value, status")
         .eq("representative_id", representativeId)
         .eq("status", "approved");
 
@@ -181,7 +181,7 @@ class CommissionService {
       }
 
       const paidCommission = (withdrawals || []).reduce(
-        (sum, withdrawal) => sum + parseFloat(withdrawal.amount || "0"),
+        (sum, withdrawal) => sum + parseFloat(withdrawal.requested_value || "0"),
         0
       );
 

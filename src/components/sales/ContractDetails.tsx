@@ -72,10 +72,7 @@ import {
 const ContractDetails: React.FC<ContractDetailsProps> = ({
   contractId: propContractId,
   onBack,
-  isEditMode: propIsEditMode = false,
 }) => {
-  console.log('📋 ContractDetails rendered with propIsEditMode:', propIsEditMode);
-  
   const { id: paramContractId } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const contractId = propContractId || paramContractId;
@@ -115,18 +112,12 @@ const ContractDetails: React.FC<ContractDetailsProps> = ({
   const currentUser = authService.getCurrentUser();
   const isAdmin = currentUser?.role === "Administrador";
   const isRepresentative = currentUser?.role === "Representante";
-  
-  console.log('👤 Current user:', currentUser?.role, 'isAdmin:', isAdmin, 'isRepresentative:', isRepresentative);
-  console.log('📋 Contract status:', contract?.status, 'representative id:', contract?.representative?.id);
-  
   const canEditOrDelete =
     contract &&
     ((isRepresentative &&
       (contract.status === "Pendente" || contract.status === "Reprovado") &&
       contract.representative.id === currentUser?.id) ||
      (isAdmin && (contract.status === "Pendente" || contract.status === "Reprovado" || contract.status === "Em Análise")));
-     
-  console.log('🔐 canEditOrDelete:', canEditOrDelete);
 
   useEffect(() => {
     if (!contractId) {
@@ -150,21 +141,17 @@ const ContractDetails: React.FC<ContractDetailsProps> = ({
 
   // Check if edit mode should be enabled after contract is loaded
   useEffect(() => {
-    console.log('🔍 ContractDetails useEffect - contract:', !!contract, 'canEditOrDelete:', canEditOrDelete, 'propIsEditMode:', propIsEditMode);
-    
     if (contract && canEditOrDelete) {
-      // Check if edit mode is requested via URL parameter or prop
+      // Check if edit mode is requested via URL parameter
       const urlParams = new URLSearchParams(window.location.search);
       const editParam = urlParams.get("edit");
-      console.log('🔍 URL edit param:', editParam, 'propIsEditMode:', propIsEditMode);
-      
-      if (editParam === "true" || propIsEditMode) {
-        console.log('✅ Setting edit mode to true and calling handleEditContent');
+      if (editParam === "true") {
+        console.log('🔧 Edit mode detected from URL, activating editor...');
         setIsEditMode(true);
         handleEditContent();
       }
     }
-  }, [contract, canEditOrDelete, propIsEditMode]);
+  }, [contract, canEditOrDelete]);
 
   const loadAvailableTemplates = async () => {
     try {
@@ -1345,8 +1332,27 @@ const ContractDetails: React.FC<ContractDetailsProps> = ({
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            {getStatusBadge(contract.status)}
+            <div className="flex items-center gap-2">
+              {isAdmin && (contract.status === "Pendente" || contract.status === "Reprovado" || contract.status === "Em Análise") && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    if (!isEditMode) {
+                      // Entrar no modo de edição
+                      handleEditContent();
+                    } else {
+                      // Cancelar edição
+                      setIsEditMode(false);
+                      setIsEditingContent(false);
+                    }
+                  }}
+                >
+                  <Edit className="mr-2 h-4 w-4" />
+                  {isEditMode ? "Cancelar Edição" : "Editar Contrato"}
+                </Button>
+              )}
+              {getStatusBadge(contract.status)}
 
             {/* View-Only Link - Always available */}
             <Button
@@ -2954,17 +2960,6 @@ const ContractDetails: React.FC<ContractDetailsProps> = ({
                         signatureLinks,
                       ),
                     }}
-                    style={
-                      {
-                        "& .signature-field": {
-                          border: "2px dashed #ccc",
-                          padding: "20px",
-                          margin: "20px 0",
-                          backgroundColor: "#f9f9f9",
-                          textAlign: "center",
-                        },
-                      } as any
-                    }
                   />
                 ) : (
                   <div className="text-center py-8">
