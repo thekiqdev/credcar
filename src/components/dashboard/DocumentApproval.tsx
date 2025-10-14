@@ -245,8 +245,15 @@ const DocumentApproval: React.FC<DocumentApprovalProps> = ({
       // Extrair nome do arquivo da URL
       const fileName = relativePath.split('/').pop() || `${documentType}.pdf`;
       
-      // Fazer download do arquivo usando o servidor local
-      const response = await fetch(`http://localhost:3001/api/download-file?path=${encodeURIComponent(relativePath)}`);
+      // Determinar URL base baseada no ambiente
+      const baseUrl = window.location.hostname === 'localhost' 
+        ? 'http://localhost:3001' 
+        : 'https://sistema.credcarmultimarcas.com.br';
+      
+      console.log('🌐 Base URL:', baseUrl);
+      
+      // Fazer download do arquivo usando a URL correta
+      const response = await fetch(`${baseUrl}/api/download-file?path=${encodeURIComponent(relativePath)}`);
       
       if (!response.ok) {
         throw new Error('Erro ao baixar arquivo');
@@ -300,8 +307,15 @@ const DocumentApproval: React.FC<DocumentApprovalProps> = ({
         return;
       }
       
-      // Construir URL de visualização usando o caminho relativo
-      const viewUrl = `http://localhost:3001/api/view-file?path=${encodeURIComponent(relativePath)}`;
+      // Determinar URL base baseada no ambiente
+      const baseUrl = window.location.hostname === 'localhost' 
+        ? 'http://localhost:3001' 
+        : 'https://sistema.credcarmultimarcas.com.br';
+      
+      console.log('🌐 Base URL:', baseUrl);
+      
+      // Construir URL de visualização usando a URL correta
+      const viewUrl = `${baseUrl}/api/view-file?path=${encodeURIComponent(relativePath)}`;
       
       console.log('🔗 View URL:', viewUrl);
       
