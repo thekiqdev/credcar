@@ -17,6 +17,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { ArrowRight, ArrowLeft, Users, Hash, Clock } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { authService } from "@/lib/auth.service";
 
 interface Group {
   id: number;
@@ -59,6 +60,7 @@ interface QuotaSelectionProps {
   selectedCreditRange: CreditRange;
   onQuotaSelect: (quota: Quota, group: Group) => void;
   onBack: () => void;
+  isAdminMode?: boolean;
 }
 
 const QuotaSelection: React.FC<QuotaSelectionProps> = ({
@@ -66,6 +68,7 @@ const QuotaSelection: React.FC<QuotaSelectionProps> = ({
   selectedCreditRange,
   onQuotaSelect,
   onBack,
+  isAdminMode = false,
 }) => {
   const [groups, setGroups] = useState<Group[]>([]);
   const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
@@ -73,10 +76,22 @@ const QuotaSelection: React.FC<QuotaSelectionProps> = ({
   const [selectedQuota, setSelectedQuota] = useState<Quota | null>(null);
   const [loading, setLoading] = useState(true);
   const [reserving, setReserving] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
+
+  // Get current user to check role - same pattern as CommissionTableSelection
+  const currentUser = authService.getCurrentUser();
+  const adminEmails = ["admin@credicar.com", "admin@credcar.com", "admin@agenciadev.com"];
+  const isAdmin =
+    isAdminMode || // Se está no modo admin, sempre mostrar grupos privados
+    currentUser?.role === "Administrador" ||
+    currentUser?.role === "admin" ||
+    adminEmails.includes(currentUser?.email?.toLowerCase() || "") ||
+    (currentUser?.email && currentUser.email.toLowerCase().includes("admin"));
+
+  console.log("🔍 QuotaSelection - Current User:", currentUser);
+  console.log("🔍 QuotaSelection - Is Admin Mode:", isAdminMode);
+  console.log("🔐 QuotaSelection - Is Admin:", isAdmin);
 
   useEffect(() => {
-    checkUserRole();
     fetchGroups();
   }, []);
 
@@ -85,32 +100,6 @@ const QuotaSelection: React.FC<QuotaSelectionProps> = ({
       fetchQuotas(selectedGroup.id);
     }
   }, [selectedGroup]);
-
-  const checkUserRole = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      console.log("🔍 QuotaSelection - User:", user?.id);
-      if (!user) {
-        console.log("❌ QuotaSelection - No user found");
-        setIsAdmin(false);
-        return;
-      }
-
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("user_type")
-        .eq("id", user.id)
-        .single();
-
-      console.log("👤 QuotaSelection - User Type:", profile?.user_type);
-      const adminStatus = profile?.user_type === "admin";
-      console.log("🔐 QuotaSelection - Is Admin:", adminStatus);
-      setIsAdmin(adminStatus);
-    } catch (error) {
-      console.error("Error checking user role:", error);
-      setIsAdmin(false);
-    }
-  };
 
   const fetchGroups = async () => {
     try {

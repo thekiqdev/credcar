@@ -417,6 +417,7 @@ const ContractCreationFlow: React.FC<ContractCreationFlowProps> = ({
               selectedCreditRange={selectedCreditRange}
               onQuotaSelect={handleQuotaSelect}
               onBack={handleBackToCreditSelection}
+              isAdminMode={isAdminMode}
             />
           </div>
         )}
