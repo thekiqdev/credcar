@@ -683,10 +683,11 @@ const ContractDetails: React.FC<{
   };
 
   const handleSaveContent = async () => {
-    if (!contract || !currentUser) return;
+    if (!contract) return;
 
     try {
       setIsProcessing(true);
+      console.log('💾 Starting to save contract content...');
 
       const content = editorRef.current
         ? editorRef.current.getContent()
@@ -694,8 +695,9 @@ const ContractDetails: React.FC<{
 
       console.log("Saving contract content:", {
         contractId: contract.id,
-        userId: currentUser.id,
+        userId: currentUser?.id || 'admin-mode',
         isAdmin,
+        isAdminMode,
         contentLength: content.length,
       });
 
