@@ -141,10 +141,19 @@ const ContractDetails: React.FC<ContractDetailsProps> = ({
 
   // Check if edit mode should be enabled after contract is loaded
   useEffect(() => {
+    console.log('🔍 useEffect edit mode check:', {
+      contract: !!contract,
+      canEditOrDelete,
+      contractId: contract?.id,
+      contractStatus: contract?.status
+    });
+    
     if (contract && canEditOrDelete) {
       // Check if edit mode is requested via URL parameter
       const urlParams = new URLSearchParams(window.location.search);
       const editParam = urlParams.get("edit");
+      console.log('🔍 URL params:', { editParam, fullUrl: window.location.href });
+      
       if (editParam === "true") {
         console.log('🔧 Edit mode detected from URL, activating editor...');
         setIsEditMode(true);
@@ -778,10 +787,12 @@ const ContractDetails: React.FC<ContractDetailsProps> = ({
 
   const handleEditContent = () => {
     const currentContent = contract?.contract_content || "";
-    console.log(
-      "Starting content edit with content length:",
-      currentContent.length,
-    );
+    console.log('🔧 handleEditContent called:', {
+      contentLength: currentContent.length,
+      isEditMode,
+      isEditingContent,
+      contractId: contract?.id
+    });
     setEditedContent(currentContent);
     setIsEditingContent(true);
     setIsEditMode(true);
