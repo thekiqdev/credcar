@@ -96,6 +96,8 @@ const RepresentativeProfile: React.FC<RepresentativeProfileProps> = () => {
   const [documents, setDocuments] = useState<any[]>([]);
   const [isLoadingDocuments, setIsLoadingDocuments] = useState(false);
   const [contractProfile, setContractProfile] = useState<string | null>(null);
+  const [allContracts, setAllContracts] = useState<any[]>([]);
+  const [isLoadingContracts, setIsLoadingContracts] = useState(true);
 
   // Load representative data
   useEffect(() => {
@@ -110,8 +112,9 @@ const RepresentativeProfile: React.FC<RepresentativeProfileProps> = () => {
           setAccountStatus(data.status);
           setEditData(data);
           setContractProfile(data.contract_profile || null);
-          // Load documents
+          // Load documents and contracts
           await loadDocuments(id);
+          await loadContracts(id);
         }
       } catch (error) {
         console.error("Error loading representative:", error);
@@ -138,6 +141,55 @@ const RepresentativeProfile: React.FC<RepresentativeProfileProps> = () => {
       setDocuments([]);
     } finally {
       setIsLoadingDocuments(false);
+    }
+  };
+
+  // Load contracts for representative
+  const loadContracts = async (representativeId: string) => {
+    try {
+      setIsLoadingContracts(true);
+      console.log('📋 Loading contracts for representative:', representativeId);
+      
+      const { data: contracts, error } = await supabase
+        .from('contracts')
+        .select(`
+          id,
+          contract_number,
+          credit_amount,
+          first_payment,
+          remaining_payments,
+          payment_term,
+          status,
+          created_at,
+          clients!inner (
+            id,
+            full_name,
+            email,
+            phone,
+            cpf_cnpj
+          ),
+          planos!inner (
+            id,
+            nome,
+            descricao,
+            comissao
+          )
+        `)
+        .eq('representative_id', representativeId)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error loading contracts:', error);
+        throw error;
+      }
+
+      console.log('✅ Contracts loaded:', contracts?.length || 0);
+      setAllContracts(contracts || []);
+    } catch (error) {
+      console.error('Error loading contracts:', error);
+      setAllContracts([]);
+    } finally {
+      setIsLoadingContracts(false);
     }
   };
 
@@ -189,66 +241,6 @@ const RepresentativeProfile: React.FC<RepresentativeProfileProps> = () => {
     setEditData(representative);
     setIsEditing(false);
   };
-
-  // Mock all contracts for this representative
-  const allContracts = [
-    {
-      id: "PV-2023-001",
-      client: "João Silva",
-      value: "R$ 45.000",
-      status: "Aprovado",
-      date: "15/12/2023",
-    },
-    {
-      id: "PV-2023-002",
-      client: "Maria Santos",
-      value: "R$ 38.500",
-      status: "Em Avaliação",
-      date: "12/12/2023",
-    },
-    {
-      id: "PV-2023-003",
-      client: "Pedro Costa",
-      value: "R$ 52.000",
-      status: "Aprovado",
-      date: "10/12/2023",
-    },
-    {
-      id: "PV-2023-004",
-      client: "Lucia Ferreira",
-      value: "R$ 41.200",
-      status: "Em Avaliação",
-      date: "08/12/2023",
-    },
-    {
-      id: "PV-2023-005",
-      client: "Roberto Alves",
-      value: "R$ 36.800",
-      status: "Aprovado",
-      date: "05/12/2023",
-    },
-    {
-      id: "PV-2023-006",
-      client: "Ana Costa",
-      value: "R$ 28.900",
-      status: "Reprovado",
-      date: "03/12/2023",
-    },
-    {
-      id: "PV-2023-007",
-      client: "Carlos Lima",
-      value: "R$ 67.500",
-      status: "Aprovado",
-      date: "01/12/2023",
-    },
-    {
-      id: "PV-2023-008",
-      client: "Fernanda Silva",
-      value: "R$ 33.200",
-      status: "Reprovado",
-      date: "28/11/2023",
-    },
-  ];
 
   const filteredContracts =
     contractFilter === "all"
@@ -712,57 +704,79 @@ const RepresentativeProfile: React.FC<RepresentativeProfileProps> = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredContracts.map((contract) => (
-                  <TableRow key={contract.id}>
-                    <TableCell className="font-medium">{contract.id}</TableCell>
-                    <TableCell>{contract.client}</TableCell>
-                    <TableCell>{contract.value}</TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={
-                          contract.status === "Aprovado"
-                            ? "default"
-                            : contract.status === "Reprovado"
-                              ? "destructive"
-                              : "outline"
-                        }
-                      >
-                        {contract.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {contract.date}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center space-x-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleViewContract(contract.id)}
-                          title="Ver detalhes"
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleEditContract(contract.id)}
-                          title="Editar contrato"
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDeleteContract(contract)}
-                          title="Excluir contrato"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                {isLoadingContracts ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-8">
+                      <div className="flex items-center justify-center">
+                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-red-600 mr-2"></div>
+                        Carregando contratos...
                       </div>
                     </TableCell>
                   </TableRow>
-                ))}
+                ) : filteredContracts.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                      Nenhum contrato encontrado
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredContracts.map((contract) => (
+                    <TableRow key={contract.id}>
+                      <TableCell className="font-medium">{contract.contract_number}</TableCell>
+                      <TableCell>{contract.clients?.full_name || 'N/A'}</TableCell>
+                      <TableCell>
+                        {new Intl.NumberFormat('pt-BR', {
+                          style: 'currency',
+                          currency: 'BRL'
+                        }).format(contract.credit_amount)}
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={
+                            contract.status === "Aprovado"
+                              ? "default"
+                              : contract.status === "Reprovado"
+                                ? "destructive"
+                                : "outline"
+                          }
+                        >
+                          {contract.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {new Date(contract.created_at).toLocaleDateString('pt-BR')}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center space-x-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleViewContract(contract.id)}
+                            title="Ver detalhes"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEditContract(contract.id)}
+                            title="Editar contrato"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteContract(contract)}
+                            title="Excluir contrato"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
             {filteredContracts.length === 0 && (
