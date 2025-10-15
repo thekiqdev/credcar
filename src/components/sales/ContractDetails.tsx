@@ -552,7 +552,30 @@ const ContractDetails: React.FC<{
             email,
             phone,
             cpf_cnpj,
-            address
+            address,
+            // Novos campos de identificação
+            rg,
+            birth_date,
+            nationality,
+            marital_status,
+            spouse_name,
+            spouse_phone,
+            // Novos campos profissionais
+            company,
+            salary,
+            position,
+            // Novos campos de referências pessoais
+            reference_name,
+            reference_address,
+            reference_phone,
+            // Campos separados do endereço
+            address_street,
+            address_number,
+            address_complement,
+            address_neighborhood,
+            address_city,
+            address_state,
+            address_zip
           ),
           planos!inner (
             id,
@@ -814,6 +837,29 @@ const ContractDetails: React.FC<{
         city: contract.clients.city,
         state: contract.clients.state,
         zip_code: contract.clients.zip_code,
+        // Novos campos de identificação
+        rg: contract.clients.rg,
+        birth_date: contract.clients.birth_date,
+        nationality: contract.clients.nationality,
+        marital_status: contract.clients.marital_status,
+        spouse_name: contract.clients.spouse_name,
+        spouse_phone: contract.clients.spouse_phone,
+        // Novos campos profissionais
+        company: contract.clients.company,
+        salary: contract.clients.salary,
+        position: contract.clients.position,
+        // Novos campos de referências pessoais
+        reference_name: contract.clients.reference_name,
+        reference_address: contract.clients.reference_address,
+        reference_phone: contract.clients.reference_phone,
+        // Campos separados do endereço
+        address_street: contract.clients.address_street,
+        address_number: contract.clients.address_number,
+        address_complement: contract.clients.address_complement,
+        address_neighborhood: contract.clients.address_neighborhood,
+        address_city: contract.clients.address_city,
+        address_state: contract.clients.address_state,
+        address_zip: contract.clients.address_zip,
       } : undefined,
       contract: {
         value: parseFloat(contract.credit_amount || '0'),
