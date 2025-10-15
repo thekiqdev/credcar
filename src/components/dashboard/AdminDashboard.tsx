@@ -915,6 +915,14 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
           phone: editingClient.phone,
           cpf_cnpj: editingClient.cpf_cnpj,
           address: editingClient.address,
+          // Campos separados do endereço
+          address_street: editingClient.address_street,
+          address_number: editingClient.address_number,
+          address_complement: editingClient.address_complement,
+          address_neighborhood: editingClient.address_neighborhood,
+          address_city: editingClient.address_city,
+          address_state: editingClient.address_state,
+          address_zip: editingClient.address_zip,
           // Novos campos de identificação
           rg: editingClient.rg,
           birth_date: editingClient.birth_date,
@@ -9853,10 +9861,118 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 {/* Endereço */}
                 <div className="space-y-4">
                   <h3 className="text-lg font-semibold">Endereço</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="md:col-span-2">
+                      <Label htmlFor="edit-address-street">Logradouro</Label>
+                      <Input
+                        id="edit-address-street"
+                        value={editingClient.address_street || ""}
+                        onChange={(e) =>
+                          setEditingClient({
+                            ...editingClient,
+                            address_street: e.target.value,
+                          })
+                        }
+                        placeholder="Rua, Avenida, etc."
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="edit-address-number">Número</Label>
+                      <Input
+                        id="edit-address-number"
+                        value={editingClient.address_number || ""}
+                        onChange={(e) =>
+                          setEditingClient({
+                            ...editingClient,
+                            address_number: e.target.value,
+                          })
+                        }
+                        placeholder="123"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="edit-address-complement">Complemento</Label>
+                      <Input
+                        id="edit-address-complement"
+                        value={editingClient.address_complement || ""}
+                        onChange={(e) =>
+                          setEditingClient({
+                            ...editingClient,
+                            address_complement: e.target.value,
+                          })
+                        }
+                        placeholder="Apto, Bloco, etc. (opcional)"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="edit-address-neighborhood">Bairro</Label>
+                      <Input
+                        id="edit-address-neighborhood"
+                        value={editingClient.address_neighborhood || ""}
+                        onChange={(e) =>
+                          setEditingClient({
+                            ...editingClient,
+                            address_neighborhood: e.target.value,
+                          })
+                        }
+                        placeholder="Nome do bairro"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <Label htmlFor="edit-address-city">Cidade</Label>
+                      <Input
+                        id="edit-address-city"
+                        value={editingClient.address_city || ""}
+                        onChange={(e) =>
+                          setEditingClient({
+                            ...editingClient,
+                            address_city: e.target.value,
+                          })
+                        }
+                        placeholder="Nome da cidade"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="edit-address-state">Estado</Label>
+                      <Input
+                        id="edit-address-state"
+                        value={editingClient.address_state || ""}
+                        onChange={(e) =>
+                          setEditingClient({
+                            ...editingClient,
+                            address_state: e.target.value.toUpperCase(),
+                          })
+                        }
+                        placeholder="SP"
+                        maxLength={2}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="edit-address-zip">CEP</Label>
+                      <Input
+                        id="edit-address-zip"
+                        value={editingClient.address_zip || ""}
+                        onChange={(e) =>
+                          setEditingClient({
+                            ...editingClient,
+                            address_zip: e.target.value,
+                          })
+                        }
+                        placeholder="00000-000"
+                      />
+                    </div>
+                  </div>
+                  
                   <div>
-                    <Label htmlFor="edit-address">Endereço Completo</Label>
+                    <Label htmlFor="edit-address-full">Endereço Completo</Label>
                     <Input
-                      id="edit-address"
+                      id="edit-address-full"
                       value={editingClient.address || ""}
                       onChange={(e) =>
                         setEditingClient({
@@ -9864,6 +9980,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           address: e.target.value,
                         })
                       }
+                      placeholder="Endereço completo (gerado automaticamente)"
                     />
                   </div>
                 </div>

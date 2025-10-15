@@ -1723,6 +1723,14 @@ const ContractDetails: React.FC<{
                               phone: contract.client.phone,
                               cpf_cnpj: contract.client.cpf_cnpj,
                               address: contract.client.address,
+                              // Campos separados do endereço
+                              address_street: contract.client.address_street,
+                              address_number: contract.client.address_number,
+                              address_complement: contract.client.address_complement,
+                              address_neighborhood: contract.client.address_neighborhood,
+                              address_city: contract.client.address_city,
+                              address_state: contract.client.address_state,
+                              address_zip: contract.client.address_zip,
                               // Novos campos de identificação
                               rg: contract.client.rg,
                               birth_date: contract.client.birth_date,

@@ -191,11 +191,16 @@ const ContractCreationFlow: React.FC<ContractCreationFlowProps> = ({
         }
       }
 
-      // Parse address components from the full address string
-      const addressParts = clientData.address.split(", ");
-      const [street, number, complement, neighborhood, cityState, zip] =
-        addressParts;
-      const [city, state] = cityState ? cityState.split(" - ") : ["", ""];
+      // Use address components directly from clientData
+      const addressComponents = {
+        street: clientData.address_street || "",
+        number: clientData.address_number || "",
+        complement: clientData.address_complement || "",
+        neighborhood: clientData.address_neighborhood || "",
+        city: clientData.address_city || "",
+        state: clientData.address_state || "",
+        zip: clientData.address_zip || "",
+      };
 
       // Check if client already exists
       let clientId: number;
@@ -214,6 +219,14 @@ const ContractCreationFlow: React.FC<ContractCreationFlowProps> = ({
             phone: clientData.phone,
             cpf_cnpj: clientData.cpf_cnpj,
             address: clientData.address, // Using single address field as per schema
+            // Campos separados do endereço
+            address_street: addressComponents.street,
+            address_number: addressComponents.number,
+            address_complement: addressComponents.complement,
+            address_neighborhood: addressComponents.neighborhood,
+            address_city: addressComponents.city,
+            address_state: addressComponents.state,
+            address_zip: addressComponents.zip,
             // Novos campos de identificação
             rg: clientData.rg,
             birth_date: clientData.birth_date,
@@ -245,6 +258,14 @@ const ContractCreationFlow: React.FC<ContractCreationFlowProps> = ({
               phone: clientData.phone,
               cpf_cnpj: clientData.cpf_cnpj,
               address: clientData.address, // Using single address field as per schema
+              // Campos separados do endereço
+              address_street: addressComponents.street,
+              address_number: addressComponents.number,
+              address_complement: addressComponents.complement,
+              address_neighborhood: addressComponents.neighborhood,
+              address_city: addressComponents.city,
+              address_state: addressComponents.state,
+              address_zip: addressComponents.zip,
               // Novos campos de identificação
               rg: clientData.rg,
               birth_date: clientData.birth_date,
