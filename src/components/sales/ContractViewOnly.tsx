@@ -670,7 +670,7 @@ const ContractViewOnly: React.FC = () => {
           <CardContent className="print:p-0">
             {contract.contract_content ? (
               <div
-                className="prose max-w-none p-4 border rounded-md bg-white print:border-0 print:p-0 print:bg-transparent"
+                className="prose max-w-none p-4 rounded-md bg-white print:p-0 print:bg-transparent"
                 dangerouslySetInnerHTML={{
                   __html: renderContractContentWithSignatures(
                     contract.contract_content,

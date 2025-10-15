@@ -2606,7 +2606,7 @@ const ContractDetails: React.FC<{
                           <FileText className="h-5 w-5" />
                           Visualização do Contrato com Assinaturas
                         </h3>
-                        <div className="bg-white rounded-lg p-6">
+                        <div className="bg-white border rounded-lg p-6">
                           <div
                             className="prose max-w-none"
                             dangerouslySetInnerHTML={{
