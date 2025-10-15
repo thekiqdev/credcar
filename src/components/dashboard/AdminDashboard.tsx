@@ -523,6 +523,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     }
   }, [activeSection]);
 
+  // Carregar clientes quando a seção de clients for ativada
+  useEffect(() => {
+    if (activeSection === "clients") {
+      loadAllClients();
+    }
+  }, [activeSection]);
+
   // Email settings state
   const [emailSettings, setEmailSettings] = useState({
     provider: "smtp",
@@ -567,6 +574,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [isLoadingClients, setIsLoadingClients] = useState(true);
   const [isLoadingInternalUsers, setIsLoadingInternalUsers] = useState(true);
   const [clientsFilter, setClientsFilter] = useState("all");
+  
+  // Client edit modal state
+  const [isClientEditModalOpen, setIsClientEditModalOpen] = useState(false);
+  const [editingClient, setEditingClient] = useState(null);
+  const [isSavingClient, setIsSavingClient] = useState(false);
   const [clientsSearch, setClientsSearch] = useState("");
 
   // Global search state
@@ -879,6 +891,65 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       console.error("Error loading clients:", error);
     } finally {
       setIsLoadingClients(false);
+    }
+  };
+
+  // Função para abrir modal de edição de cliente
+  const handleEditClient = (client: any) => {
+    setEditingClient(client);
+    setIsClientEditModalOpen(true);
+  };
+
+  // Função para salvar alterações do cliente
+  const handleSaveClient = async () => {
+    if (!editingClient) return;
+
+    try {
+      setIsSavingClient(true);
+      
+      const { error } = await supabase
+        .from("clients")
+        .update({
+          full_name: editingClient.full_name,
+          email: editingClient.email,
+          phone: editingClient.phone,
+          cpf_cnpj: editingClient.cpf_cnpj,
+          address: editingClient.address,
+          // Novos campos de identificação
+          rg: editingClient.rg,
+          birth_date: editingClient.birth_date,
+          nationality: editingClient.nationality,
+          marital_status: editingClient.marital_status,
+          spouse_name: editingClient.spouse_name,
+          spouse_phone: editingClient.spouse_phone,
+          // Novos campos profissionais
+          company: editingClient.company,
+          salary: editingClient.salary,
+          position: editingClient.position,
+          // Novos campos de referências pessoais
+          reference_name: editingClient.reference_name,
+          reference_address: editingClient.reference_address,
+          reference_phone: editingClient.reference_phone,
+        })
+        .eq("id", editingClient.id);
+
+      if (error) {
+        throw new Error(`Erro ao salvar cliente: ${error.message}`);
+      }
+
+      // Atualizar a lista de clientes
+      await loadAllClients();
+      
+      // Fechar modal
+      setIsClientEditModalOpen(false);
+      setEditingClient(null);
+      
+      alert("Cliente atualizado com sucesso!");
+    } catch (error) {
+      console.error("Error saving client:", error);
+      alert(error instanceof Error ? error.message : "Erro desconhecido");
+    } finally {
+      setIsSavingClient(false);
     }
   };
 
@@ -6707,7 +6778,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                       >
                                         <Eye className="h-4 w-4" />
                                       </Button>
-                                      <Button variant="outline" size="sm">
+                                      <Button 
+                                        variant="outline" 
+                                        size="sm"
+                                        onClick={() => handleEditClient(client)}
+                                        title="Editar cliente"
+                                      >
                                         <Edit className="h-4 w-4" />
                                       </Button>
                                     </div>
@@ -9512,6 +9588,304 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 }}
               >
                 Fechar
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Modal de Edição de Cliente */}
+        <Dialog open={isClientEditModalOpen} onOpenChange={setIsClientEditModalOpen}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Editar Cliente</DialogTitle>
+              <DialogDescription>
+                Edite as informações do cliente
+              </DialogDescription>
+            </DialogHeader>
+            
+            {editingClient && (
+              <div className="space-y-6">
+                {/* Dados Pessoais */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold">Dados Pessoais</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="edit-full-name">Nome Completo</Label>
+                      <Input
+                        id="edit-full-name"
+                        value={editingClient.full_name || ""}
+                        onChange={(e) =>
+                          setEditingClient({
+                            ...editingClient,
+                            full_name: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="edit-cpf-cnpj">CPF/CNPJ</Label>
+                      <Input
+                        id="edit-cpf-cnpj"
+                        value={editingClient.cpf_cnpj || ""}
+                        onChange={(e) =>
+                          setEditingClient({
+                            ...editingClient,
+                            cpf_cnpj: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Identificação */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold">Identificação</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="edit-rg">RG</Label>
+                      <Input
+                        id="edit-rg"
+                        value={editingClient.rg || ""}
+                        onChange={(e) =>
+                          setEditingClient({
+                            ...editingClient,
+                            rg: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="edit-birth-date">Data de Nascimento</Label>
+                      <Input
+                        id="edit-birth-date"
+                        type="date"
+                        value={editingClient.birth_date || ""}
+                        onChange={(e) =>
+                          setEditingClient({
+                            ...editingClient,
+                            birth_date: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="edit-nationality">Nacionalidade</Label>
+                      <Input
+                        id="edit-nationality"
+                        value={editingClient.nationality || ""}
+                        onChange={(e) =>
+                          setEditingClient({
+                            ...editingClient,
+                            nationality: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="edit-marital-status">Estado Civil</Label>
+                      <Input
+                        id="edit-marital-status"
+                        value={editingClient.marital_status || ""}
+                        onChange={(e) =>
+                          setEditingClient({
+                            ...editingClient,
+                            marital_status: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="edit-spouse-name">Nome do Cônjuge</Label>
+                      <Input
+                        id="edit-spouse-name"
+                        value={editingClient.spouse_name || ""}
+                        onChange={(e) =>
+                          setEditingClient({
+                            ...editingClient,
+                            spouse_name: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="edit-spouse-phone">Celular do Cônjuge</Label>
+                      <Input
+                        id="edit-spouse-phone"
+                        value={editingClient.spouse_phone || ""}
+                        onChange={(e) =>
+                          setEditingClient({
+                            ...editingClient,
+                            spouse_phone: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Contato */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold">Contato</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="edit-email">Email</Label>
+                      <Input
+                        id="edit-email"
+                        type="email"
+                        value={editingClient.email || ""}
+                        onChange={(e) =>
+                          setEditingClient({
+                            ...editingClient,
+                            email: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="edit-phone">Telefone</Label>
+                      <Input
+                        id="edit-phone"
+                        value={editingClient.phone || ""}
+                        onChange={(e) =>
+                          setEditingClient({
+                            ...editingClient,
+                            phone: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Dados Profissionais */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold">Dados Profissionais</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="edit-company">Empresa</Label>
+                      <Input
+                        id="edit-company"
+                        value={editingClient.company || ""}
+                        onChange={(e) =>
+                          setEditingClient({
+                            ...editingClient,
+                            company: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="edit-position">Cargo</Label>
+                      <Input
+                        id="edit-position"
+                        value={editingClient.position || ""}
+                        onChange={(e) =>
+                          setEditingClient({
+                            ...editingClient,
+                            position: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="edit-salary">Salário</Label>
+                      <Input
+                        id="edit-salary"
+                        value={editingClient.salary || ""}
+                        onChange={(e) =>
+                          setEditingClient({
+                            ...editingClient,
+                            salary: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Referências Pessoais */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold">Referências Pessoais</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="edit-reference-name">Nome da Referência</Label>
+                      <Input
+                        id="edit-reference-name"
+                        value={editingClient.reference_name || ""}
+                        onChange={(e) =>
+                          setEditingClient({
+                            ...editingClient,
+                            reference_name: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="edit-reference-phone">Telefone da Referência</Label>
+                      <Input
+                        id="edit-reference-phone"
+                        value={editingClient.reference_phone || ""}
+                        onChange={(e) =>
+                          setEditingClient({
+                            ...editingClient,
+                            reference_phone: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+                    <div className="md:col-span-2">
+                      <Label htmlFor="edit-reference-address">Endereço da Referência</Label>
+                      <Input
+                        id="edit-reference-address"
+                        value={editingClient.reference_address || ""}
+                        onChange={(e) =>
+                          setEditingClient({
+                            ...editingClient,
+                            reference_address: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Endereço */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold">Endereço</h3>
+                  <div>
+                    <Label htmlFor="edit-address">Endereço Completo</Label>
+                    <Input
+                      id="edit-address"
+                      value={editingClient.address || ""}
+                      onChange={(e) =>
+                        setEditingClient({
+                          ...editingClient,
+                          address: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setIsClientEditModalOpen(false);
+                  setEditingClient(null);
+                }}
+              >
+                Cancelar
+              </Button>
+              <Button
+                onClick={handleSaveClient}
+                disabled={isSavingClient}
+                className="bg-green-600 hover:bg-green-700"
+              >
+                {isSavingClient ? "Salvando..." : "Salvar Alterações"}
               </Button>
             </DialogFooter>
           </DialogContent>
