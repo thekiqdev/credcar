@@ -530,6 +530,25 @@ const ContractViewOnly: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* CSS para garantir consistência com TinyMCE */}
+      <style>{`
+        .contract-content table {
+          border-collapse: collapse;
+          width: 100%;
+        }
+        .contract-content table td, 
+        .contract-content table th {
+          border: 1px solid #ddd;
+          padding: 8px;
+        }
+        .contract-content table th {
+          background-color: #f2f2f2;
+        }
+        .contract-content p {
+          margin: 0 0 1em 0;
+        }
+      `}</style>
+      
       {/* Company Header */}
       {generalSettings && (
         <div className="bg-white border-b print:hidden">
@@ -670,7 +689,13 @@ const ContractViewOnly: React.FC = () => {
           <CardContent className="print:p-0">
             {contract.contract_content ? (
               <div
-                className="prose max-w-none p-4 rounded-md bg-white print:p-0 print:bg-transparent"
+                className="contract-content prose max-w-none p-4 rounded-md bg-white print:p-0 print:bg-transparent"
+                style={{
+                  fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif",
+                  fontSize: "14px",
+                  lineHeight: "1.6",
+                  color: "#333"
+                }}
                 dangerouslySetInnerHTML={{
                   __html: renderContractContentWithSignatures(
                     contract.contract_content,

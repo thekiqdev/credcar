@@ -1423,6 +1423,25 @@ const ContractDetails: React.FC<{
 
   return (
     <div className="bg-background">
+      {/* CSS para garantir consistência com TinyMCE */}
+      <style>{`
+        .contract-content table {
+          border-collapse: collapse;
+          width: 100%;
+        }
+        .contract-content table td, 
+        .contract-content table th {
+          border: 1px solid #ddd;
+          padding: 8px;
+        }
+        .contract-content table th {
+          background-color: #f2f2f2;
+        }
+        .contract-content p {
+          margin: 0 0 1em 0;
+        }
+      `}</style>
+      
       {/* Header */}
       <header className="border-b bg-background p-4">
         <div className="flex items-center justify-between">
@@ -2608,7 +2627,13 @@ const ContractDetails: React.FC<{
                         </h3>
                         <div className="bg-white border rounded-lg p-6">
                           <div
-                            className="prose max-w-none"
+                            className="contract-content prose max-w-none"
+                            style={{
+                              fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif",
+                              fontSize: "14px",
+                              lineHeight: "1.6",
+                              color: "#333"
+                            }}
                             dangerouslySetInnerHTML={{
                               __html: renderContractContentWithSignatures(
                                 contract.contract_content,

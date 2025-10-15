@@ -543,6 +543,65 @@ app.get('/api/test-contract-profile-migration', async (req, res) => {
   }
 });
 
+// Rota para upload de logo do sistema
+app.post('/api/upload-system-logo', upload.single('file'), async (req, res) => {
+  try {
+    console.log('📤 Recebendo upload de logo do sistema...');
+    
+    if (!req.file) {
+      return res.status(400).json({ error: 'Nenhum arquivo enviado' });
+    }
+
+    // Validar tipo de arquivo
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/svg+xml'];
+    if (!allowedTypes.includes(req.file.mimetype)) {
+      return res.status(400).json({ error: 'Apenas arquivos de imagem são permitidos (JPEG, PNG, GIF, SVG)' });
+    }
+
+    // Validar tamanho (máximo 5MB para logos)
+    if (req.file.size > 5 * 1024 * 1024) {
+      return res.status(400).json({ error: 'Arquivo muito grande. Tamanho máximo: 5MB' });
+    }
+
+    // Criar diretório para logos do sistema
+    const logoDir = path.join(__dirname, 'documentos', 'sistema', 'logos');
+    if (!fs.existsSync(logoDir)) {
+      fs.mkdirSync(logoDir, { recursive: true });
+    }
+
+    // Gerar nome único para o arquivo
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const fileExtension = path.extname(req.file.originalname);
+    const fileName = `logo-${timestamp}${fileExtension}`;
+    const filePath = path.join(logoDir, fileName);
+
+    // Mover arquivo para o diretório final
+    fs.renameSync(req.file.path, filePath);
+
+    // Gerar URL de download
+    const relativePath = path.relative(__dirname, filePath).replace(/\\/g, '/');
+    const downloadUrl = `${req.protocol}://${req.get('host')}/api/download-file?path=${encodeURIComponent(relativePath)}`;
+
+    console.log('✅ Logo do sistema salvo com sucesso:', relativePath);
+
+    res.json({
+      success: true,
+      data: {
+        fileName: fileName,
+        filePath: relativePath,
+        downloadUrl: downloadUrl,
+        originalName: req.file.originalname,
+        size: req.file.size,
+        mimeType: req.file.mimetype
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Erro no upload do logo:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
 // Rota para upload de contrato representante
 app.post('/api/upload-representative-contract', upload.single('file'), validateFile, (req, res) => {
   try {

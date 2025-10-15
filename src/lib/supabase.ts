@@ -3587,8 +3587,29 @@ export const generalSettingsService = {
   // Get general settings
   async getSettings() {
     try {
-      // Return default settings since general_settings table is not in the schema
-      return {
+      const { data, error } = await supabase
+        .from('system_general_config')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (error) {
+        console.error('Error fetching general settings:', error);
+        // Return default settings if no data found
+        return {
+          system_name: "CredCar",
+          company_name: "CredCar Soluções Financeiras",
+          company_address: "Rua das Empresas, 123 - Centro - São Paulo/SP",
+          company_phone: "(11) 3000-0000",
+          company_email: "contato@credcar.com.br",
+          company_cnpj: "12.345.678/0001-90",
+          logo_url: "",
+          logo_file_path: "",
+        };
+      }
+
+      return data || {
         system_name: "CredCar",
         company_name: "CredCar Soluções Financeiras",
         company_address: "Rua das Empresas, 123 - Centro - São Paulo/SP",
@@ -3596,6 +3617,7 @@ export const generalSettingsService = {
         company_email: "contato@credcar.com.br",
         company_cnpj: "12.345.678/0001-90",
         logo_url: "",
+        logo_file_path: "",
       };
     } catch (error) {
       console.error("Error in generalSettingsService.getSettings:", error);
@@ -3612,14 +3634,54 @@ export const generalSettingsService = {
     company_email?: string;
     company_cnpj?: string;
     logo_url?: string;
+    logo_file_path?: string;
   }) {
     try {
-      // Since general_settings table is not in the schema, just return the settings
-      console.log("Settings update requested:", settings);
-      return {
-        ...settings,
-        updated_at: new Date().toISOString(),
-      };
+      // First, try to get existing record
+      const { data: existingData } = await supabase
+        .from('system_general_config')
+        .select('id')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (existingData) {
+        // Update existing record
+        const { data, error } = await supabase
+          .from('system_general_config')
+          .update({
+            ...settings,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', existingData.id)
+          .select()
+          .single();
+
+        if (error) {
+          console.error('Error updating general settings:', error);
+          throw error;
+        }
+
+        return data;
+      } else {
+        // Insert new record
+        const { data, error } = await supabase
+          .from('system_general_config')
+          .insert([{
+            ...settings,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          }])
+          .select()
+          .single();
+
+        if (error) {
+          console.error('Error inserting general settings:', error);
+          throw error;
+        }
+
+        return data;
+      }
     } catch (error) {
       console.error("Error in generalSettingsService.updateSettings:", error);
       throw error;
