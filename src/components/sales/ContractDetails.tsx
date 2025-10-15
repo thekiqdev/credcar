@@ -691,6 +691,69 @@ const ContractDetails: React.FC<{
       };
 
       setContract(contractData);
+      
+      // Aplicar mesclagem automática no conteúdo do contrato
+      if (contractData.contract_content) {
+        const mergeData: MergeData = {
+          client: contractData.client ? {
+            full_name: contractData.client.full_name,
+            email: contractData.client.email,
+            phone: contractData.client.phone,
+            cpf_cnpj: contractData.client.cpf_cnpj,
+            address: contractData.client.address,
+            city: contractData.client.city,
+            state: contractData.client.state,
+            zip_code: contractData.client.zip_code,
+            // Novos campos de identificação
+            rg: contractData.client.rg,
+            birth_date: contractData.client.birth_date,
+            nationality: contractData.client.nationality,
+            marital_status: contractData.client.marital_status,
+            spouse_name: contractData.client.spouse_name,
+            spouse_phone: contractData.client.spouse_phone,
+            // Novos campos profissionais
+            company: contractData.client.company,
+            salary: contractData.client.salary,
+            position: contractData.client.position,
+            // Novos campos de referências pessoais
+            reference_name: contractData.client.reference_name,
+            reference_address: contractData.client.reference_address,
+            reference_phone: contractData.client.reference_phone,
+            // Campos separados do endereço
+            address_street: contractData.client.address_street,
+            address_number: contractData.client.address_number,
+            address_complement: contractData.client.address_complement,
+            address_neighborhood: contractData.client.address_neighborhood,
+            address_city: contractData.client.address_city,
+            address_state: contractData.client.address_state,
+            address_zip: contractData.client.address_zip,
+          } : undefined,
+          contract: {
+            value: contractData.total_value,
+            installments: contractData.total_installments,
+            number: contractData.contract_code,
+            date: new Date(contractData.created_at).toLocaleDateString('pt-BR'),
+            status: contractData.status,
+          },
+          representative: contractData.representative ? {
+            name: contractData.representative.full_name,
+            email: contractData.representative.email,
+            phone: contractData.representative.phone,
+          } : undefined,
+        };
+        
+        // Aplicar mesclagem
+        const mergedContent = mergePlaceholders(contractData.contract_content, mergeData);
+        
+        // Atualizar o contrato com o conteúdo mesclado
+        setContract({
+          ...contractData,
+          contract_content: mergedContent
+        });
+        
+        // Definir o conteúdo editado para o editor
+        setEditedContent(mergedContent);
+      }
     } catch (err) {
       console.error("Error loading contract details:", err);
       const errorMessage =
