@@ -1225,9 +1225,3 @@ export const Constants = {
     },
   },
 } as const
-
-export interface ContractDetailsProps {
-  contractId?: string;
-  onBack?: () => void;
-  isEditMode?: boolean;
-}

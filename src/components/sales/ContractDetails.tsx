@@ -1723,6 +1723,21 @@ const ContractDetails: React.FC<{
                               phone: contract.client.phone,
                               cpf_cnpj: contract.client.cpf_cnpj,
                               address: contract.client.address,
+                              // Novos campos de identificação
+                              rg: contract.client.rg,
+                              birth_date: contract.client.birth_date,
+                              nationality: contract.client.nationality,
+                              marital_status: contract.client.marital_status,
+                              spouse_name: contract.client.spouse_name,
+                              spouse_phone: contract.client.spouse_phone,
+                              // Novos campos profissionais
+                              company: contract.client.company,
+                              salary: contract.client.salary,
+                              position: contract.client.position,
+                              // Novos campos de referências pessoais
+                              reference_name: contract.client.reference_name,
+                              reference_address: contract.client.reference_address,
+                              reference_phone: contract.client.reference_phone,
                             })
                             .eq("id", contract.client.id);
 

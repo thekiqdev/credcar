@@ -214,6 +214,21 @@ const ContractCreationFlow: React.FC<ContractCreationFlowProps> = ({
             phone: clientData.phone,
             cpf_cnpj: clientData.cpf_cnpj,
             address: clientData.address, // Using single address field as per schema
+            // Novos campos de identificação
+            rg: clientData.rg,
+            birth_date: clientData.birth_date,
+            nationality: clientData.nationality,
+            marital_status: clientData.marital_status,
+            spouse_name: clientData.spouse_name,
+            spouse_phone: clientData.spouse_phone,
+            // Novos campos profissionais
+            company: clientData.company,
+            salary: clientData.salary ? parseFloat(clientData.salary.replace(/[^\d,]/g, '').replace(',', '.')) : null,
+            position: clientData.position,
+            // Novos campos de referências pessoais
+            reference_name: clientData.reference_name,
+            reference_address: clientData.reference_address,
+            reference_phone: clientData.reference_phone,
           })
           .eq("id", existingClient.id);
 
@@ -230,6 +245,21 @@ const ContractCreationFlow: React.FC<ContractCreationFlowProps> = ({
               phone: clientData.phone,
               cpf_cnpj: clientData.cpf_cnpj,
               address: clientData.address, // Using single address field as per schema
+              // Novos campos de identificação
+              rg: clientData.rg,
+              birth_date: clientData.birth_date,
+              nationality: clientData.nationality,
+              marital_status: clientData.marital_status,
+              spouse_name: clientData.spouse_name,
+              spouse_phone: clientData.spouse_phone,
+              // Novos campos profissionais
+              company: clientData.company,
+              salary: clientData.salary ? parseFloat(clientData.salary.replace(/[^\d,]/g, '').replace(',', '.')) : null,
+              position: clientData.position,
+              // Novos campos de referências pessoais
+              reference_name: clientData.reference_name,
+              reference_address: clientData.reference_address,
+              reference_phone: clientData.reference_phone,
             },
           ])
           .select("id")
