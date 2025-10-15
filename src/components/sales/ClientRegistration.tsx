@@ -62,6 +62,21 @@ interface ClientData {
   address_city?: string;
   address_state?: string;
   address_zip?: string;
+  // Novos campos de identificação
+  rg?: string;
+  birth_date?: string;
+  nationality?: string;
+  marital_status?: string;
+  spouse_name?: string;
+  spouse_phone?: string;
+  // Novos campos profissionais
+  company?: string;
+  salary?: string;
+  position?: string;
+  // Novos campos de referências pessoais
+  reference_name?: string;
+  reference_address?: string;
+  reference_phone?: string;
 }
 
 interface ClientRegistrationProps {
@@ -87,6 +102,21 @@ const ClientRegistration: React.FC<ClientRegistrationProps> = ({
     phone: "",
     cpf_cnpj: "",
     address: "",
+    // Novos campos de identificação
+    rg: "",
+    birth_date: "",
+    nationality: "",
+    marital_status: "",
+    spouse_name: "",
+    spouse_phone: "",
+    // Novos campos profissionais
+    company: "",
+    salary: "",
+    position: "",
+    // Novos campos de referências pessoais
+    reference_name: "",
+    reference_address: "",
+    reference_phone: "",
   });
 
   // Separate state for address components for UI
@@ -159,6 +189,19 @@ const ClientRegistration: React.FC<ClientRegistrationProps> = ({
   const formatZip = (value: string) => {
     const numbers = value.replace(/\D/g, "");
     return numbers.replace(/(\d{5})(\d{3})/, "$1-$2");
+  };
+
+  const formatRg = (value: string) => {
+    const numbers = value.replace(/\D/g, "");
+    return numbers.replace(/(\d{2})(\d{3})(\d{3})(\d{1})/, "$1.$2.$3-$4");
+  };
+
+  const formatSalary = (value: string) => {
+    const numbers = value.replace(/\D/g, "");
+    return new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    }).format(parseInt(numbers) / 100);
   };
 
   const validateForm = (): boolean => {
@@ -288,6 +331,96 @@ const ClientRegistration: React.FC<ClientRegistrationProps> = ({
             </CardContent>
           </Card>
 
+          {/* Identificação */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <FileText className="mr-2 h-5 w-5" />
+                Identificação
+              </CardTitle>
+              <CardDescription>Documentos e informações pessoais</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="rg">RG</Label>
+                  <Input
+                    id="rg"
+                    value={clientData.rg || ""}
+                    onChange={(e) =>
+                      handleInputChange("rg", formatRg(e.target.value))
+                    }
+                    placeholder="00.000.000-0"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="birth_date">Data de Nascimento</Label>
+                  <Input
+                    id="birth_date"
+                    type="date"
+                    value={clientData.birth_date || ""}
+                    onChange={(e) =>
+                      handleInputChange("birth_date", e.target.value)
+                    }
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="nationality">Nacionalidade</Label>
+                  <Input
+                    id="nationality"
+                    value={clientData.nationality || ""}
+                    onChange={(e) =>
+                      handleInputChange("nationality", e.target.value)
+                    }
+                    placeholder="Brasileira"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="marital_status">Estado Civil</Label>
+                  <Input
+                    id="marital_status"
+                    value={clientData.marital_status || ""}
+                    onChange={(e) =>
+                      handleInputChange("marital_status", e.target.value)
+                    }
+                    placeholder="Solteiro, Casado, etc."
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="spouse_name">Nome do Cônjuge</Label>
+                  <Input
+                    id="spouse_name"
+                    value={clientData.spouse_name || ""}
+                    onChange={(e) =>
+                      handleInputChange("spouse_name", e.target.value)
+                    }
+                    placeholder="Nome completo do cônjuge"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="spouse_phone">Celular do Cônjuge</Label>
+                  <Input
+                    id="spouse_phone"
+                    value={clientData.spouse_phone || ""}
+                    onChange={(e) =>
+                      handleInputChange("spouse_phone", formatPhone(e.target.value))
+                    }
+                    placeholder="(11) 99999-9999"
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Contact Information */}
           <Card>
             <CardHeader>
@@ -330,6 +463,58 @@ const ClientRegistration: React.FC<ClientRegistrationProps> = ({
                   {errors.phone && (
                     <p className="text-sm text-red-500 mt-1">{errors.phone}</p>
                   )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Dados Profissionais */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <User className="mr-2 h-5 w-5" />
+                Dados Profissionais
+              </CardTitle>
+              <CardDescription>Informações sobre trabalho e renda</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="company">Empresa onde Trabalha</Label>
+                  <Input
+                    id="company"
+                    value={clientData.company || ""}
+                    onChange={(e) =>
+                      handleInputChange("company", e.target.value)
+                    }
+                    placeholder="Nome da empresa"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="position">Cargo</Label>
+                  <Input
+                    id="position"
+                    value={clientData.position || ""}
+                    onChange={(e) =>
+                      handleInputChange("position", e.target.value)
+                    }
+                    placeholder="Cargo ou função"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
+                <div>
+                  <Label htmlFor="salary">Salário</Label>
+                  <Input
+                    id="salary"
+                    value={clientData.salary || ""}
+                    onChange={(e) =>
+                      handleInputChange("salary", formatSalary(e.target.value))
+                    }
+                    placeholder="R$ 0,00"
+                  />
                 </div>
               </div>
             </CardContent>
@@ -471,6 +656,58 @@ const ClientRegistration: React.FC<ClientRegistrationProps> = ({
                       {errors.address_zip}
                     </p>
                   )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Referências Pessoais */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <User className="mr-2 h-5 w-5" />
+                Referências Pessoais
+              </CardTitle>
+              <CardDescription>Pessoa de referência para contato</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="reference_name">Nome da Referência</Label>
+                  <Input
+                    id="reference_name"
+                    value={clientData.reference_name || ""}
+                    onChange={(e) =>
+                      handleInputChange("reference_name", e.target.value)
+                    }
+                    placeholder="Nome completo da pessoa de referência"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="reference_phone">Telefone da Referência</Label>
+                  <Input
+                    id="reference_phone"
+                    value={clientData.reference_phone || ""}
+                    onChange={(e) =>
+                      handleInputChange("reference_phone", formatPhone(e.target.value))
+                    }
+                    placeholder="(11) 99999-9999"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
+                <div>
+                  <Label htmlFor="reference_address">Endereço da Referência</Label>
+                  <Input
+                    id="reference_address"
+                    value={clientData.reference_address || ""}
+                    onChange={(e) =>
+                      handleInputChange("reference_address", e.target.value)
+                    }
+                    placeholder="Endereço completo da pessoa de referência"
+                  />
                 </div>
               </div>
             </CardContent>
