@@ -553,22 +553,18 @@ const ContractDetails: React.FC<{
             phone,
             cpf_cnpj,
             address,
-            // Novos campos de identificação
             rg,
             birth_date,
             nationality,
             marital_status,
             spouse_name,
             spouse_phone,
-            // Novos campos profissionais
             company,
             salary,
             position,
-            // Novos campos de referências pessoais
             reference_name,
             reference_address,
             reference_phone,
-            // Campos separados do endereço
             address_street,
             address_number,
             address_complement,
