@@ -275,38 +275,26 @@ const ContractViewOnly: React.FC = () => {
   };
 
   const getLogoUrl = () => {
-    try {
-      if (!generalSettings) {
-        return null;
-      }
-      
-      // Verificar se logo_url é uma URL completa ou apenas um caminho
-      if (generalSettings.logo_url && generalSettings.logo_url.trim() !== '') {
-        // Se logo_url começa com http, é uma URL completa
-        if (generalSettings.logo_url.startsWith('http')) {
-          return generalSettings.logo_url;
-        } else {
-          // Se logo_url é apenas um caminho, construir URL completa
-          const baseUrl = import.meta.env.VITE_UPLOAD_SERVER_URL || 'http://localhost:3001';
-          const constructedUrl = `${baseUrl}/api/download-file?path=${encodeURIComponent(generalSettings.logo_url)}`;
-          console.log('🔧 Logo URL construída:', constructedUrl);
-          return constructedUrl;
-        }
-      }
-      
-      if (generalSettings.logo_file_path && generalSettings.logo_file_path.trim() !== '') {
-        // Construir URL para o arquivo real no servidor usando o mesmo endpoint do upload
-        const baseUrl = import.meta.env.VITE_UPLOAD_SERVER_URL || 'http://localhost:3001';
-        const constructedUrl = `${baseUrl}/api/download-file?path=${encodeURIComponent(generalSettings.logo_file_path)}`;
-        console.log('🔧 Logo URL construída:', constructedUrl);
-        return constructedUrl;
-      }
-      
-      return null;
-    } catch (error) {
-      console.error('❌ Erro ao construir URL do logo:', error);
-      return null;
+    if (!generalSettings) return null;
+    
+    // Se logo_url existe e é uma URL completa, usar ela
+    if (generalSettings.logo_url && generalSettings.logo_url.startsWith('http')) {
+      return generalSettings.logo_url;
     }
+    
+    // Se logo_file_path existe, construir URL
+    if (generalSettings.logo_file_path) {
+      const baseUrl = import.meta.env.VITE_UPLOAD_SERVER_URL || 'http://localhost:3001';
+      return `${baseUrl}/api/download-file?path=${encodeURIComponent(generalSettings.logo_file_path)}`;
+    }
+    
+    // Se logo_url existe mas é apenas caminho, construir URL
+    if (generalSettings.logo_url) {
+      const baseUrl = import.meta.env.VITE_UPLOAD_SERVER_URL || 'http://localhost:3001';
+      return `${baseUrl}/api/download-file?path=${encodeURIComponent(generalSettings.logo_url)}`;
+    }
+    
+    return null;
   };
 
   const renderContractContentWithSignatures = (
@@ -595,27 +583,21 @@ const ContractViewOnly: React.FC = () => {
           >
             <div className="text-center">
               <div className="flex items-center justify-center mb-4">
-                {(() => {
-                  const logoUrl = getLogoUrl();
-                  return logoUrl ? (
-                    <img
-                      src={logoUrl}
-                      alt="Logo da empresa"
-                      className="h-12 object-contain mr-3"
-                      onError={(e) => {
-                        console.error('❌ Erro ao carregar logo:', logoUrl);
-                        (e.target as HTMLImageElement).style.display = "none";
-                      }}
-                      onLoad={() => {
-                        console.log('✅ Logo carregado com sucesso');
-                      }}
-                    />
-                  ) : (
-                    <div className="h-12 w-12 rounded-md bg-red-600 mr-3 flex items-center justify-center">
-                      <Building className="h-6 w-6 text-white" />
-                    </div>
-                  );
-                })()}
+                {getLogoUrl() ? (
+                  <img
+                    src={getLogoUrl()!}
+                    alt="Logo da empresa"
+                    className="h-12 object-contain mr-3"
+                    onError={(e) => {
+                      console.error('❌ Erro ao carregar logo');
+                      (e.target as HTMLImageElement).style.display = "none";
+                    }}
+                  />
+                ) : (
+                  <div className="h-12 w-12 rounded-md bg-red-600 mr-3 flex items-center justify-center">
+                    <Building className="h-6 w-6 text-white" />
+                  </div>
+                )}
                 <h1 className="text-3xl font-bold text-gray-900">
                   {generalSettings.system_name}
                 </h1>

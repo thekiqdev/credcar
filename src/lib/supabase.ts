@@ -3593,7 +3593,7 @@ export const generalSettingsService = {
         .single();
 
       if (error) {
-        console.error('❌ Erro ao buscar configurações gerais:', error);
+        console.error('Error fetching general settings:', error);
         // Return default settings if no data found
         return {
           system_name: "CredCar",
@@ -3618,7 +3618,7 @@ export const generalSettingsService = {
         logo_file_path: "",
       };
     } catch (error) {
-      console.error("❌ Erro no generalSettingsService:", error);
+      console.error("Error in generalSettingsService.getSettings:", error);
       // Return default settings on error
       return {
         system_name: "CredCar",
