@@ -301,10 +301,19 @@ const ContractViewOnly: React.FC = () => {
       console.log('🔍 ContractViewOnly: logo_url:', generalSettings.logo_url);
       console.log('🔍 ContractViewOnly: logo_file_path:', generalSettings.logo_file_path);
       
-      // Prioridade: logo_url (URL completa do servidor) > logo_file_path (construir URL)
+      // Verificar se logo_url é uma URL completa ou apenas um caminho
       if (generalSettings.logo_url && generalSettings.logo_url.trim() !== '') {
-        console.log('✅ ContractViewOnly: Using logo_url:', generalSettings.logo_url);
-        return generalSettings.logo_url;
+        // Se logo_url começa com http, é uma URL completa
+        if (generalSettings.logo_url.startsWith('http')) {
+          console.log('✅ ContractViewOnly: Using complete logo_url:', generalSettings.logo_url);
+          return generalSettings.logo_url;
+        } else {
+          // Se logo_url é apenas um caminho, construir URL completa
+          const baseUrl = import.meta.env.VITE_UPLOAD_SERVER_URL || 'http://localhost:3001';
+          const constructedUrl = `${baseUrl}/api/download-file?path=${encodeURIComponent(generalSettings.logo_url)}`;
+          console.log('🔧 ContractViewOnly: Constructed URL from logo_url path:', constructedUrl);
+          return constructedUrl;
+        }
       }
       
       if (generalSettings.logo_file_path && generalSettings.logo_file_path.trim() !== '') {
