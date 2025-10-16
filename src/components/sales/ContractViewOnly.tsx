@@ -548,67 +548,99 @@ const ContractViewOnly: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* CSS para garantir consistência com TinyMCE */}
+      {/* CSS para garantir consistência com TinyMCE e responsividade */}
       <style>{`
         .contract-content table {
           border-collapse: collapse;
           width: 100%;
+          font-size: clamp(10px, 2vw, 14px);
         }
         .contract-content table td, 
         .contract-content table th {
           border: 1px solid #ddd;
-          padding: 8px;
+          padding: clamp(4px, 1vw, 8px);
+          word-wrap: break-word;
         }
         .contract-content table th {
           background-color: #f2f2f2;
         }
         .contract-content p {
           margin: 0 0 1em 0;
+          word-wrap: break-word;
+          hyphens: auto;
+        }
+        .contract-content h1, 
+        .contract-content h2, 
+        .contract-content h3, 
+        .contract-content h4, 
+        .contract-content h5, 
+        .contract-content h6 {
+          word-wrap: break-word;
+          margin-top: 1.5em;
+          margin-bottom: 0.5em;
+        }
+        .contract-content ul, 
+        .contract-content ol {
+          padding-left: clamp(16px, 4vw, 24px);
+        }
+        .contract-content li {
+          margin-bottom: 0.5em;
+          word-wrap: break-word;
+        }
+        @media (max-width: 640px) {
+          .contract-content {
+            font-size: 14px !important;
+            line-height: 1.5 !important;
+          }
+          .contract-content table {
+            font-size: 12px;
+          }
+          .contract-content table td, 
+          .contract-content table th {
+            padding: 6px 4px;
+          }
         }
       `}</style>
       
       {/* Company Header */}
       {generalSettings && (
         <div className="bg-white border-b print:hidden">
-          <div
-            className="max-w-none mx-auto px-12 py-8"
-            style={{ paddingLeft: "50px", paddingRight: "50px" }}
-          >
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
             <div className="text-center">
-              <div className="flex items-center justify-center mb-4">
+              <div className="flex items-center justify-center mb-4 sm:mb-6">
                 {getLogoUrl() ? (
                   <img
                     src={getLogoUrl()!}
                     alt="Logo da empresa"
-                    className="h-24 object-contain"
+                    className="h-16 sm:h-20 lg:h-24 object-contain"
                     onError={(e) => {
                       (e.target as HTMLImageElement).style.display = "none";
                     }}
                   />
                 ) : (
-                  <div className="h-24 w-24 rounded-md bg-red-600 flex items-center justify-center">
-                    <Building className="h-12 w-12 text-white" />
+                  <div className="h-16 sm:h-20 lg:h-24 w-16 sm:w-20 lg:w-24 rounded-md bg-red-600 flex items-center justify-center">
+                    <Building className="h-8 sm:h-10 lg:h-12 w-8 sm:w-10 lg:w-12 text-white" />
                   </div>
                 )}
               </div>
-              <div className="text-sm text-gray-600 space-y-1">
-                <p className="font-semibold text-lg">
+              <div className="text-xs sm:text-sm text-gray-600 space-y-1 sm:space-y-2">
+                <p className="font-semibold text-sm sm:text-base lg:text-lg">
                   {generalSettings.company_name}
                 </p>
-                <p>CNPJ: {generalSettings.company_cnpj}</p>
-                <div className="flex items-center justify-center gap-4 text-sm">
+                <p className="text-xs sm:text-sm">CNPJ: {generalSettings.company_cnpj}</p>
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4 text-xs sm:text-sm">
                   <span className="flex items-center gap-1">
-                    <MapPin className="h-4 w-4" />
-                    {generalSettings.company_address}
+                    <MapPin className="h-3 w-3 sm:h-4 sm:w-4" />
+                    <span className="text-center sm:text-left">{generalSettings.company_address}</span>
                   </span>
                 </div>
-                <div className="flex items-center justify-center gap-4 text-sm">
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4 text-xs sm:text-sm">
                   <span className="flex items-center gap-1">
-                    <Phone className="h-4 w-4" />
+                    <Phone className="h-3 w-3 sm:h-4 sm:w-4" />
                     {generalSettings.company_phone}
                   </span>
                   <span className="flex items-center gap-1">
-                    <Mail className="h-4 w-4" />
+                    <Mail className="h-3 w-3 sm:h-4 sm:w-4" />
                     {generalSettings.company_email}
                   </span>
                 </div>
@@ -619,19 +651,16 @@ const ContractViewOnly: React.FC = () => {
       )}
 
       {/* Contract Content */}
-      <div
-        className="max-w-none mx-auto px-12 py-8"
-        style={{ paddingLeft: "50px", paddingRight: "50px" }}
-      >
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         {/* Contract Header */}
-        <Card className="mb-8 print:hidden">
+        <Card className="mb-6 sm:mb-8 print:hidden">
           <CardHeader>
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
-                <CardTitle className="text-2xl">
+                <CardTitle className="text-lg sm:text-xl lg:text-2xl">
                   Contrato {contract.contract_code}
                 </CardTitle>
-                <CardDescription>
+                <CardDescription className="text-sm sm:text-base">
                   Criado em {formatDate(contract.created_at)}
                 </CardDescription>
               </div>
@@ -639,7 +668,7 @@ const ContractViewOnly: React.FC = () => {
                 {getStatusBadge(contract.status)}
                 <Button
                   onClick={() => window.print()}
-                  className="bg-red-600 hover:bg-red-700 print:hidden"
+                  className="bg-red-600 hover:bg-red-700 print:hidden text-sm sm:text-base"
                 >
                   <Download className="mr-2 h-4 w-4" />
                   Imprimir
@@ -648,25 +677,25 @@ const ContractViewOnly: React.FC = () => {
             </div>
           </CardHeader>
            <CardContent className="print:hidden">
-             <div className="space-y-6">
+             <div className="space-y-4 sm:space-y-6">
                <div>
-                 <h3 className="font-semibold mb-3 print:text-sm">
+                 <h3 className="font-semibold mb-3 print:text-sm text-sm sm:text-base">
                    Informações do Contrato
                  </h3>
-                 <div className="space-y-2 text-sm print:text-xs">
+                 <div className="space-y-2 text-xs sm:text-sm print:text-xs">
                    <p>
                      <strong>Valor de Contrato:</strong>{" "}
-                     <span className="text-lg font-bold text-red-600">
+                     <span className="text-base sm:text-lg font-bold text-red-600">
                        {formatCurrency(contract.total_value)}
                      </span>
                    </p>
                  </div>
                </div>
                <div>
-                 <h3 className="font-semibold mb-3 print:text-sm">
+                 <h3 className="font-semibold mb-3 print:text-sm text-sm sm:text-base">
                    Informações do Cliente
                  </h3>
-                 <div className="space-y-2 text-sm print:text-xs">
+                 <div className="space-y-2 text-xs sm:text-sm print:text-xs">
                    <p>
                      <strong>Nome:</strong> {contract.client.full_name}
                    </p>
@@ -699,15 +728,15 @@ const ContractViewOnly: React.FC = () => {
         {/* Contract Content */}
         <Card className="print:border-0 print:shadow-none">
           <CardHeader className="print:hidden">
-            <CardTitle>Conteúdo do Contrato</CardTitle>
+            <CardTitle className="text-sm sm:text-base lg:text-lg">Conteúdo do Contrato</CardTitle>
           </CardHeader>
           <CardContent className="print:p-0">
             {contract.contract_content ? (
               <div
-                className="contract-content prose max-w-none p-4 rounded-md bg-white print:p-0 print:bg-transparent"
+                className="contract-content prose prose-sm sm:prose-base lg:prose-lg max-w-none p-4 sm:p-6 rounded-md bg-white print:p-0 print:bg-transparent"
                 style={{
                   fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif",
-                  fontSize: "14px",
+                  fontSize: "clamp(12px, 2.5vw, 16px)",
                   lineHeight: "1.6",
                   color: "#333"
                 }}
