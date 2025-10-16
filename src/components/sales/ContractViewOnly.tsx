@@ -96,7 +96,11 @@ const ContractViewOnly: React.FC = () => {
 
   const loadGeneralSettings = async () => {
     try {
+      console.log('🔧 ContractViewOnly: Loading general settings...');
       const settings = await generalSettingsService.getSettings();
+      console.log('📋 ContractViewOnly: Settings fetched:', settings);
+      console.log('🖼️ ContractViewOnly: logo_url:', settings.logo_url);
+      console.log('📁 ContractViewOnly: logo_file_path:', settings.logo_file_path);
       setGeneralSettings(settings);
     } catch (error) {
       console.error("Error loading general settings:", error);
@@ -275,19 +279,30 @@ const ContractViewOnly: React.FC = () => {
   };
 
   const getLogoUrl = () => {
-    if (!generalSettings) return null;
+    if (!generalSettings) {
+      console.log('❌ ContractViewOnly: generalSettings is null');
+      return null;
+    }
+    
+    console.log('🔍 ContractViewOnly: getLogoUrl called');
+    console.log('🔍 ContractViewOnly: logo_url:', generalSettings.logo_url);
+    console.log('🔍 ContractViewOnly: logo_file_path:', generalSettings.logo_file_path);
     
     // Prioridade: logo_url (URL completa do servidor) > logo_file_path (construir URL)
     if (generalSettings.logo_url) {
+      console.log('✅ ContractViewOnly: Using logo_url:', generalSettings.logo_url);
       return generalSettings.logo_url;
     }
     
     if (generalSettings.logo_file_path) {
       // Construir URL para o arquivo real no servidor usando o mesmo endpoint do upload
       const baseUrl = import.meta.env.VITE_UPLOAD_SERVER_URL || 'http://localhost:3001';
-      return `${baseUrl}/api/download-file?path=${encodeURIComponent(generalSettings.logo_file_path)}`;
+      const constructedUrl = `${baseUrl}/api/download-file?path=${encodeURIComponent(generalSettings.logo_file_path)}`;
+      console.log('🔧 ContractViewOnly: Constructed URL from logo_file_path:', constructedUrl);
+      return constructedUrl;
     }
     
+    console.log('❌ ContractViewOnly: No logo available');
     return null;
   };
 
