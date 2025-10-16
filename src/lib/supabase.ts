@@ -3587,16 +3587,13 @@ export const generalSettingsService = {
   // Get general settings
   async getSettings() {
     try {
-      console.log('🔧 generalSettingsService: Fetching general settings from database...');
-      
       const { data, error } = await supabase
         .from('system_general_config')
         .select('*')
         .single();
 
       if (error) {
-        console.error('❌ generalSettingsService: Error fetching general settings:', error);
-        console.error('❌ generalSettingsService: Error details:', error.message, error.code);
+        console.error('❌ Erro ao buscar configurações gerais:', error);
         // Return default settings if no data found
         return {
           system_name: "CredCar",
@@ -3610,10 +3607,6 @@ export const generalSettingsService = {
         };
       }
 
-      console.log('📋 generalSettingsService: Settings fetched from database:', data);
-      console.log('🖼️ generalSettingsService: logo_url from DB:', data?.logo_url);
-      console.log('📁 generalSettingsService: logo_file_path from DB:', data?.logo_file_path);
-      
       return data || {
         system_name: "CredCar",
         company_name: "CredCar Soluções Financeiras",
@@ -3625,7 +3618,7 @@ export const generalSettingsService = {
         logo_file_path: "",
       };
     } catch (error) {
-      console.error("❌ generalSettingsService: Error in getSettings:", error);
+      console.error("❌ Erro no generalSettingsService:", error);
       // Return default settings on error
       return {
         system_name: "CredCar",

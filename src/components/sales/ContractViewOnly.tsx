@@ -84,7 +84,6 @@ const ContractViewOnly: React.FC = () => {
       return;
     }
 
-    console.log('🚀 ContractViewOnly: useEffect triggered, contractId:', contractId);
     loadContractDetails();
     loadGeneralSettings();
   }, [contractId]);
@@ -95,22 +94,9 @@ const ContractViewOnly: React.FC = () => {
     }
   }, [contract, contractId]);
 
-  // Debug: Log quando generalSettings muda
-  useEffect(() => {
-    console.log('🔄 ContractViewOnly: generalSettings updated:', generalSettings);
-    if (generalSettings) {
-      console.log('🖼️ ContractViewOnly: logo_url:', generalSettings.logo_url);
-      console.log('📁 ContractViewOnly: logo_file_path:', generalSettings.logo_file_path);
-    }
-  }, [generalSettings]);
-
   const loadGeneralSettings = async () => {
     try {
-      console.log('🔧 ContractViewOnly: Loading general settings...');
       const settings = await generalSettingsService.getSettings();
-      console.log('📋 ContractViewOnly: Settings fetched:', settings);
-      console.log('🖼️ ContractViewOnly: logo_url:', settings.logo_url);
-      console.log('📁 ContractViewOnly: logo_file_path:', settings.logo_file_path);
       setGeneralSettings(settings);
     } catch (error) {
       console.error("Error loading general settings:", error);
@@ -290,28 +276,20 @@ const ContractViewOnly: React.FC = () => {
 
   const getLogoUrl = () => {
     try {
-      console.log('🔍 ContractViewOnly: getLogoUrl called');
-      
       if (!generalSettings) {
-        console.log('❌ ContractViewOnly: generalSettings is null');
         return null;
       }
-      
-      console.log('🔍 ContractViewOnly: generalSettings:', generalSettings);
-      console.log('🔍 ContractViewOnly: logo_url:', generalSettings.logo_url);
-      console.log('🔍 ContractViewOnly: logo_file_path:', generalSettings.logo_file_path);
       
       // Verificar se logo_url é uma URL completa ou apenas um caminho
       if (generalSettings.logo_url && generalSettings.logo_url.trim() !== '') {
         // Se logo_url começa com http, é uma URL completa
         if (generalSettings.logo_url.startsWith('http')) {
-          console.log('✅ ContractViewOnly: Using complete logo_url:', generalSettings.logo_url);
           return generalSettings.logo_url;
         } else {
           // Se logo_url é apenas um caminho, construir URL completa
           const baseUrl = import.meta.env.VITE_UPLOAD_SERVER_URL || 'http://localhost:3001';
           const constructedUrl = `${baseUrl}/api/download-file?path=${encodeURIComponent(generalSettings.logo_url)}`;
-          console.log('🔧 ContractViewOnly: Constructed URL from logo_url path:', constructedUrl);
+          console.log('🔧 Logo URL construída:', constructedUrl);
           return constructedUrl;
         }
       }
@@ -320,14 +298,13 @@ const ContractViewOnly: React.FC = () => {
         // Construir URL para o arquivo real no servidor usando o mesmo endpoint do upload
         const baseUrl = import.meta.env.VITE_UPLOAD_SERVER_URL || 'http://localhost:3001';
         const constructedUrl = `${baseUrl}/api/download-file?path=${encodeURIComponent(generalSettings.logo_file_path)}`;
-        console.log('🔧 ContractViewOnly: Constructed URL from logo_file_path:', constructedUrl);
+        console.log('🔧 Logo URL construída:', constructedUrl);
         return constructedUrl;
       }
       
-      console.log('❌ ContractViewOnly: No logo available');
       return null;
     } catch (error) {
-      console.error('❌ ContractViewOnly: Error in getLogoUrl:', error);
+      console.error('❌ Erro ao construir URL do logo:', error);
       return null;
     }
   };
@@ -620,7 +597,6 @@ const ContractViewOnly: React.FC = () => {
               <div className="flex items-center justify-center mb-4">
                 {(() => {
                   const logoUrl = getLogoUrl();
-                  console.log('🎨 ContractViewOnly: Rendering logo with URL:', logoUrl);
                   return logoUrl ? (
                     <img
                       src={logoUrl}
@@ -631,7 +607,7 @@ const ContractViewOnly: React.FC = () => {
                         (e.target as HTMLImageElement).style.display = "none";
                       }}
                       onLoad={() => {
-                        console.log('✅ Logo carregado com sucesso:', logoUrl);
+                        console.log('✅ Logo carregado com sucesso');
                       }}
                     />
                   ) : (
