@@ -11,6 +11,7 @@ import {
   authService as oldAuthService,
   commissionPlansService,
   administratorService,
+  generalSettingsService,
 } from "../../lib/supabase";
 import { systemConfigService } from "../../lib/system-config.service";
 import { asaasService } from "../../lib/asaas.service";
@@ -549,7 +550,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     companyEmail: "contato@credcar.com.br",
     companyCNPJ: "12.345.678/0001-90",
     logoUrl: "",
+    logoFilePath: "",
   });
+
+  // Logo upload state
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+  const [logoUploadError, setLogoUploadError] = useState<string | null>(null);
+  const [isSavingSettings, setIsSavingSettings] = useState(false);
 
   // Representatives state
   const [representatives, setRepresentatives] = useState<Representative[]>([]);
@@ -616,6 +623,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
           loadPaymentSettings(),
           loadCronStats(),
           loadCommissionReports(),
+          loadGeneralSettings(),
         ]);
         console.log("AdminDashboard: All data loaded successfully");
       } catch (error) {
@@ -625,6 +633,108 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
     loadData();
   }, []);
+
+  // Load general settings
+  const loadGeneralSettings = async () => {
+    try {
+      const settings = await generalSettingsService.getSettings();
+      setGeneralSettings({
+        systemName: settings.system_name || "CredCar",
+        companyName: settings.company_name || "CredCar Soluções Financeiras",
+        companyAddress: settings.company_address || "Rua das Empresas, 123 - Centro - São Paulo/SP",
+        companyPhone: settings.company_phone || "(11) 3000-0000",
+        companyEmail: settings.company_email || "contato@credcar.com.br",
+        companyCNPJ: settings.company_cnpj || "12.345.678/0001-90",
+        logoUrl: settings.logo_url || "",
+        logoFilePath: settings.logo_file_path || "",
+      });
+    } catch (error) {
+      console.error('Error loading general settings:', error);
+    }
+  };
+
+  // Handle logo upload
+  const handleLogoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/svg+xml'];
+    if (!allowedTypes.includes(file.type)) {
+      setLogoUploadError('Apenas arquivos de imagem são permitidos (JPEG, PNG, GIF, SVG)');
+      return;
+    }
+
+    // Validate file size (5MB max)
+    if (file.size > 5 * 1024 * 1024) {
+      setLogoUploadError('Arquivo muito grande. Tamanho máximo: 5MB');
+      return;
+    }
+
+    setIsUploadingLogo(true);
+    setLogoUploadError(null);
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const hostname = window.location.hostname;
+      const baseUrl = hostname === 'localhost' 
+        ? 'http://localhost:3001' 
+        : 'https://sistema.credcarmultimarcas.com.br';
+
+      const response = await fetch(`${baseUrl}/api/upload-system-logo`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Erro no upload');
+      }
+
+      const result = await response.json();
+      
+      // Update settings with new logo
+      setGeneralSettings(prev => ({
+        ...prev,
+        logoUrl: result.data.downloadUrl,
+        logoFilePath: result.data.filePath,
+      }));
+
+      console.log('✅ Logo uploaded successfully:', result.data);
+    } catch (error) {
+      console.error('❌ Logo upload error:', error);
+      setLogoUploadError(error instanceof Error ? error.message : 'Erro desconhecido');
+    } finally {
+      setIsUploadingLogo(false);
+    }
+  };
+
+  // Save general settings
+  const handleSaveGeneralSettings = async () => {
+    try {
+      setIsSavingSettings(true);
+      
+      await generalSettingsService.updateSettings({
+        system_name: generalSettings.systemName,
+        company_name: generalSettings.companyName,
+        company_address: generalSettings.companyAddress,
+        company_phone: generalSettings.companyPhone,
+        company_email: generalSettings.companyEmail,
+        company_cnpj: generalSettings.companyCNPJ,
+        logo_url: generalSettings.logoUrl,
+        logo_file_path: generalSettings.logoFilePath,
+      });
+
+      alert('Configurações salvas com sucesso!');
+    } catch (error) {
+      console.error('Error saving general settings:', error);
+      alert('Erro ao salvar configurações. Tente novamente.');
+    } finally {
+      setIsSavingSettings(false);
+    }
+  };
 
   const loadRepresentatives = async () => {
     try {
@@ -5156,18 +5266,25 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                               />
                             </div>
                             <div>
-                              <Label htmlFor="logo-url">URL do Logo</Label>
+                              <Label htmlFor="logo-upload">Logo da Empresa</Label>
+                              <div className="space-y-2">
                               <Input
-                                id="logo-url"
-                                value={generalSettings.logoUrl}
-                                onChange={(e) =>
-                                  setGeneralSettings({
-                                    ...generalSettings,
-                                    logoUrl: e.target.value,
-                                  })
-                                }
-                                placeholder="https://exemplo.com/logo.png"
-                              />
+                                  id="logo-upload"
+                                  type="file"
+                                  accept="image/jpeg,image/jpg,image/png,image/gif,image/svg+xml"
+                                  onChange={handleLogoUpload}
+                                  disabled={isUploadingLogo}
+                                />
+                                <p className="text-xs text-muted-foreground">
+                                  Formatos aceitos: JPEG, PNG, GIF, SVG (máx. 5MB)
+                                </p>
+                                {logoUploadError && (
+                                  <p className="text-xs text-red-600">{logoUploadError}</p>
+                                )}
+                                {isUploadingLogo && (
+                                  <p className="text-xs text-blue-600">Enviando logo...</p>
+                                )}
+                              </div>
                             </div>
                           </div>
                           {generalSettings.logoUrl && (
@@ -5318,8 +5435,19 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           </div>
                         </div>
 
-                        <Button className="bg-red-600 hover:bg-red-700">
-                          Salvar Configurações Gerais
+                        <Button 
+                          className="bg-red-600 hover:bg-red-700"
+                          onClick={handleSaveGeneralSettings}
+                          disabled={isSavingSettings}
+                        >
+                          {isSavingSettings ? (
+                            <>
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                              Salvando...
+                            </>
+                          ) : (
+                            'Salvar Configurações Gerais'
+                          )}
                         </Button>
                       </CardContent>
                     </Card>
