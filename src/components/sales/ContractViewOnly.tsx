@@ -580,19 +580,16 @@ const ContractViewOnly: React.FC = () => {
                   <img
                     src={getLogoUrl()!}
                     alt="Logo da empresa"
-                    className="h-12 object-contain mr-3"
+                    className="h-16 object-contain"
                     onError={(e) => {
                       (e.target as HTMLImageElement).style.display = "none";
                     }}
                   />
                 ) : (
-                  <div className="h-12 w-12 rounded-md bg-red-600 mr-3 flex items-center justify-center">
-                    <Building className="h-6 w-6 text-white" />
+                  <div className="h-16 w-16 rounded-md bg-red-600 flex items-center justify-center">
+                    <Building className="h-8 w-8 text-white" />
                   </div>
                 )}
-                <h1 className="text-3xl font-bold text-gray-900">
-                  {generalSettings.system_name}
-                </h1>
               </div>
               <div className="text-sm text-gray-600 space-y-1">
                 <p className="font-semibold text-lg">
