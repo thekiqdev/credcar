@@ -84,6 +84,7 @@ const ContractViewOnly: React.FC = () => {
       return;
     }
 
+    console.log('🚀 ContractViewOnly: useEffect triggered, contractId:', contractId);
     loadContractDetails();
     loadGeneralSettings();
   }, [contractId]);
@@ -93,6 +94,15 @@ const ContractViewOnly: React.FC = () => {
       loadSignatureLinks();
     }
   }, [contract, contractId]);
+
+  // Debug: Log quando generalSettings muda
+  useEffect(() => {
+    console.log('🔄 ContractViewOnly: generalSettings updated:', generalSettings);
+    if (generalSettings) {
+      console.log('🖼️ ContractViewOnly: logo_url:', generalSettings.logo_url);
+      console.log('📁 ContractViewOnly: logo_file_path:', generalSettings.logo_file_path);
+    }
+  }, [generalSettings]);
 
   const loadGeneralSettings = async () => {
     try {
@@ -592,24 +602,28 @@ const ContractViewOnly: React.FC = () => {
           >
             <div className="text-center">
               <div className="flex items-center justify-center mb-4">
-                {getLogoUrl() ? (
-                  <img
-                    src={getLogoUrl()!}
-                    alt="Logo da empresa"
-                    className="h-12 object-contain mr-3"
-                    onError={(e) => {
-                      console.error('❌ Erro ao carregar logo:', getLogoUrl());
-                      (e.target as HTMLImageElement).style.display = "none";
-                    }}
-                    onLoad={() => {
-                      console.log('✅ Logo carregado com sucesso:', getLogoUrl());
-                    }}
-                  />
-                ) : (
-                  <div className="h-12 w-12 rounded-md bg-red-600 mr-3 flex items-center justify-center">
-                    <Building className="h-6 w-6 text-white" />
-                  </div>
-                )}
+                {(() => {
+                  const logoUrl = getLogoUrl();
+                  console.log('🎨 ContractViewOnly: Rendering logo with URL:', logoUrl);
+                  return logoUrl ? (
+                    <img
+                      src={logoUrl}
+                      alt="Logo da empresa"
+                      className="h-12 object-contain mr-3"
+                      onError={(e) => {
+                        console.error('❌ Erro ao carregar logo:', logoUrl);
+                        (e.target as HTMLImageElement).style.display = "none";
+                      }}
+                      onLoad={() => {
+                        console.log('✅ Logo carregado com sucesso:', logoUrl);
+                      }}
+                    />
+                  ) : (
+                    <div className="h-12 w-12 rounded-md bg-red-600 mr-3 flex items-center justify-center">
+                      <Building className="h-6 w-6 text-white" />
+                    </div>
+                  );
+                })()}
                 <h1 className="text-3xl font-bold text-gray-900">
                   {generalSettings.system_name}
                 </h1>
