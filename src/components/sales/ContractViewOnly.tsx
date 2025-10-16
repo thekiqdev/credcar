@@ -277,21 +277,14 @@ const ContractViewOnly: React.FC = () => {
   const getLogoUrl = () => {
     if (!generalSettings) return null;
     
-    // Se logo_url existe e é uma URL completa, usar ela
-    if (generalSettings.logo_url && generalSettings.logo_url.startsWith('http')) {
-      return generalSettings.logo_url;
+    // Usar logo_url diretamente como caminho relativo
+    if (generalSettings.logo_url && generalSettings.logo_url.trim() !== '') {
+      return `/${generalSettings.logo_url}`;
     }
     
-    // Se logo_file_path existe, construir URL
-    if (generalSettings.logo_file_path) {
-      const baseUrl = import.meta.env.VITE_UPLOAD_SERVER_URL || 'http://localhost:3001';
-      return `${baseUrl}/api/download-file?path=${encodeURIComponent(generalSettings.logo_file_path)}`;
-    }
-    
-    // Se logo_url existe mas é apenas caminho, construir URL
-    if (generalSettings.logo_url) {
-      const baseUrl = import.meta.env.VITE_UPLOAD_SERVER_URL || 'http://localhost:3001';
-      return `${baseUrl}/api/download-file?path=${encodeURIComponent(generalSettings.logo_url)}`;
+    // Fallback para logo_file_path
+    if (generalSettings.logo_file_path && generalSettings.logo_file_path.trim() !== '') {
+      return `/${generalSettings.logo_file_path}`;
     }
     
     return null;
@@ -589,7 +582,6 @@ const ContractViewOnly: React.FC = () => {
                     alt="Logo da empresa"
                     className="h-12 object-contain mr-3"
                     onError={(e) => {
-                      console.error('❌ Erro ao carregar logo');
                       (e.target as HTMLImageElement).style.display = "none";
                     }}
                   />
