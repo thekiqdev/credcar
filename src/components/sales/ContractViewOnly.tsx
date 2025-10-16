@@ -634,49 +634,49 @@ const ContractViewOnly: React.FC = () => {
       {generalSettings && (
         <div className="bg-white border-b print:border-b-2 print:border-gray-300">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 print:py-4 print:px-0">
-            <div className="flex flex-col sm:flex-row print:flex-row items-center justify-between gap-4 sm:gap-6 print:gap-4">
-              {/* Informações da empresa - Esquerda */}
-              <div className="text-left flex-1">
-                <div className="text-xs sm:text-sm print:text-xs text-gray-600 space-y-1 sm:space-y-2 print:space-y-1">
-                  <p className="font-semibold text-sm sm:text-base lg:text-lg print:text-sm">
-                    {generalSettings.company_name}
-                  </p>
-                  <p className="text-xs sm:text-sm print:text-xs">CNPJ: {generalSettings.company_cnpj}</p>
-                  <div className="flex flex-col sm:flex-col print:flex-col items-start gap-1 sm:gap-1 print:gap-1 text-xs sm:text-sm print:text-xs">
-                    <span className="flex items-center gap-1">
-                      <MapPin className="h-3 w-3 sm:h-4 sm:w-4 print:h-3 print:w-3" />
-                      <span>{generalSettings.company_address}</span>
-                    </span>
-                  </div>
-                  <div className="flex flex-col sm:flex-col print:flex-col items-start gap-1 sm:gap-1 print:gap-1 text-xs sm:text-sm print:text-xs">
-                    <span className="flex items-center gap-1">
-                      <Phone className="h-3 w-3 sm:h-4 sm:w-4 print:h-3 print:w-3" />
-                      {generalSettings.company_phone}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Mail className="h-3 w-3 sm:h-4 sm:w-4 print:h-3 print:w-3" />
-                      {generalSettings.company_email}
-                    </span>
-                  </div>
-                </div>
-              </div>
-              
-              {/* Logo - Direita */}
-              <div className="flex-shrink-0">
+            <div className="flex items-center justify-center gap-8 sm:gap-12 lg:gap-16 print:gap-4 print:justify-between">
+              {/* Logo - Esquerda */}
+              <div className="flex-shrink-0 print:w-1/2 print:flex print:justify-center print:items-center">
                 {getLogoUrl() ? (
                   <img
                     src={getLogoUrl()!}
                     alt="Logo da empresa"
-                    className="h-16 sm:h-20 lg:h-24 print:h-16 object-contain"
+                    className="h-16 sm:h-20 lg:h-24 print:h-32 print:w-auto print:max-w-full object-contain"
                     onError={(e) => {
                       (e.target as HTMLImageElement).style.display = "none";
                     }}
                   />
                 ) : (
-                  <div className="h-16 sm:h-20 lg:h-24 print:h-16 w-16 sm:w-20 lg:w-24 print:w-16 rounded-md bg-red-600 flex items-center justify-center">
-                    <Building className="h-8 sm:h-10 lg:h-12 print:h-8 w-8 sm:w-10 lg:w-12 print:w-8 text-white" />
+                  <div className="h-16 sm:h-20 lg:h-24 print:h-32 print:w-32 rounded-md bg-red-600 flex items-center justify-center">
+                    <Building className="h-8 sm:h-10 lg:h-12 print:h-16 print:w-16 text-white" />
                   </div>
                 )}
+              </div>
+              
+              {/* Informações da empresa - Direita */}
+              <div className="text-left print:w-1/2 print:flex print:flex-col print:justify-center">
+                <div className="text-xs sm:text-sm print:text-sm text-gray-600 space-y-1 sm:space-y-2 print:space-y-2">
+                  <p className="font-semibold text-sm sm:text-base lg:text-lg print:text-base print:font-bold">
+                    {generalSettings.company_name}
+                  </p>
+                  <p className="text-xs sm:text-sm print:text-sm">CNPJ: {generalSettings.company_cnpj}</p>
+                  <div className="flex flex-col gap-1 text-xs sm:text-sm print:text-sm print:gap-2">
+                    <span className="flex items-center gap-1">
+                      <MapPin className="h-3 w-3 sm:h-4 sm:w-4 print:h-4 print:w-4" />
+                      <span>{generalSettings.company_address}</span>
+                    </span>
+                  </div>
+                  <div className="flex flex-col gap-1 text-xs sm:text-sm print:text-sm print:gap-2">
+                    <span className="flex items-center gap-1">
+                      <Phone className="h-3 w-3 sm:h-4 sm:w-4 print:h-4 print:w-4" />
+                      {generalSettings.company_phone}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <Mail className="h-3 w-3 sm:h-4 sm:w-4 print:h-4 print:w-4" />
+                      {generalSettings.company_email}
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
