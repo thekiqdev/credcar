@@ -65,6 +65,7 @@ interface GeneralSettings {
   company_email: string;
   company_cnpj: string;
   logo_url: string;
+  logo_file_path: string;
 }
 
 const ContractViewOnly: React.FC = () => {
@@ -108,6 +109,7 @@ const ContractViewOnly: React.FC = () => {
         company_email: "contato@credcar.com.br",
         company_cnpj: "12.345.678/0001-90",
         logo_url: "",
+        logo_file_path: "",
       });
     }
   };
@@ -270,6 +272,23 @@ const ContractViewOnly: React.FC = () => {
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("pt-BR");
+  };
+
+  const getLogoUrl = () => {
+    if (!generalSettings) return null;
+    
+    // Prioridade: logo_file_path (arquivo real) > logo_url (URL externa)
+    if (generalSettings.logo_file_path) {
+      // Construir URL para o arquivo real no servidor
+      const baseUrl = import.meta.env.VITE_UPLOAD_SERVER_URL || 'http://localhost:3001';
+      return `${baseUrl}/api/view-file?path=${encodeURIComponent(generalSettings.logo_file_path)}`;
+    }
+    
+    if (generalSettings.logo_url) {
+      return generalSettings.logo_url;
+    }
+    
+    return null;
   };
 
   const renderContractContentWithSignatures = (
@@ -435,7 +454,7 @@ const ContractViewOnly: React.FC = () => {
         </head>
         <body>
           <div class="header">
-            ${generalSettings?.logo_url ? `<img src="${generalSettings.logo_url}" alt="Logo" style="height: 50px; margin-bottom: 8px;">` : ""}
+            ${getLogoUrl() ? `<img src="${getLogoUrl()}" alt="Logo" style="height: 50px; margin-bottom: 8px;">` : ""}
             <h1>${generalSettings?.system_name || "CredCar"}</h1>
             <div class="company-info">
               <strong>${generalSettings?.company_name || "CredCar Soluções Financeiras"}</strong><br>
@@ -558,13 +577,17 @@ const ContractViewOnly: React.FC = () => {
           >
             <div className="text-center">
               <div className="flex items-center justify-center mb-4">
-                {generalSettings.logo_url ? (
+                {getLogoUrl() ? (
                   <img
-                    src={generalSettings.logo_url}
+                    src={getLogoUrl()!}
                     alt="Logo da empresa"
                     className="h-12 object-contain mr-3"
                     onError={(e) => {
+                      console.error('❌ Erro ao carregar logo:', getLogoUrl());
                       (e.target as HTMLImageElement).style.display = "none";
+                    }}
+                    onLoad={() => {
+                      console.log('✅ Logo carregado com sucesso:', getLogoUrl());
                     }}
                   />
                 ) : (
