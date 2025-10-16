@@ -634,8 +634,35 @@ const ContractViewOnly: React.FC = () => {
       {generalSettings && (
         <div className="bg-white border-b print:border-b-2 print:border-gray-300">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 print:py-4 print:px-0">
-            <div className="text-center">
-              <div className="flex items-center justify-center mb-4 sm:mb-6 print:mb-3">
+            <div className="flex flex-col sm:flex-row print:flex-row items-center justify-between gap-4 sm:gap-6 print:gap-4">
+              {/* Informações da empresa - Esquerda */}
+              <div className="text-left flex-1">
+                <div className="text-xs sm:text-sm print:text-xs text-gray-600 space-y-1 sm:space-y-2 print:space-y-1">
+                  <p className="font-semibold text-sm sm:text-base lg:text-lg print:text-sm">
+                    {generalSettings.company_name}
+                  </p>
+                  <p className="text-xs sm:text-sm print:text-xs">CNPJ: {generalSettings.company_cnpj}</p>
+                  <div className="flex flex-col sm:flex-col print:flex-col items-start gap-1 sm:gap-1 print:gap-1 text-xs sm:text-sm print:text-xs">
+                    <span className="flex items-center gap-1">
+                      <MapPin className="h-3 w-3 sm:h-4 sm:w-4 print:h-3 print:w-3" />
+                      <span>{generalSettings.company_address}</span>
+                    </span>
+                  </div>
+                  <div className="flex flex-col sm:flex-col print:flex-col items-start gap-1 sm:gap-1 print:gap-1 text-xs sm:text-sm print:text-xs">
+                    <span className="flex items-center gap-1">
+                      <Phone className="h-3 w-3 sm:h-4 sm:w-4 print:h-3 print:w-3" />
+                      {generalSettings.company_phone}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <Mail className="h-3 w-3 sm:h-4 sm:w-4 print:h-3 print:w-3" />
+                      {generalSettings.company_email}
+                    </span>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Logo - Direita */}
+              <div className="flex-shrink-0">
                 {getLogoUrl() ? (
                   <img
                     src={getLogoUrl()!}
@@ -650,28 +677,6 @@ const ContractViewOnly: React.FC = () => {
                     <Building className="h-8 sm:h-10 lg:h-12 print:h-8 w-8 sm:w-10 lg:w-12 print:w-8 text-white" />
                   </div>
                 )}
-              </div>
-              <div className="text-xs sm:text-sm print:text-xs text-gray-600 space-y-1 sm:space-y-2 print:space-y-1">
-                <p className="font-semibold text-sm sm:text-base lg:text-lg print:text-sm">
-                  {generalSettings.company_name}
-                </p>
-                <p className="text-xs sm:text-sm print:text-xs">CNPJ: {generalSettings.company_cnpj}</p>
-                <div className="flex flex-col sm:flex-row print:flex-col items-center justify-center gap-2 sm:gap-4 print:gap-1 text-xs sm:text-sm print:text-xs">
-                  <span className="flex items-center gap-1 print:justify-center">
-                    <MapPin className="h-3 w-3 sm:h-4 sm:w-4 print:h-3 print:w-3" />
-                    <span className="text-center sm:text-left print:text-center">{generalSettings.company_address}</span>
-                  </span>
-                </div>
-                <div className="flex flex-col sm:flex-row print:flex-col items-center justify-center gap-2 sm:gap-4 print:gap-1 text-xs sm:text-sm print:text-xs">
-                  <span className="flex items-center gap-1 print:justify-center">
-                    <Phone className="h-3 w-3 sm:h-4 sm:w-4 print:h-3 print:w-3" />
-                    {generalSettings.company_phone}
-                  </span>
-                  <span className="flex items-center gap-1 print:justify-center">
-                    <Mail className="h-3 w-3 sm:h-4 sm:w-4 print:h-3 print:w-3" />
-                    {generalSettings.company_email}
-                  </span>
-                </div>
               </div>
             </div>
           </div>
