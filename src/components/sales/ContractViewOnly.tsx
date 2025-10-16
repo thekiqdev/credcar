@@ -600,47 +600,75 @@ const ContractViewOnly: React.FC = () => {
             padding: 6px 4px;
           }
         }
+        @media print {
+          .contract-content {
+            font-size: 12px !important;
+            line-height: 1.4 !important;
+          }
+          .contract-content table {
+            font-size: 10px;
+          }
+          .contract-content table td, 
+          .contract-content table th {
+            padding: 4px 2px;
+          }
+          .contract-content h1, 
+          .contract-content h2, 
+          .contract-content h3, 
+          .contract-content h4, 
+          .contract-content h5, 
+          .contract-content h6 {
+            margin-top: 1em;
+            margin-bottom: 0.5em;
+            page-break-after: avoid;
+          }
+          .contract-content p {
+            margin-bottom: 0.8em;
+            orphans: 3;
+            widows: 3;
+          }
+        }
       `}</style>
       
       {/* Company Header */}
       {generalSettings && (
-        <div className="bg-white border-b print:hidden">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+        <div className="bg-white border-b print:border-b-2 print:border-gray-300">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 print:py-4 print:px-0">
             <div className="text-center">
-              <div className="flex items-center justify-center mb-4 sm:mb-6">
+              <div className="flex items-center justify-center mb-4 sm:mb-6 print:mb-3">
                 {getLogoUrl() ? (
                   <img
                     src={getLogoUrl()!}
                     alt="Logo da empresa"
-                    className="h-16 sm:h-20 lg:h-24 object-contain"
+                    className="h-16 sm:h-20 lg:h-24 print:h-16 object-contain"
                     onError={(e) => {
                       (e.target as HTMLImageElement).style.display = "none";
                     }}
                   />
                 ) : (
-                  <div className="h-16 sm:h-20 lg:h-24 w-16 sm:w-20 lg:w-24 rounded-md bg-red-600 flex items-center justify-center">
-                    <Building className="h-8 sm:h-10 lg:h-12 w-8 sm:w-10 lg:w-12 text-white" />
+                  <div className="h-16 sm:h-20 lg:h-24 print:h-16 w-16 sm:w-20 lg:w-24 print:w-16 rounded-md bg-red-600 flex items-center justify-center">
+                    <Building className="h-8 sm:h-10 lg:h-12 print:h-8 w-8 sm:w-10 lg:w-12 print:w-8 text-white" />
                   </div>
                 )}
               </div>
-              <div className="text-xs sm:text-sm text-gray-600 space-y-1 sm:space-y-2">
-                <p className="font-semibold text-sm sm:text-base lg:text-lg">
+              <div className="text-xs sm:text-sm print:text-xs text-gray-600 space-y-1 sm:space-y-2 print:space-y-1">
+                <p className="font-semibold text-sm sm:text-base lg:text-lg print:text-sm">
                   {generalSettings.company_name}
                 </p>
-                <p className="text-xs sm:text-sm">CNPJ: {generalSettings.company_cnpj}</p>
-                <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4 text-xs sm:text-sm">
-                  <span className="flex items-center gap-1">
-                    <MapPin className="h-3 w-3 sm:h-4 sm:w-4" />
-                    <span className="text-center sm:text-left">{generalSettings.company_address}</span>
+                <p className="text-xs sm:text-sm print:text-xs">CNPJ: {generalSettings.company_cnpj}</p>
+                <div className="flex flex-col sm:flex-row print:flex-col items-center justify-center gap-2 sm:gap-4 print:gap-1 text-xs sm:text-sm print:text-xs">
+                  <span className="flex items-center gap-1 print:justify-center">
+                    <MapPin className="h-3 w-3 sm:h-4 sm:w-4 print:h-3 print:w-3" />
+                    <span className="text-center sm:text-left print:text-center">{generalSettings.company_address}</span>
                   </span>
                 </div>
-                <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4 text-xs sm:text-sm">
-                  <span className="flex items-center gap-1">
-                    <Phone className="h-3 w-3 sm:h-4 sm:w-4" />
+                <div className="flex flex-col sm:flex-row print:flex-col items-center justify-center gap-2 sm:gap-4 print:gap-1 text-xs sm:text-sm print:text-xs">
+                  <span className="flex items-center gap-1 print:justify-center">
+                    <Phone className="h-3 w-3 sm:h-4 sm:w-4 print:h-3 print:w-3" />
                     {generalSettings.company_phone}
                   </span>
-                  <span className="flex items-center gap-1">
-                    <Mail className="h-3 w-3 sm:h-4 sm:w-4" />
+                  <span className="flex items-center gap-1 print:justify-center">
+                    <Mail className="h-3 w-3 sm:h-4 sm:w-4 print:h-3 print:w-3" />
                     {generalSettings.company_email}
                   </span>
                 </div>
