@@ -289,31 +289,38 @@ const ContractViewOnly: React.FC = () => {
   };
 
   const getLogoUrl = () => {
-    if (!generalSettings) {
-      console.log('❌ ContractViewOnly: generalSettings is null');
+    try {
+      console.log('🔍 ContractViewOnly: getLogoUrl called');
+      
+      if (!generalSettings) {
+        console.log('❌ ContractViewOnly: generalSettings is null');
+        return null;
+      }
+      
+      console.log('🔍 ContractViewOnly: generalSettings:', generalSettings);
+      console.log('🔍 ContractViewOnly: logo_url:', generalSettings.logo_url);
+      console.log('🔍 ContractViewOnly: logo_file_path:', generalSettings.logo_file_path);
+      
+      // Prioridade: logo_url (URL completa do servidor) > logo_file_path (construir URL)
+      if (generalSettings.logo_url && generalSettings.logo_url.trim() !== '') {
+        console.log('✅ ContractViewOnly: Using logo_url:', generalSettings.logo_url);
+        return generalSettings.logo_url;
+      }
+      
+      if (generalSettings.logo_file_path && generalSettings.logo_file_path.trim() !== '') {
+        // Construir URL para o arquivo real no servidor usando o mesmo endpoint do upload
+        const baseUrl = import.meta.env.VITE_UPLOAD_SERVER_URL || 'http://localhost:3001';
+        const constructedUrl = `${baseUrl}/api/download-file?path=${encodeURIComponent(generalSettings.logo_file_path)}`;
+        console.log('🔧 ContractViewOnly: Constructed URL from logo_file_path:', constructedUrl);
+        return constructedUrl;
+      }
+      
+      console.log('❌ ContractViewOnly: No logo available');
+      return null;
+    } catch (error) {
+      console.error('❌ ContractViewOnly: Error in getLogoUrl:', error);
       return null;
     }
-    
-    console.log('🔍 ContractViewOnly: getLogoUrl called');
-    console.log('🔍 ContractViewOnly: logo_url:', generalSettings.logo_url);
-    console.log('🔍 ContractViewOnly: logo_file_path:', generalSettings.logo_file_path);
-    
-    // Prioridade: logo_url (URL completa do servidor) > logo_file_path (construir URL)
-    if (generalSettings.logo_url) {
-      console.log('✅ ContractViewOnly: Using logo_url:', generalSettings.logo_url);
-      return generalSettings.logo_url;
-    }
-    
-    if (generalSettings.logo_file_path) {
-      // Construir URL para o arquivo real no servidor usando o mesmo endpoint do upload
-      const baseUrl = import.meta.env.VITE_UPLOAD_SERVER_URL || 'http://localhost:3001';
-      const constructedUrl = `${baseUrl}/api/download-file?path=${encodeURIComponent(generalSettings.logo_file_path)}`;
-      console.log('🔧 ContractViewOnly: Constructed URL from logo_file_path:', constructedUrl);
-      return constructedUrl;
-    }
-    
-    console.log('❌ ContractViewOnly: No logo available');
-    return null;
   };
 
   const renderContractContentWithSignatures = (
