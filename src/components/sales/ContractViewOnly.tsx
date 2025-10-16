@@ -277,15 +277,15 @@ const ContractViewOnly: React.FC = () => {
   const getLogoUrl = () => {
     if (!generalSettings) return null;
     
-    // Prioridade: logo_file_path (arquivo real) > logo_url (URL externa)
-    if (generalSettings.logo_file_path) {
-      // Construir URL para o arquivo real no servidor
-      const baseUrl = import.meta.env.VITE_UPLOAD_SERVER_URL || 'http://localhost:3001';
-      return `${baseUrl}/api/view-file?path=${encodeURIComponent(generalSettings.logo_file_path)}`;
-    }
-    
+    // Prioridade: logo_url (URL completa do servidor) > logo_file_path (construir URL)
     if (generalSettings.logo_url) {
       return generalSettings.logo_url;
+    }
+    
+    if (generalSettings.logo_file_path) {
+      // Construir URL para o arquivo real no servidor usando o mesmo endpoint do upload
+      const baseUrl = import.meta.env.VITE_UPLOAD_SERVER_URL || 'http://localhost:3001';
+      return `${baseUrl}/api/download-file?path=${encodeURIComponent(generalSettings.logo_file_path)}`;
     }
     
     return null;
