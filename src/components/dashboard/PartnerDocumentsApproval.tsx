@@ -215,7 +215,7 @@ const PartnerDocumentsApproval: React.FC = () => {
     setShowApproveDialog(true);
   };
 
-  const handleOpenDeleteDialog = (document: PartnerDocument) => {
+  const handleOpenRejectDialog = (document: PartnerDocument) => {
     setSelectedDocument(document);
     setRejectionReason('');
     setShowRejectDialog(true);
@@ -258,37 +258,35 @@ const PartnerDocumentsApproval: React.FC = () => {
     }
   };
 
-  const handleDeleteDocument = async () => {
-    if (!selectedDocument) return;
-
-    if (!confirm(`Tem certeza que deseja excluir o documento "${selectedDocument.document_type}"? Esta ação não pode ser desfeita e o sócio poderá enviar o arquivo novamente.`)) {
+  const handleRejectDocument = async () => {
+    if (!selectedDocument || !rejectionReason.trim()) {
+      setError('Motivo da rejeição é obrigatório');
       return;
     }
 
     try {
       setIsProcessing(true);
-      console.log('🗑️ Excluindo documento:', selectedDocument);
       
-      // 1. Excluir arquivo físico do servidor
-      await uploadService.deleteFile(selectedDocument.file_url);
-      console.log('✅ Arquivo físico excluído do servidor');
-      
-      // 2. Excluir registro do banco de dados
-      await partnersService.deletePartnerDocument(selectedDocument.id);
-      console.log('✅ Registro excluído do banco de dados');
-      
-      // 3. Fechar dialog e limpar estado
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Usuário não autenticado');
+
+      // Update document status
+      await partnersService.updateDocumentStatus(
+        selectedDocument.id,
+        'Reprovado',
+        user.id,
+        rejectionReason
+      );
+
       setShowRejectDialog(false);
       setSelectedDocument(null);
       setRejectionReason('');
-      
-      // 4. Recarregar dados
       await loadData();
       
-      console.log('✅ Documento excluído com sucesso');
     } catch (error) {
-      console.error('❌ Erro ao excluir documento:', error);
-      setError('Erro ao excluir documento. Tente novamente.');
+      console.error('Error rejecting document:', error);
+      setError('Erro ao reprovar documento');
     } finally {
       setIsProcessing(false);
     }
@@ -521,8 +519,7 @@ const PartnerDocumentsApproval: React.FC = () => {
                               variant="outline" 
                               size="sm"
                               className="text-red-600 hover:text-red-700"
-                              onClick={() => handleOpenDeleteDialog(document)}
-                              title="Excluir Documento"
+                              onClick={() => handleOpenRejectDialog(document)}
                             >
                               <XCircle className="h-4 w-4" />
                             </Button>
@@ -642,29 +639,28 @@ const PartnerDocumentsApproval: React.FC = () => {
       <Dialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Excluir Documento</DialogTitle>
+            <DialogTitle>Reprovar Documento</DialogTitle>
             <DialogDescription>
-              Tem certeza que deseja excluir o documento "{selectedDocument?.document_type}" enviado por {selectedDocument?.partners?.name || 'o sócio'}? Esta ação não pode ser desfeita e o sócio poderá enviar o arquivo novamente.
+              Informe o motivo da reprovação do documento
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
               <Label>Documento</Label>
               <p className="font-medium">
-                {selectedDocument?.document_type} - {selectedDocument?.partners?.name}
+                {selectedDocument?.document_type} - {selectedDocument?.partner?.name}
               </p>
             </div>
             <div>
-              <Label>Sócio</Label>
-              <p className="font-medium">
-                {selectedDocument?.partners?.name} ({selectedDocument?.partners?.cpf})
-              </p>
-            </div>
-            <div>
-              <Label>Representante</Label>
-              <p className="font-medium">
-                {selectedDocument?.partners?.profiles?.name}
-              </p>
+              <Label htmlFor="rejection-reason">Motivo da Rejeição *</Label>
+              <Textarea
+                id="rejection-reason"
+                placeholder="Descreva o motivo da reprovação..."
+                value={rejectionReason}
+                onChange={(e) => setRejectionReason(e.target.value)}
+                rows={4}
+                className="resize-none"
+              />
             </div>
           </div>
           <DialogFooter>
@@ -673,14 +669,14 @@ const PartnerDocumentsApproval: React.FC = () => {
               onClick={() => setShowRejectDialog(false)}
               disabled={isProcessing}
             >
-              Fechar
+              Cancelar
             </Button>
             <Button 
-              onClick={handleDeleteDocument}
-              disabled={isProcessing}
+              onClick={handleRejectDocument}
+              disabled={isProcessing || !rejectionReason.trim()}
               className="bg-red-600 hover:bg-red-700"
             >
-              {isProcessing ? 'Excluindo...' : 'Excluir Documento'}
+              {isProcessing ? 'Reprovando...' : 'Reprovar Documento'}
             </Button>
           </DialogFooter>
         </DialogContent>

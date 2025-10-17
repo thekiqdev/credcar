@@ -4071,26 +4071,4 @@ export const partnersService = {
       throw error;
     }
   },
-
-  // Excluir documento de sócio
-  async deletePartnerDocument(documentId: number): Promise<void> {
-    try {
-      console.log("🗑️ Excluindo documento de sócio:", documentId);
-      
-      const { error } = await supabase
-        .from('partner_documents')
-        .delete()
-        .eq('id', documentId);
-
-      if (error) {
-        console.error("Error in partnersService.deletePartnerDocument:", error);
-        throw error;
-      }
-
-      console.log("✅ Documento de sócio excluído com sucesso:", documentId);
-    } catch (error) {
-      console.error("Error in partnersService.deletePartnerDocument:", error);
-      throw error;
-    }
-  },
 };
