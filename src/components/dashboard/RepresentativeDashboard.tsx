@@ -330,9 +330,17 @@ const RepresentativeDashboard: React.FC<RepresentativeDashboardProps> = ({
     
     try {
       setIsLoadingDocuments(true);
-      const { documentService } = await import("../../lib/supabase");
-      const documents = await documentService.getByRepresentativeId(currentUser.id);
-      setRepresentativeDocuments(documents || []);
+      const { data: documents, error } = await supabase
+        .from('representative_documents')
+        .select('*')
+        .eq('representative_id', currentUser.id);
+      
+      if (error) {
+        console.error("Error loading representative documents:", error);
+        setRepresentativeDocuments([]);
+      } else {
+        setRepresentativeDocuments(documents || []);
+      }
     } catch (error) {
       console.error("Error loading representative documents:", error);
       setRepresentativeDocuments([]);
@@ -1827,11 +1835,11 @@ const RepresentativeDashboard: React.FC<RepresentativeDashboardProps> = ({
                             <div className="h-1 w-8 bg-green-600"></div>
                             <h4 className="text-lg font-semibold text-green-800">Documentos do Sócio</h4>
                             <Badge variant="outline" className="bg-green-50 text-green-700">
-                              {requiredDocuments.filter(d => d.type.includes('sócio') || d.type.includes('pf') || d.type.includes('certidão') || d.type.includes('foto') || d.type.includes('cnh') || d.type.includes('identidade')).length} documentos
+                              {requiredDocuments.filter(doc => doc.type.includes('sócio') || doc.type.includes('pf') || doc.type.includes('certidão') || doc.type.includes('foto') || doc.type.includes('cnh') || doc.type.includes('identidade')).length} documentos
                             </Badge>
                           </div>
 
-                          {requiredDocuments.filter(doc => doc.type.includes('sócio') || doc.type.includes('pf') || d.type.includes('certidão') || doc.type.includes('foto') || doc.type.includes('cnh') || doc.type.includes('identidade')).map((doc) => (
+                          {requiredDocuments.filter(doc => doc.type.includes('sócio') || doc.type.includes('pf') || doc.type.includes('certidão') || doc.type.includes('foto') || doc.type.includes('cnh') || doc.type.includes('identidade')).map((doc) => (
                             <div key={doc.id} className="flex items-center justify-between p-4 border rounded-lg">
                               <div className="flex items-center gap-3 flex-1">
                                 <div className="p-2 bg-green-100 rounded-lg">
