@@ -286,19 +286,12 @@ class UploadService {
       formData.append('representativeId', docInfo.representativeId);
       formData.append('documentType', docInfo.documentType);
       formData.append('cpfCnpj', docInfo.cpfCnpj);
-      
-      // Adicionar CPF do sócio se disponível
-      if (docInfo.partnerCpf) {
-        formData.append('partnerCpf', docInfo.partnerCpf);
-        console.log('👤 Partner CPF adicionado:', docInfo.partnerCpf);
-      }
 
       console.log('📤 FormData criado com campos:', {
         file: file.name,
         representativeId: docInfo.representativeId,
         documentType: docInfo.documentType,
-        cpfCnpj: docInfo.cpfCnpj,
-        partnerCpf: docInfo.partnerCpf || 'N/A'
+        cpfCnpj: docInfo.cpfCnpj
       });
 
       // Fazer upload

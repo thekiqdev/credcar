@@ -999,7 +999,14 @@ app.post('/api/upload-document', upload.single('file'), validateFile, (req, res)
     if (partnerId && partnerCpf) {
       // Documento de sócio: documentos/cpf_representante/socio/cpf_socio/tipo_documento
       const sanitizedPartnerCpf = partnerCpf.replace(/[^a-zA-Z0-9]/g, '');
+      console.log('🔍 Partner ID:', partnerId);
+      console.log('🔍 Partner CPF:', partnerCpf);
+      console.log('🔍 Sanitized Partner CPF:', sanitizedPartnerCpf);
+      console.log('🔍 Mapped Path:', mappedPath);
+      
       const docType = mappedPath.split('/')[1]; // Extrair apenas o tipo do documento (ex: cartilha_credenciamento_pf)
+      console.log('🔍 Extracted Doc Type:', docType);
+      
       finalPath = path.join(baseDir, sanitizedCpfCnpj, 'socio', sanitizedPartnerCpf, docType);
       console.log('🔍 Documento de sócio - Final Path:', finalPath);
     } else {
