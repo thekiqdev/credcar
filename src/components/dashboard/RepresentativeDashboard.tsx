@@ -446,7 +446,10 @@ const RepresentativeDashboard: React.FC<RepresentativeDashboardProps> = ({
       // Criar lista completa de documentos com status
       const documentsWithStatus = documentTypes.map(type => {
         const existingDoc = existingDocs?.find(doc => doc.document_type === type);
-        return {
+        console.log(`🔍 Processando documento: ${type}`);
+        console.log(`📄 Documento existente encontrado:`, existingDoc);
+        
+        const result = {
           id: type,
           type: type,
           status: existingDoc ? existingDoc.status : 'Pendente',
@@ -456,8 +459,12 @@ const RepresentativeDashboard: React.FC<RepresentativeDashboardProps> = ({
           rejection_reason: existingDoc?.rejection_reason || null,
           file: null
         };
+        
+        console.log(`✅ Resultado final para ${type}:`, result);
+        return result;
       });
 
+      console.log('📋 Lista final de documentos com status:', documentsWithStatus);
       setRequiredDocuments(documentsWithStatus);
     } catch (error) {
       console.error('Error loading required documents:', error);
@@ -509,26 +516,23 @@ const RepresentativeDashboard: React.FC<RepresentativeDashboardProps> = ({
 
       // Salvar no banco de dados
       console.log('💾 Salvando no banco de dados...');
-      console.log('📋 Dados para salvar:', {
+      const dataToSave = {
         representative_id: currentUser.id,
         document_type: document.type,
         file_url: result.data?.filePath || result.data?.directory,
         status: 'Pendente',
         uploaded_at: new Date().toISOString()
-      });
+      };
+      console.log('📋 Dados para salvar:', dataToSave);
 
       const { data: savedData, error: dbError } = await supabase
         .from('representative_documents')
-        .upsert({
-          representative_id: currentUser.id,
-          document_type: document.type,
-          file_url: result.data?.filePath || result.data?.directory,
-          status: 'Pendente',
-          uploaded_at: new Date().toISOString()
-        })
+        .upsert(dataToSave)
         .select();
 
       console.log('💾 Resultado do salvamento:', { savedData, dbError });
+      console.log('🔍 Dados salvos detalhados:', savedData);
+      console.log('❌ Erro detalhado:', dbError);
 
       if (dbError) {
         console.error('❌ Erro ao salvar no banco:', dbError);
@@ -537,9 +541,12 @@ const RepresentativeDashboard: React.FC<RepresentativeDashboardProps> = ({
 
       console.log('✅ Documento salvo no banco com sucesso!');
 
-      // Recarregar documentos para garantir sincronização
-      console.log('🔄 Recarregando documentos após upload...');
-      await loadRequiredDocuments();
+      // Atualizar status do documento
+      setRequiredDocuments(prev => prev.map(doc => 
+        doc.id === documentId 
+          ? { ...doc, status: 'Pendente', file_url: result.data?.filePath || result.data?.directory, uploaded_at: new Date().toISOString(), file: null }
+          : doc
+      ));
 
       alert('Documento enviado com sucesso!');
       
