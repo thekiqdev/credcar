@@ -25,7 +25,7 @@ import {
   generalSettingsService,
   electronicSignatureService,
 } from "@/lib/supabase";
-import { mergePlaceholders, MergeData } from "@/lib/merge-fields";
+import { mergePlaceholders } from "@/lib/merge-fields";
 import { Database } from "@/types/supabase";
 
 type ContractStatus = Database["public"]["Enums"]["contract_status"];
@@ -44,7 +44,13 @@ interface ContractData {
     phone: string | null;
     cpf_cnpj: string | null;
     address: string | null;
-    // Campos estendidos
+    address_street: string | null;
+    address_number: string | null;
+    address_complement: string | null;
+    address_neighborhood: string | null;
+    address_city: string | null;
+    address_state: string | null;
+    address_zipcode: string | null;
     rg: string | null;
     birth_date: string | null;
     nationality: string | null;
@@ -57,14 +63,6 @@ interface ContractData {
     reference_name: string | null;
     reference_address: string | null;
     reference_phone: string | null;
-    // Endereço detalhado
-    address_street: string | null;
-    address_number: string | null;
-    address_complement: string | null;
-    address_neighborhood: string | null;
-    address_city: string | null;
-    address_state: string | null;
-    address_zip_code: string | null;
   };
   commission_table: {
     id: number;
@@ -166,6 +164,13 @@ const ContractViewOnly: React.FC = () => {
             phone,
             cpf_cnpj,
             address,
+            address_street,
+            address_number,
+            address_complement,
+            address_neighborhood,
+            address_city,
+            address_state,
+            address_zipcode,
             rg,
             birth_date,
             nationality,
@@ -177,14 +182,7 @@ const ContractViewOnly: React.FC = () => {
             position,
             reference_name,
             reference_address,
-            reference_phone,
-            address_street,
-            address_number,
-            address_complement,
-            address_neighborhood,
-            address_city,
-            address_state,
-            address_zip_code
+            reference_phone
           ),
           planos!inner (
             id,
@@ -230,6 +228,25 @@ const ContractViewOnly: React.FC = () => {
           phone: data.clients?.phone,
           cpf_cnpj: data.clients?.cpf_cnpj,
           address: data.clients?.address,
+          address_street: data.clients?.address_street,
+          address_number: data.clients?.address_number,
+          address_complement: data.clients?.address_complement,
+          address_neighborhood: data.clients?.address_neighborhood,
+          address_city: data.clients?.address_city,
+          address_state: data.clients?.address_state,
+          address_zipcode: data.clients?.address_zipcode,
+          rg: data.clients?.rg,
+          birth_date: data.clients?.birth_date,
+          nationality: data.clients?.nationality,
+          marital_status: data.clients?.marital_status,
+          spouse_name: data.clients?.spouse_name,
+          spouse_phone: data.clients?.spouse_phone,
+          company: data.clients?.company,
+          salary: data.clients?.salary ? parseFloat(data.clients.salary) : null,
+          position: data.clients?.position,
+          reference_name: data.clients?.reference_name,
+          reference_address: data.clients?.reference_address,
+          reference_phone: data.clients?.reference_phone,
         },
         commission_table: {
           id: data.planos?.id || 0,
@@ -338,61 +355,7 @@ const ContractViewOnly: React.FC = () => {
     if (!content) return content;
 
     // Aplicar mesclagem de campos primeiro
-    let processedContent = content;
-    
-    if (contract) {
-      const mergeData: MergeData = {
-        // Dados do cliente
-        clientName: contract.client.full_name || '',
-        clientEmail: contract.client.email || '',
-        clientPhone: contract.client.phone || '',
-        clientCpfCnpj: contract.client.cpf_cnpj || '',
-        clientAddress: contract.client.address || '',
-        
-        // Dados do contrato
-        contractCode: contract.contract_code || '',
-        contractValue: contract.total_value?.toString() || '0',
-        contractDate: new Date(contract.created_at).toLocaleDateString('pt-BR'),
-        
-        // Dados do representante
-        representativeName: contract.representative?.full_name || '',
-        representativeEmail: contract.representative?.email || '',
-        representativePhone: contract.representative?.phone || '',
-        
-        // Dados da tabela de comissão
-        commissionTableName: contract.commission_table?.name || '',
-        commissionPercentage: contract.commission_table?.commission_percentage?.toString() || '0',
-        
-        // Dados do grupo
-        groupName: contract.group?.name || '',
-        groupDescription: contract.group?.description || '',
-        
-        // Dados adicionais do cliente (se disponíveis)
-        clientRg: contract.client.rg || '',
-        clientBirthDate: contract.client.birth_date || '',
-        clientNationality: contract.client.nationality || '',
-        clientMaritalStatus: contract.client.marital_status || '',
-        clientSpouseName: contract.client.spouse_name || '',
-        clientSpousePhone: contract.client.spouse_phone || '',
-        clientCompany: contract.client.company || '',
-        clientSalary: contract.client.salary?.toString() || '',
-        clientPosition: contract.client.position || '',
-        clientReferenceName: contract.client.reference_name || '',
-        clientReferenceAddress: contract.client.reference_address || '',
-        clientReferencePhone: contract.client.reference_phone || '',
-        
-        // Endereço detalhado
-        clientAddressStreet: contract.client.address_street || '',
-        clientAddressNumber: contract.client.address_number || '',
-        clientAddressComplement: contract.client.address_complement || '',
-        clientAddressNeighborhood: contract.client.address_neighborhood || '',
-        clientAddressCity: contract.client.address_city || '',
-        clientAddressState: contract.client.address_state || '',
-        clientAddressZipCode: contract.client.address_zip_code || '',
-      };
-      
-      processedContent = mergePlaceholders(processedContent, mergeData);
-    }
+    let processedContent = mergePlaceholders(content, contract);
     const processedSignatureIds = new Set<string>();
 
     // Process shortcodes and replace with signature content
