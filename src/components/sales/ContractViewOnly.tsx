@@ -25,6 +25,7 @@ import {
   generalSettingsService,
   electronicSignatureService,
 } from "@/lib/supabase";
+import { mergePlaceholders, MergeData } from "@/lib/merge-fields";
 import { Database } from "@/types/supabase";
 
 type ContractStatus = Database["public"]["Enums"]["contract_status"];
@@ -296,7 +297,63 @@ const ContractViewOnly: React.FC = () => {
   ) => {
     if (!content) return content;
 
+    // Aplicar merge fields primeiro
     let processedContent = content;
+    
+    if (contract) {
+      const mergeData: MergeData = {
+        // Dados do cliente
+        client_name: contract.client.full_name || '',
+        client_email: contract.client.email || '',
+        client_phone: contract.client.phone || '',
+        client_cpf_cnpj: contract.client.cpf_cnpj || '',
+        client_address: contract.client.address || '',
+        
+        // Dados do contrato
+        contract_code: contract.contract_code || '',
+        contract_value: contract.total_value || 0,
+        contract_date: new Date(contract.created_at).toLocaleDateString('pt-BR'),
+        
+        // Dados da tabela de comissão
+        commission_table_name: contract.commission_table?.name || '',
+        commission_percentage: contract.commission_table?.commission_percentage || 0,
+        
+        // Dados do representante
+        representative_name: contract.representative?.name || '',
+        representative_email: contract.representative?.email || '',
+        representative_phone: contract.representative?.phone || '',
+        representative_cpf_cnpj: contract.representative?.cpf_cnpj || '',
+        representative_address: contract.representative?.address || '',
+        
+        // Dados do grupo de comissão
+        group_name: contract.commission_group?.name || '',
+        
+        // Dados adicionais do cliente (se disponíveis)
+        client_rg: contract.client.rg || '',
+        client_birth_date: contract.client.birth_date || '',
+        client_nationality: contract.client.nationality || '',
+        client_marital_status: contract.client.marital_status || '',
+        client_spouse_name: contract.client.spouse_name || '',
+        client_spouse_phone: contract.client.spouse_phone || '',
+        client_company: contract.client.company || '',
+        client_salary: contract.client.salary || 0,
+        client_position: contract.client.position || '',
+        client_reference_name: contract.client.reference_name || '',
+        client_reference_address: contract.client.reference_address || '',
+        client_reference_phone: contract.client.reference_phone || '',
+        
+        // Endereço detalhado
+        client_address_street: contract.client.address_street || '',
+        client_address_number: contract.client.address_number || '',
+        client_address_complement: contract.client.address_complement || '',
+        client_address_neighborhood: contract.client.address_neighborhood || '',
+        client_address_city: contract.client.address_city || '',
+        client_address_state: contract.client.address_state || '',
+        client_address_zipcode: contract.client.address_zipcode || '',
+      };
+      
+      processedContent = mergePlaceholders(content, mergeData);
+    }
     const processedSignatureIds = new Set<string>();
 
     // Process shortcodes and replace with signature content
