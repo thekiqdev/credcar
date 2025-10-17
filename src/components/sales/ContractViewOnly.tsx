@@ -44,6 +44,27 @@ interface ContractData {
     phone: string | null;
     cpf_cnpj: string | null;
     address: string | null;
+    // Campos estendidos
+    rg: string | null;
+    birth_date: string | null;
+    nationality: string | null;
+    marital_status: string | null;
+    spouse_name: string | null;
+    spouse_phone: string | null;
+    company: string | null;
+    salary: number | null;
+    position: string | null;
+    reference_name: string | null;
+    reference_address: string | null;
+    reference_phone: string | null;
+    // Endereço detalhado
+    address_street: string | null;
+    address_number: string | null;
+    address_complement: string | null;
+    address_neighborhood: string | null;
+    address_city: string | null;
+    address_state: string | null;
+    address_zip_code: string | null;
   };
   commission_table: {
     id: number;
@@ -144,7 +165,26 @@ const ContractViewOnly: React.FC = () => {
             email,
             phone,
             cpf_cnpj,
-            address
+            address,
+            rg,
+            birth_date,
+            nationality,
+            marital_status,
+            spouse_name,
+            spouse_phone,
+            company,
+            salary,
+            position,
+            reference_name,
+            reference_address,
+            reference_phone,
+            address_street,
+            address_number,
+            address_complement,
+            address_neighborhood,
+            address_city,
+            address_state,
+            address_zip_code
           ),
           planos!inner (
             id,
@@ -297,62 +337,61 @@ const ContractViewOnly: React.FC = () => {
   ) => {
     if (!content) return content;
 
-    // Aplicar merge fields primeiro
+    // Aplicar mesclagem de campos primeiro
     let processedContent = content;
     
     if (contract) {
       const mergeData: MergeData = {
         // Dados do cliente
-        client_name: contract.client.full_name || '',
-        client_email: contract.client.email || '',
-        client_phone: contract.client.phone || '',
-        client_cpf_cnpj: contract.client.cpf_cnpj || '',
-        client_address: contract.client.address || '',
+        clientName: contract.client.full_name || '',
+        clientEmail: contract.client.email || '',
+        clientPhone: contract.client.phone || '',
+        clientCpfCnpj: contract.client.cpf_cnpj || '',
+        clientAddress: contract.client.address || '',
         
         // Dados do contrato
-        contract_code: contract.contract_code || '',
-        contract_value: contract.total_value || 0,
-        contract_date: new Date(contract.created_at).toLocaleDateString('pt-BR'),
-        
-        // Dados da tabela de comissão
-        commission_table_name: contract.commission_table?.name || '',
-        commission_percentage: contract.commission_table?.commission_percentage || 0,
+        contractCode: contract.contract_code || '',
+        contractValue: contract.total_value?.toString() || '0',
+        contractDate: new Date(contract.created_at).toLocaleDateString('pt-BR'),
         
         // Dados do representante
-        representative_name: contract.representative?.name || '',
-        representative_email: contract.representative?.email || '',
-        representative_phone: contract.representative?.phone || '',
-        representative_cpf_cnpj: contract.representative?.cpf_cnpj || '',
-        representative_address: contract.representative?.address || '',
+        representativeName: contract.representative?.full_name || '',
+        representativeEmail: contract.representative?.email || '',
+        representativePhone: contract.representative?.phone || '',
         
-        // Dados do grupo de comissão
-        group_name: contract.commission_group?.name || '',
+        // Dados da tabela de comissão
+        commissionTableName: contract.commission_table?.name || '',
+        commissionPercentage: contract.commission_table?.commission_percentage?.toString() || '0',
+        
+        // Dados do grupo
+        groupName: contract.group?.name || '',
+        groupDescription: contract.group?.description || '',
         
         // Dados adicionais do cliente (se disponíveis)
-        client_rg: contract.client.rg || '',
-        client_birth_date: contract.client.birth_date || '',
-        client_nationality: contract.client.nationality || '',
-        client_marital_status: contract.client.marital_status || '',
-        client_spouse_name: contract.client.spouse_name || '',
-        client_spouse_phone: contract.client.spouse_phone || '',
-        client_company: contract.client.company || '',
-        client_salary: contract.client.salary || 0,
-        client_position: contract.client.position || '',
-        client_reference_name: contract.client.reference_name || '',
-        client_reference_address: contract.client.reference_address || '',
-        client_reference_phone: contract.client.reference_phone || '',
+        clientRg: contract.client.rg || '',
+        clientBirthDate: contract.client.birth_date || '',
+        clientNationality: contract.client.nationality || '',
+        clientMaritalStatus: contract.client.marital_status || '',
+        clientSpouseName: contract.client.spouse_name || '',
+        clientSpousePhone: contract.client.spouse_phone || '',
+        clientCompany: contract.client.company || '',
+        clientSalary: contract.client.salary?.toString() || '',
+        clientPosition: contract.client.position || '',
+        clientReferenceName: contract.client.reference_name || '',
+        clientReferenceAddress: contract.client.reference_address || '',
+        clientReferencePhone: contract.client.reference_phone || '',
         
         // Endereço detalhado
-        client_address_street: contract.client.address_street || '',
-        client_address_number: contract.client.address_number || '',
-        client_address_complement: contract.client.address_complement || '',
-        client_address_neighborhood: contract.client.address_neighborhood || '',
-        client_address_city: contract.client.address_city || '',
-        client_address_state: contract.client.address_state || '',
-        client_address_zipcode: contract.client.address_zipcode || '',
+        clientAddressStreet: contract.client.address_street || '',
+        clientAddressNumber: contract.client.address_number || '',
+        clientAddressComplement: contract.client.address_complement || '',
+        clientAddressNeighborhood: contract.client.address_neighborhood || '',
+        clientAddressCity: contract.client.address_city || '',
+        clientAddressState: contract.client.address_state || '',
+        clientAddressZipCode: contract.client.address_zip_code || '',
       };
       
-      processedContent = mergePlaceholders(content, mergeData);
+      processedContent = mergePlaceholders(processedContent, mergeData);
     }
     const processedSignatureIds = new Set<string>();
 
