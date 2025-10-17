@@ -44,25 +44,6 @@ interface ContractData {
     phone: string | null;
     cpf_cnpj: string | null;
     address: string | null;
-    address_street: string | null;
-    address_number: string | null;
-    address_complement: string | null;
-    address_neighborhood: string | null;
-    address_city: string | null;
-    address_state: string | null;
-    address_zipcode: string | null;
-    rg: string | null;
-    birth_date: string | null;
-    nationality: string | null;
-    marital_status: string | null;
-    spouse_name: string | null;
-    spouse_phone: string | null;
-    company: string | null;
-    salary: number | null;
-    position: string | null;
-    reference_name: string | null;
-    reference_address: string | null;
-    reference_phone: string | null;
   };
   commission_table: {
     id: number;
@@ -163,26 +144,7 @@ const ContractViewOnly: React.FC = () => {
             email,
             phone,
             cpf_cnpj,
-            address,
-            address_street,
-            address_number,
-            address_complement,
-            address_neighborhood,
-            address_city,
-            address_state,
-            address_zipcode,
-            rg,
-            birth_date,
-            nationality,
-            marital_status,
-            spouse_name,
-            spouse_phone,
-            company,
-            salary,
-            position,
-            reference_name,
-            reference_address,
-            reference_phone
+            address
           ),
           planos!inner (
             id,
@@ -228,25 +190,6 @@ const ContractViewOnly: React.FC = () => {
           phone: data.clients?.phone,
           cpf_cnpj: data.clients?.cpf_cnpj,
           address: data.clients?.address,
-          address_street: data.clients?.address_street,
-          address_number: data.clients?.address_number,
-          address_complement: data.clients?.address_complement,
-          address_neighborhood: data.clients?.address_neighborhood,
-          address_city: data.clients?.address_city,
-          address_state: data.clients?.address_state,
-          address_zipcode: data.clients?.address_zipcode,
-          rg: data.clients?.rg,
-          birth_date: data.clients?.birth_date,
-          nationality: data.clients?.nationality,
-          marital_status: data.clients?.marital_status,
-          spouse_name: data.clients?.spouse_name,
-          spouse_phone: data.clients?.spouse_phone,
-          company: data.clients?.company,
-          salary: data.clients?.salary ? parseFloat(data.clients.salary) : null,
-          position: data.clients?.position,
-          reference_name: data.clients?.reference_name,
-          reference_address: data.clients?.reference_address,
-          reference_phone: data.clients?.reference_phone,
         },
         commission_table: {
           id: data.planos?.id || 0,
@@ -355,7 +298,12 @@ const ContractViewOnly: React.FC = () => {
     if (!content) return content;
 
     // Aplicar mesclagem de campos primeiro
-    let processedContent = mergePlaceholders(content, contract);
+    let processedContent = mergePlaceholders(content, {
+      client: contract?.client,
+      contract: contract,
+      representative: contract?.representative,
+      commission_table: contract?.commission_table
+    });
     const processedSignatureIds = new Set<string>();
 
     // Process shortcodes and replace with signature content
