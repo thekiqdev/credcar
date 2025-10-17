@@ -1026,11 +1026,15 @@ app.post('/api/upload-document', upload.single('file'), validateFile, (req, res)
     fs.renameSync(req.file.path, finalFilePath);
     console.log('✅ Arquivo movido com sucesso!');
 
+    // Construir caminho relativo para salvar no banco
+    const relativePath = path.relative(path.join(__dirname, 'documentos'), finalFilePath);
+    console.log('🔍 Relative Path for DB:', relativePath);
+    
     const fileInfo = {
       originalName: req.file.originalname,
       filename: req.file.filename,
-      filePath: finalFilePath,
-      directory: finalFilePath,
+      filePath: relativePath, // Usar caminho relativo em vez de absoluto
+      directory: relativePath,
       size: req.file.size,
       mimetype: req.file.mimetype,
       documentType: documentType,
