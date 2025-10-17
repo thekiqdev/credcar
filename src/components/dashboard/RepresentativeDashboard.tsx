@@ -39,6 +39,15 @@ import {
   Trash2,
   Key,
   User,
+  Mail,
+  Phone,
+  MapPin,
+  Building,
+  FileCheck,
+  Upload,
+  CheckCircle,
+  XCircle,
+  AlertCircle,
 } from "lucide-react";
 import DocumentNotification from './DocumentNotification';
 import { withdrawalService } from "../../lib/withdrawal.service";
@@ -136,6 +145,18 @@ const RepresentativeDashboard: React.FC<RepresentativeDashboardProps> = ({
   const [selectedClientForPassword, setSelectedClientForPassword] =
     React.useState<any>(null);
   const [newPassword, setNewPassword] = React.useState("");
+  
+  // My Account states
+  const [representativeDocuments, setRepresentativeDocuments] = useState<any[]>([]);
+  const [isLoadingDocuments, setIsLoadingDocuments] = useState(false);
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [profileData, setProfileData] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    cnpj: "",
+    address: "",
+  });
 
   const displayName =
     representativeName || currentUser?.name || "Representante";
@@ -266,6 +287,14 @@ const RepresentativeDashboard: React.FC<RepresentativeDashboardProps> = ({
     });
   }, [navigate, currentUser && currentUser.id, showContractFlow]); // Add navigate and showContractFlow as dependency to reload when contract is created
 
+  // Load documents when My Account tab is active
+  useEffect(() => {
+    if (activeTab === "my-account" && currentUser?.id) {
+      loadRepresentativeDocuments();
+      loadProfileData();
+    }
+  }, [activeTab, currentUser?.id]);
+
   const salesProgress =
     (performanceData.totalSales / performanceData.targetSales) * 100;
   const availableBalance = performanceData.pendingCommission;
@@ -281,6 +310,65 @@ const RepresentativeDashboard: React.FC<RepresentativeDashboardProps> = ({
     
     console.log("✅ Logout complete, navigating to home");
     navigate("/", { replace: true });
+  };
+
+  // Load representative documents
+  const loadRepresentativeDocuments = async () => {
+    if (!currentUser?.id) return;
+    
+    try {
+      setIsLoadingDocuments(true);
+      const { documentService } = await import("../../lib/supabase");
+      const documents = await documentService.getByRepresentativeId(currentUser.id);
+      setRepresentativeDocuments(documents || []);
+    } catch (error) {
+      console.error("Error loading representative documents:", error);
+      setRepresentativeDocuments([]);
+    } finally {
+      setIsLoadingDocuments(false);
+    }
+  };
+
+  // Load profile data
+  const loadProfileData = () => {
+    if (currentUser) {
+      setProfileData({
+        name: currentUser.name || currentUser.full_name || "",
+        email: currentUser.email || "",
+        phone: currentUser.phone || "",
+        cnpj: currentUser.cnpj || "",
+        address: currentUser.address || "",
+      });
+    }
+  };
+
+  // Handle profile edit
+  const handleEditProfile = () => {
+    setIsEditingProfile(true);
+    loadProfileData();
+  };
+
+  const handleCancelEditProfile = () => {
+    setIsEditingProfile(false);
+    loadProfileData();
+  };
+
+  const handleSaveProfile = async () => {
+    if (!currentUser?.id) return;
+    
+    try {
+      const { representativeService } = await import("../../lib/supabase");
+      await representativeService.update(currentUser.id, profileData);
+      
+      // Update current user data
+      setCurrentUser({ ...currentUser, ...profileData });
+      setIsEditingProfile(false);
+      
+      alert("Perfil atualizado com sucesso!");
+    } catch (error) {
+      console.error("Error updating profile:", error);
+      alert("Erro ao atualizar perfil. Tente novamente.");
+    }
   };
 
   const handleWithdrawalRequest = async () => {
@@ -554,6 +642,14 @@ const RepresentativeDashboard: React.FC<RepresentativeDashboardProps> = ({
             >
               <Users className="mr-2 h-4 w-4" />
               Meus Clientes
+            </Button>
+            <Button
+              variant={activeTab === "my-account" ? "default" : "ghost"}
+              className="w-full justify-start"
+              onClick={() => setActiveTab("my-account")}
+            >
+              <User className="mr-2 h-4 w-4" />
+              Minha Conta
             </Button>
           </nav>
         </aside>
@@ -1329,6 +1425,211 @@ const RepresentativeDashboard: React.FC<RepresentativeDashboardProps> = ({
                         >
                           <Calculator className="mr-2 h-4 w-4" />
                           Criar Primeiro Contrato
+                        </Button>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+
+          {/* My Account Section */}
+          {!showContractFlow &&
+            !isLoading &&
+            !error &&
+            activeTab === "my-account" && (
+              <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-2xl font-bold">Minha Conta</h2>
+                  <div className="flex gap-2">
+                    {isEditingProfile ? (
+                      <>
+                        <Button variant="outline" onClick={handleCancelEditProfile}>
+                          Cancelar
+                        </Button>
+                        <Button onClick={handleSaveProfile}>
+                          <CheckCircle className="mr-2 h-4 w-4" />
+                          Salvar
+                        </Button>
+                      </>
+                    ) : (
+                      <Button onClick={handleEditProfile}>
+                        <Edit className="mr-2 h-4 w-4" />
+                        Editar Perfil
+                      </Button>
+                    )}
+                  </div>
+                </div>
+
+                <div className="grid gap-6 md:grid-cols-2">
+                  {/* Personal Information */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <User className="h-5 w-5" />
+                        Dados Pessoais
+                      </CardTitle>
+                      <CardDescription>
+                        Suas informações pessoais e de contato
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label htmlFor="name">Nome Completo</Label>
+                          {isEditingProfile ? (
+                            <Input
+                              id="name"
+                              value={profileData.name}
+                              onChange={(e) => setProfileData({ ...profileData, name: e.target.value })}
+                            />
+                          ) : (
+                            <p className="text-sm font-medium">{profileData.name || "Não informado"}</p>
+                          )}
+                        </div>
+                        <div>
+                          <Label htmlFor="cnpj">CPF/CNPJ</Label>
+                          {isEditingProfile ? (
+                            <Input
+                              id="cnpj"
+                              value={profileData.cnpj}
+                              onChange={(e) => setProfileData({ ...profileData, cnpj: e.target.value })}
+                            />
+                          ) : (
+                            <p className="text-sm font-medium">{profileData.cnpj || "Não informado"}</p>
+                          )}
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label htmlFor="email">Email</Label>
+                          {isEditingProfile ? (
+                            <Input
+                              id="email"
+                              type="email"
+                              value={profileData.email}
+                              onChange={(e) => setProfileData({ ...profileData, email: e.target.value })}
+                            />
+                          ) : (
+                            <p className="text-sm font-medium">{profileData.email || "Não informado"}</p>
+                          )}
+                        </div>
+                        <div>
+                          <Label htmlFor="phone">Telefone</Label>
+                          {isEditingProfile ? (
+                            <Input
+                              id="phone"
+                              value={profileData.phone}
+                              onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
+                            />
+                          ) : (
+                            <p className="text-sm font-medium">{profileData.phone || "Não informado"}</p>
+                          )}
+                        </div>
+                      </div>
+                      <div>
+                        <Label htmlFor="address">Endereço</Label>
+                        {isEditingProfile ? (
+                          <Input
+                            id="address"
+                            value={profileData.address}
+                            onChange={(e) => setProfileData({ ...profileData, address: e.target.value })}
+                          />
+                        ) : (
+                          <p className="text-sm font-medium">{profileData.address || "Não informado"}</p>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Account Status */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Building className="h-5 w-5" />
+                        Status da Conta
+                      </CardTitle>
+                      <CardDescription>
+                        Informações sobre sua conta no sistema
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium">Status</span>
+                        <Badge variant={currentUser?.status === "Ativo" ? "default" : "secondary"}>
+                          {currentUser?.status || "Não definido"}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium">Código de Comissão</span>
+                        <span className="text-sm font-mono">{currentUser?.commission_code || "Não definido"}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium">Data de Cadastro</span>
+                        <span className="text-sm">{currentUser?.created_at ? new Date(currentUser.created_at).toLocaleDateString("pt-BR") : "Não informado"}</span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Documents Section */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <FileText className="h-5 w-5" />
+                      Documentos
+                    </CardTitle>
+                    <CardDescription>
+                      Gerencie seus documentos enviados e pendentes
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {isLoadingDocuments ? (
+                      <div className="flex items-center justify-center py-8">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600"></div>
+                        <span className="ml-2 text-muted-foreground">Carregando documentos...</span>
+                      </div>
+                    ) : representativeDocuments.length > 0 ? (
+                      <div className="space-y-4">
+                        <div className="grid gap-4">
+                          {representativeDocuments.map((doc) => (
+                            <div key={doc.id} className="flex items-center justify-between p-4 border rounded-lg">
+                              <div className="flex items-center gap-3">
+                                <div className="p-2 bg-blue-100 rounded-lg">
+                                  <FileText className="h-5 w-5 text-blue-600" />
+                                </div>
+                                <div>
+                                  <p className="font-medium">{doc.document_type}</p>
+                                  <p className="text-sm text-muted-foreground">
+                                    Enviado em {new Date(doc.created_at).toLocaleDateString("pt-BR")}
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Badge variant={doc.status === "Aprovado" ? "default" : doc.status === "Rejeitado" ? "destructive" : "secondary"}>
+                                  {doc.status}
+                                </Badge>
+                                <Button variant="outline" size="sm">
+                                  <Eye className="h-4 w-4" />
+                                </Button>
+                                <Button variant="outline" size="sm">
+                                  <Download className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-center py-8">
+                        <FileText className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
+                        <p className="text-lg font-medium mb-2">Nenhum documento encontrado</p>
+                        <p className="text-muted-foreground mb-4">
+                          Seus documentos aparecerão aqui quando forem enviados.
+                        </p>
+                        <Button variant="outline">
+                          <Upload className="mr-2 h-4 w-4" />
+                          Enviar Documento
                         </Button>
                       </div>
                     )}
