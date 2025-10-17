@@ -27,7 +27,7 @@ import {
   FileText,
   AlertCircle
 } from 'lucide-react';
-import { partnersService } from '../../lib/supabase';
+import { partnersService, uploadService } from '../../lib/supabase';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -189,20 +189,48 @@ const PartnerDocumentsView: React.FC<PartnerDocumentsViewProps> = ({
     }
   };
 
-  const handleRejectDocument = async (document: PartnerDocument) => {
-    const rejectionReason = prompt('Por favor, forneça um motivo para a rejeição:');
-    if (!rejectionReason || !rejectionReason.trim()) {
+  const handleDeleteDocument = async (document: PartnerDocument) => {
+    const confirmDelete = confirm(`Tem certeza que deseja excluir o documento "${document.document_type}"?\n\nEsta ação irá:\n- Excluir o arquivo do servidor\n- Remover o registro do banco de dados\n- Permitir que o sócio envie novamente`);
+    
+    if (!confirmDelete) {
       return;
     }
     
     setIsSubmitting(true);
     try {
-      await partnersService.updateDocumentStatus(document.id, 'Reprovado', rejectionReason);
+      console.log('🗑️ Iniciando exclusão do documento:', document.document_type);
+      console.log('🗑️ File URL:', document.file_url);
+      
+      // 1. Excluir arquivo do servidor
+      const deleteResult = await uploadService.deleteFile(document.file_url);
+      
+      if (!deleteResult.success) {
+        throw new Error(`Erro ao excluir arquivo: ${deleteResult.error}`);
+      }
+      
+      console.log('✅ Arquivo excluído do servidor com sucesso');
+      
+      // 2. Excluir registro do banco de dados
+      const { error: deleteError } = await supabase
+        .from('partner_documents')
+        .delete()
+        .eq('id', document.id);
+      
+      if (deleteError) {
+        throw new Error(`Erro ao excluir registro do banco: ${deleteError.message}`);
+      }
+      
+      console.log('✅ Registro excluído do banco com sucesso');
+      
+      // 3. Recarregar lista de documentos
       loadPartnerDocuments();
       onStatusChange?.();
+      
+      console.log('✅ Documento excluído completamente');
+      
     } catch (err) {
-      console.error('Error rejecting document:', err);
-      setError('Erro ao reprovar documento.');
+      console.error('❌ Erro ao excluir documento:', err);
+      setError(`Erro ao excluir documento: ${err instanceof Error ? err.message : 'Erro desconhecido'}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -366,10 +394,10 @@ const PartnerDocumentsView: React.FC<PartnerDocumentsViewProps> = ({
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => handleRejectDocument(doc)}
-                                title="Reprovar Documento"
+                                onClick={() => handleDeleteDocument(doc)}
+                                title="Excluir Documento"
                                 className="text-red-600 hover:text-red-700"
-                                disabled={isSubmitting || doc.status === 'Reprovado'}
+                                disabled={isSubmitting}
                               >
                                 <XCircle className="h-4 w-4" />
                               </Button>

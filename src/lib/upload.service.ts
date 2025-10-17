@@ -642,9 +642,9 @@ class UploadService {
    */
   async deleteFile(fileUrl: string): Promise<{ success: boolean; error?: string }> {
     try {
-      console.log('🗑️ Excluindo arquivo:', fileUrl);
+      console.log('🗑️ Iniciando exclusão de arquivo:', fileUrl);
       
-      // Extrair caminho relativo do fileUrl
+      // Extract path after /documentos/ - handle both Windows and Unix paths
       let relativePath = fileUrl;
       
       // Handle Windows paths (C:\CURSOR\credcar\documentos\...)
@@ -659,7 +659,7 @@ class UploadService {
       // Replace backslashes with forward slashes for consistency
       relativePath = relativePath.replace(/\\/g, '/');
       
-      console.log('🗑️ Relative path for deletion:', relativePath);
+      console.log('🗑️ Relative path:', relativePath);
       
       const response = await fetch(`${this.baseUrl}/delete-file`, {
         method: 'POST',
@@ -672,7 +672,7 @@ class UploadService {
       const data = await response.json();
       
       if (data.success) {
-        console.log('✅ Arquivo excluído com sucesso:', relativePath);
+        console.log('✅ Arquivo excluído com sucesso:', data.deletedPath);
         return { success: true };
       } else {
         console.error('❌ Erro ao excluir arquivo:', data.error);
