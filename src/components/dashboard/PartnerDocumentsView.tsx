@@ -203,7 +203,7 @@ const PartnerDocumentsView: React.FC<PartnerDocumentsViewProps> = ({
       console.log('🗑️ File URL:', document.file_url);
       
       // 1. Excluir arquivo do servidor
-      const deleteResult = await uploadService.deleteFile(document.file_url);
+      const deleteResult = await uploadService.deleteFile(document.file_url, partnerCpf);
       
       if (!deleteResult.success) {
         throw new Error(`Erro ao excluir arquivo: ${deleteResult.error}`);

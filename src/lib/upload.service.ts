@@ -640,7 +640,7 @@ class UploadService {
   /**
    * Excluir arquivo do servidor
    */
-  async deleteFile(fileUrl: string): Promise<{ success: boolean; error?: string }> {
+  async deleteFile(fileUrl: string, partnerCpf?: string): Promise<{ success: boolean; error?: string }> {
     try {
       console.log('🗑️ Iniciando exclusão de arquivo:', fileUrl);
       
@@ -659,8 +659,35 @@ class UploadService {
       // Replace backslashes with forward slashes for consistency
       relativePath = relativePath.replace(/\\/g, '/');
       
-      console.log('🗑️ Relative path:', relativePath);
+      console.log('🗑️ Relative path original:', relativePath);
       
+      // Tentar primeiro com o caminho original
+      let deleteResult = await this.tryDeleteFile(relativePath);
+      
+      // Se falhou e temos o CPF do sócio, tentar com estrutura corrigida
+      if (!deleteResult.success && partnerCpf) {
+        console.log('🔄 Tentando com estrutura corrigida para sócio...');
+        const correctedPath = this.correctPartnerPath(relativePath, partnerCpf);
+        console.log('🗑️ Caminho corrigido:', correctedPath);
+        deleteResult = await this.tryDeleteFile(correctedPath);
+      }
+      
+      return deleteResult;
+      
+    } catch (error) {
+      console.error('❌ Erro ao excluir arquivo:', error);
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Erro desconhecido' 
+      };
+    }
+  }
+
+  /**
+   * Tentar excluir arquivo com caminho específico
+   */
+  private async tryDeleteFile(relativePath: string): Promise<{ success: boolean; error?: string }> {
+    try {
       const response = await fetch(`${this.baseUrl}/delete-file`, {
         method: 'POST',
         headers: {
@@ -679,12 +706,29 @@ class UploadService {
         return { success: false, error: data.error };
       }
     } catch (error) {
-      console.error('❌ Erro ao excluir arquivo:', error);
+      console.error('❌ Erro na requisição de exclusão:', error);
       return { 
         success: false, 
-        error: error instanceof Error ? error.message : 'Erro desconhecido' 
+        error: error instanceof Error ? error.message : 'Erro na requisição' 
       };
     }
+  }
+
+  /**
+   * Corrigir caminho para estrutura de sócio
+   */
+  private correctPartnerPath(originalPath: string, partnerCpf: string): string {
+    // Se o caminho já tem a estrutura correta, retornar como está
+    if (originalPath.includes(`/socio/${partnerCpf}/`)) {
+      return originalPath;
+    }
+    
+    // Se o caminho está na estrutura antiga (sem CPF do sócio), corrigir
+    if (originalPath.includes('/socio/') && !originalPath.includes(`/socio/${partnerCpf}/`)) {
+      return originalPath.replace('/socio/', `/socio/${partnerCpf}/`);
+    }
+    
+    return originalPath;
   }
 }
 
