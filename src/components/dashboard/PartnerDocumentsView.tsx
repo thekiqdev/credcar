@@ -53,6 +53,7 @@ interface PartnerDocumentsViewProps {
   isOpen: boolean;
   onClose: () => void;
   onStatusChange?: () => void;
+  isAdminMode?: boolean; // Nova prop para identificar se é modo admin
 }
 
 const PartnerDocumentsView: React.FC<PartnerDocumentsViewProps> = ({
@@ -61,7 +62,8 @@ const PartnerDocumentsView: React.FC<PartnerDocumentsViewProps> = ({
   partnerCpf,
   isOpen,
   onClose,
-  onStatusChange
+  onStatusChange,
+  isAdminMode = false
 }) => {
   const [documents, setDocuments] = useState<PartnerDocument[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -73,6 +75,10 @@ const PartnerDocumentsView: React.FC<PartnerDocumentsViewProps> = ({
 
   useEffect(() => {
     if (isOpen && partnerId) {
+      console.log('🔄 PartnerDocumentsView: useEffect triggered');
+      console.log('📋 Partner ID:', partnerId);
+      console.log('📋 Partner Name:', partnerName);
+      console.log('📋 Partner CPF:', partnerCpf);
       loadPartnerDocuments();
     }
   }, [isOpen, partnerId]);
@@ -82,13 +88,41 @@ const PartnerDocumentsView: React.FC<PartnerDocumentsViewProps> = ({
       setIsLoading(true);
       setError(null);
       
-      const { data, error } = await partnersService.getPartnerDocuments(partnerId);
+      console.log('🔍 Loading documents for partner:', partnerId);
+      
+      // Teste direto com Supabase para debug
+      const { createClient } = await import('@supabase/supabase-js');
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+      const supabase = createClient(supabaseUrl, supabaseKey);
+      
+      console.log('🔍 Supabase URL:', supabaseUrl);
+      console.log('🔍 Supabase Key exists:', !!supabaseKey);
+      
+      // Buscar todos os documentos primeiro para debug
+      const { data: allDocs, error: allError } = await supabase
+        .from('partner_documents')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      console.log('📋 All partner documents:', allDocs);
+      console.log('📋 All partner documents error:', allError);
+      
+      // Buscar documentos específicos do sócio
+      const { data, error } = await supabase
+        .from('partner_documents')
+        .select('*')
+        .eq('partner_id', partnerId)
+        .order('created_at', { ascending: false });
+      
+      console.log('📋 Partner documents response:', { data, error });
       
       if (error) {
         throw error;
       }
       
       setDocuments(data || []);
+      console.log('📄 Documents loaded:', data?.length || 0);
     } catch (err) {
       console.error('Error loading partner documents:', err);
       setError('Erro ao carregar documentos do sócio.');
@@ -252,10 +286,32 @@ const PartnerDocumentsView: React.FC<PartnerDocumentsViewProps> = ({
                             variant="outline"
                             size="sm"
                             onClick={() => handleReviewDocument(doc)}
-                            title="Revisar Documento"
+                            title="Visualizar Documento"
                           >
                             <Eye className="h-4 w-4" />
                           </Button>
+                          {isAdminMode && (
+                            <>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleReviewDocument(doc)}
+                                title="Revisar Documento"
+                                className="text-blue-600 hover:text-blue-700"
+                              >
+                                <CheckCircle className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleReviewDocument(doc)}
+                                title="Reprovar Documento"
+                                className="text-red-600 hover:text-red-700"
+                              >
+                                <XCircle className="h-4 w-4" />
+                              </Button>
+                            </>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>
@@ -323,7 +379,7 @@ const PartnerDocumentsView: React.FC<PartnerDocumentsViewProps> = ({
               </div>
             )}
             
-            {selectedDocument?.status !== 'Aprovado' && (
+            {isAdminMode && selectedDocument?.status !== 'Aprovado' && (
               <div className="space-y-2">
                 <label htmlFor="rejectionReason" className="text-sm font-medium">
                   Motivo da Rejeição (se reprovar)
@@ -344,7 +400,7 @@ const PartnerDocumentsView: React.FC<PartnerDocumentsViewProps> = ({
             <Button variant="outline" onClick={() => setShowReviewDialog(false)} disabled={isSubmitting}>
               Cancelar
             </Button>
-            {selectedDocument?.status !== 'Aprovado' && (
+            {isAdminMode && selectedDocument?.status !== 'Aprovado' && (
               <Button 
                 onClick={handleApproveDocument} 
                 disabled={isSubmitting} 
@@ -353,7 +409,7 @@ const PartnerDocumentsView: React.FC<PartnerDocumentsViewProps> = ({
                 {isSubmitting ? 'Aprovando...' : 'Aprovar'}
               </Button>
             )}
-            {selectedDocument?.status !== 'Reprovado' && (
+            {isAdminMode && selectedDocument?.status !== 'Reprovado' && (
               <Button 
                 onClick={handleRejectDocument} 
                 disabled={isSubmitting || !rejectionReason.trim()} 

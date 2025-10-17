@@ -70,11 +70,13 @@ interface Partner {
 interface PartnersManagementProps {
   representativeId: string;
   onPartnersChange?: () => void;
+  isAdminMode?: boolean; // Nova prop para identificar se é modo admin
 }
 
 const PartnersManagement: React.FC<PartnersManagementProps> = ({
   representativeId,
-  onPartnersChange
+  onPartnersChange,
+  isAdminMode = false
 }) => {
   const [partners, setPartners] = useState<Partner[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -530,6 +532,7 @@ const PartnersManagement: React.FC<PartnersManagementProps> = ({
           isOpen={showDocumentsView}
           onClose={handleCloseDocumentsView}
           onStatusChange={handleDocumentsStatusChange}
+          isAdminMode={isAdminMode}
         />
       )}
     </div>

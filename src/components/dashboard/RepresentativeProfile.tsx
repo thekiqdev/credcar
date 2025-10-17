@@ -796,6 +796,7 @@ const RepresentativeProfile: React.FC<RepresentativeProfileProps> = () => {
             // Recarregar dados se necessário
             console.log('Partners updated');
           }}
+          isAdminMode={true}
         />
       </div>
 
