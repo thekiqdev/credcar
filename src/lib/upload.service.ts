@@ -236,6 +236,20 @@ class UploadService {
         ok: response.ok
       });
 
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ Erro HTTP:', response.status, response.statusText);
+        console.error('❌ Resposta do servidor:', errorText);
+        throw new Error(`Erro HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        const responseText = await response.text();
+        console.error('❌ Resposta não é JSON:', responseText);
+        throw new Error('Servidor retornou resposta inválida (não é JSON)');
+      }
+
       const data = await response.json();
       console.log('📋 Dados da resposta:', data);
 

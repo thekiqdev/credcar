@@ -478,6 +478,10 @@ const RepresentativeDashboard: React.FC<RepresentativeDashboardProps> = ({
     try {
       setUploadingDocuments(prev => new Set(prev).add(documentId));
       
+      console.log('🚀 Iniciando upload do documento:', document.type);
+      console.log('📁 Arquivo:', document.file.name, document.file.size, 'bytes');
+      console.log('👤 Representante:', currentUser.id, currentUser.cnpj);
+      
       // Preparar dados do documento
       const docInfo: DocumentInfo = {
         representativeId: currentUser.id,
@@ -488,8 +492,12 @@ const RepresentativeDashboard: React.FC<RepresentativeDashboardProps> = ({
         fileType: document.file.type
       };
 
+      console.log('📋 Document Info:', docInfo);
+
       // Upload do arquivo
       const result = await uploadService.uploadComplete(document.file, docInfo);
+      
+      console.log('📤 Resultado do upload:', result);
       
       if (!result.success) {
         throw new Error(result.error || 'Erro ao fazer upload do arquivo');

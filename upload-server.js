@@ -845,12 +845,23 @@ app.post('/api/upload-contract-document', upload.single('file'), async (req, res
   }
 });
 
+// Endpoint de teste
+app.get('/api/test', (req, res) => {
+  res.json({ message: 'Servidor funcionando!', timestamp: new Date().toISOString() });
+});
+
 // Rota para upload de documentos
 app.post('/api/upload-document', upload.single('file'), validateFile, (req, res) => {
   try {
     console.log('📤 Recebendo upload...');
     console.log('📋 Body:', req.body);
     console.log('📁 File:', req.file);
+    
+    // Verificar se req.file existe
+    if (!req.file) {
+      console.error('❌ Nenhum arquivo recebido');
+      return res.status(400).json({ error: 'Nenhum arquivo foi enviado' });
+    }
     
     const { cpfCnpj, documentType } = req.body;
     
