@@ -93,11 +93,7 @@ const PartnerDocumentsView: React.FC<PartnerDocumentsViewProps> = ({
       
       console.log('🔍 Loading documents for partner:', partnerId);
       
-      // Teste direto com Supabase para debug
-      const { createClient } = await import('@supabase/supabase-js');
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-      const supabase = createClient(supabaseUrl, supabaseKey);
+      // Usar instância do Supabase já criada no componente
       
       console.log('🔍 Supabase URL:', supabaseUrl);
       console.log('🔍 Supabase Key exists:', !!supabaseKey);
