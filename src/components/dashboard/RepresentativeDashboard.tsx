@@ -537,12 +537,9 @@ const RepresentativeDashboard: React.FC<RepresentativeDashboardProps> = ({
 
       console.log('✅ Documento salvo no banco com sucesso!');
 
-      // Atualizar status do documento
-      setRequiredDocuments(prev => prev.map(doc => 
-        doc.id === documentId 
-          ? { ...doc, status: 'Pendente', file_url: result.data?.filePath || result.data?.directory, uploaded_at: new Date().toISOString(), file: null }
-          : doc
-      ));
+      // Recarregar documentos para garantir sincronização
+      console.log('🔄 Recarregando documentos após upload...');
+      await loadRequiredDocuments();
 
       alert('Documento enviado com sucesso!');
       

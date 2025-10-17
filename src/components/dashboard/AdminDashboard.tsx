@@ -775,6 +775,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   const loadDocuments = async () => {
     try {
+      console.log('📋 Carregando documentos no AdminDashboard...');
+      
       // Load from both documents table (legacy) and representative_documents table (new)
       const [documentsResult, repDocumentsResult] = await Promise.all([
         supabase
@@ -789,6 +791,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
       const legacyDocs = documentsResult.data || [];
       const newDocs = repDocumentsResult.data || [];
+
+      console.log('📋 Documentos legados encontrados:', legacyDocs.length);
+      console.log('📋 Novos documentos encontrados:', newDocs.length);
+      console.log('📋 Novos documentos:', newDocs);
 
       if (documentsResult.error) {
         console.error("Error loading legacy documents:", documentsResult.error);
@@ -7404,6 +7410,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 {representativeDocuments[selectedRepresentativeForModal.id] && (
                   <div>
                     <h4 className="font-medium mb-3">Documentos</h4>
+                    {console.log('📋 Exibindo documentos para representante:', selectedRepresentativeForModal.id, representativeDocuments[selectedRepresentativeForModal.id])}
                     <div className="space-y-3">
                       {representativeDocuments[
                         selectedRepresentativeForModal.id
