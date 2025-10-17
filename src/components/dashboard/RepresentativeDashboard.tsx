@@ -447,18 +447,31 @@ const RepresentativeDashboard: React.FC<RepresentativeDashboardProps> = ({
 
       // Criar lista completa de documentos com status
       const documentsWithStatus = documentTypes.map(type => {
-        const existingDoc = existingDocs?.find(doc => doc.document_type === type);
+        // Buscar TODOS os documentos deste tipo e pegar o mais recente com arquivo
+        const docsOfType = existingDocs?.filter(doc => doc.document_type === type) || [];
+        
+        // Ordenar por data de upload (mais recente primeiro) e pegar o primeiro que tem file_url
+        const latestDocWithFile = docsOfType
+          .filter(doc => doc.file_url && doc.file_url.trim() !== '')
+          .sort((a, b) => new Date(b.uploaded_at).getTime() - new Date(a.uploaded_at).getTime())[0];
+        
+        // Se não encontrar com arquivo, pegar o mais recente de qualquer forma
+        const latestDoc = latestDocWithFile || docsOfType
+          .sort((a, b) => new Date(b.uploaded_at).getTime() - new Date(a.uploaded_at).getTime())[0];
+        
         console.log(`🔍 Processando documento: ${type}`);
-        console.log(`📄 Documento existente encontrado:`, existingDoc);
+        console.log(`📄 Total de documentos deste tipo: ${docsOfType.length}`);
+        console.log(`📄 Documento mais recente com arquivo:`, latestDocWithFile);
+        console.log(`📄 Documento mais recente geral:`, latestDoc);
         
         const result = {
           id: type,
           type: type,
-          status: existingDoc ? existingDoc.status : 'Pendente',
-          file_url: existingDoc?.file_url || null,
-          uploaded_at: existingDoc?.uploaded_at || null,
-          approved_at: existingDoc?.approved_at || null,
-          rejection_reason: existingDoc?.rejection_reason || null,
+          status: latestDoc ? latestDoc.status : 'Pendente',
+          file_url: latestDoc?.file_url || null,
+          uploaded_at: latestDoc?.uploaded_at || null,
+          approved_at: latestDoc?.approved_at || null,
+          rejection_reason: latestDoc?.rejection_reason || null,
           file: null
         };
         
