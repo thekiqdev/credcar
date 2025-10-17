@@ -3988,6 +3988,26 @@ export const partnersService = {
     }
   },
 
+  // Delete partner document
+  async deleteDocument(documentId: number) {
+    try {
+      const { error } = await supabase
+        .from("partner_documents")
+        .delete()
+        .eq("id", documentId);
+
+      if (error) {
+        console.error("Error deleting partner document:", error);
+        throw error;
+      }
+
+      return true;
+    } catch (error) {
+      console.error("Error in partnersService.deleteDocument:", error);
+      throw error;
+    }
+  },
+
   // Check if all partner documents are approved
   async checkAllDocumentsApproved(partnerId: string): Promise<boolean> {
     try {

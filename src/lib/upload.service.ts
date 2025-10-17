@@ -640,7 +640,7 @@ class UploadService {
   /**
    * Excluir arquivo do servidor
    */
-  async deleteFile(fileUrl: string): Promise<{ success: boolean; message: string; error?: string }> {
+  async deleteFile(fileUrl: string): Promise<{ success: boolean; error?: string }> {
     try {
       console.log('🗑️ Iniciando exclusão de arquivo:', fileUrl);
       
@@ -659,7 +659,7 @@ class UploadService {
       // Replace backslashes with forward slashes for consistency
       relativePath = relativePath.replace(/\\/g, '/');
       
-      console.log('🗑️ Caminho relativo para exclusão:', relativePath);
+      console.log('🗑️ Relative path for deletion:', relativePath);
       
       const response = await fetch(`${this.baseUrl}/delete-file`, {
         method: 'POST',
@@ -673,24 +673,16 @@ class UploadService {
       
       if (data.success) {
         console.log('✅ Arquivo excluído com sucesso:', relativePath);
-        return {
-          success: true,
-          message: data.message || 'Arquivo excluído com sucesso'
-        };
+        return { success: true };
       } else {
         console.error('❌ Erro ao excluir arquivo:', data.error);
-        return {
-          success: false,
-          message: 'Erro ao excluir arquivo',
-          error: data.error
-        };
+        return { success: false, error: data.error };
       }
     } catch (error) {
       console.error('❌ Erro ao excluir arquivo:', error);
-      return {
-        success: false,
-        message: 'Erro ao excluir arquivo',
-        error: error instanceof Error ? error.message : 'Erro desconhecido'
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Erro desconhecido' 
       };
     }
   }

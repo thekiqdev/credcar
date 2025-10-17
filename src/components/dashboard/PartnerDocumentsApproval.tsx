@@ -91,9 +91,7 @@ const PartnerDocumentsApproval: React.FC = () => {
   // Dialog states
   const [showViewDialog, setShowViewDialog] = useState(false);
   const [showApproveDialog, setShowApproveDialog] = useState(false);
-  const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState<PartnerDocument | null>(null);
-  const [rejectionReason, setRejectionReason] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
 
   // Statistics
@@ -216,10 +214,39 @@ const PartnerDocumentsApproval: React.FC = () => {
     setShowApproveDialog(true);
   };
 
-  const handleOpenRejectDialog = (document: PartnerDocument) => {
-    setSelectedDocument(document);
-    setRejectionReason('');
-    setShowRejectDialog(true);
+  const handleDeleteDocument = async (document: PartnerDocument) => {
+    try {
+      console.log('🗑️ Iniciando exclusão do documento:', document);
+      
+      setIsProcessing(true);
+      
+      // 1. Excluir arquivo do servidor
+      console.log('🗑️ Excluindo arquivo do servidor:', document.file_url);
+      const deleteResult = await uploadService.deleteFile(document.file_url);
+      
+      if (!deleteResult.success) {
+        console.error('❌ Erro ao excluir arquivo do servidor:', deleteResult.error);
+        setError(`Erro ao excluir arquivo: ${deleteResult.error}`);
+        return;
+      }
+      
+      console.log('✅ Arquivo excluído do servidor com sucesso');
+      
+      // 2. Excluir registro do banco de dados
+      console.log('🗑️ Excluindo registro do banco de dados:', document.id);
+      await partnersService.deleteDocument(document.id);
+      
+      console.log('✅ Documento excluído completamente');
+      
+      // 3. Recarregar dados
+      await loadData();
+      
+    } catch (error) {
+      console.error('❌ Erro ao excluir documento:', error);
+      setError('Erro ao excluir documento. Tente novamente.');
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const handleApproveDocument = async () => {
@@ -259,57 +286,6 @@ const PartnerDocumentsApproval: React.FC = () => {
     }
   };
 
-  const handleRejectDocument = async () => {
-    if (!selectedDocument || !rejectionReason.trim()) {
-      setError('Motivo da rejeição é obrigatório');
-      return;
-    }
-
-    try {
-      setIsProcessing(true);
-      
-      // Get current user
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Usuário não autenticado');
-
-      console.log('🗑️ Iniciando reprovação e exclusão do documento:', selectedDocument.document_type);
-      console.log('📁 File URL:', selectedDocument.file_url);
-
-      // 1. Primeiro, excluir o arquivo físico do servidor
-      if (selectedDocument.file_url) {
-        console.log('🗑️ Excluindo arquivo físico...');
-        const fileDeleted = await uploadService.deleteFile(selectedDocument.file_url);
-        
-        if (fileDeleted) {
-          console.log('✅ Arquivo físico excluído com sucesso');
-        } else {
-          console.warn('⚠️ Falha ao excluir arquivo físico, mas continuando com reprovação');
-        }
-      }
-
-      // 2. Atualizar status no banco de dados
-      console.log('📝 Atualizando status no banco de dados...');
-      await partnersService.updateDocumentStatus(
-        selectedDocument.id,
-        'Reprovado',
-        user.id,
-        rejectionReason
-      );
-
-      console.log('✅ Documento reprovado e arquivo excluído com sucesso');
-
-      setShowRejectDialog(false);
-      setSelectedDocument(null);
-      setRejectionReason('');
-      await loadData();
-      
-    } catch (error) {
-      console.error('❌ Error rejecting document:', error);
-      setError('Erro ao reprovar documento');
-    } finally {
-      setIsProcessing(false);
-    }
-  };
 
   const handleDownloadDocument = (fileUrl: string) => {
     window.open(fileUrl, '_blank');
@@ -538,7 +514,9 @@ const PartnerDocumentsApproval: React.FC = () => {
                               variant="outline" 
                               size="sm"
                               className="text-red-600 hover:text-red-700"
-                              onClick={() => handleOpenRejectDialog(document)}
+                              onClick={() => handleDeleteDocument(document)}
+                              disabled={isProcessing}
+                              title="Excluir Documento"
                             >
                               <XCircle className="h-4 w-4" />
                             </Button>
@@ -654,52 +632,6 @@ const PartnerDocumentsApproval: React.FC = () => {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Reject Document Dialog */}
-      <Dialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Reprovar Documento</DialogTitle>
-            <DialogDescription>
-              Informe o motivo da reprovação do documento
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label>Documento</Label>
-              <p className="font-medium">
-                {selectedDocument?.document_type} - {selectedDocument?.partner?.name}
-              </p>
-            </div>
-            <div>
-              <Label htmlFor="rejection-reason">Motivo da Rejeição *</Label>
-              <Textarea
-                id="rejection-reason"
-                placeholder="Descreva o motivo da reprovação..."
-                value={rejectionReason}
-                onChange={(e) => setRejectionReason(e.target.value)}
-                rows={4}
-                className="resize-none"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button 
-              variant="outline" 
-              onClick={() => setShowRejectDialog(false)}
-              disabled={isProcessing}
-            >
-              Cancelar
-            </Button>
-            <Button 
-              onClick={handleRejectDocument}
-              disabled={isProcessing || !rejectionReason.trim()}
-              className="bg-red-600 hover:bg-red-700"
-            >
-              {isProcessing ? 'Reprovando...' : 'Reprovar Documento'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };
