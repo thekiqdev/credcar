@@ -775,8 +775,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   const loadDocuments = async () => {
     try {
-      console.log("📋 AdminDashboard: Carregando documentos...");
-      
       // Load from both documents table (legacy) and representative_documents table (new)
       const [documentsResult, repDocumentsResult] = await Promise.all([
         supabase
@@ -791,10 +789,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
       const legacyDocs = documentsResult.data || [];
       const newDocs = repDocumentsResult.data || [];
-
-      console.log("📋 AdminDashboard: Documentos legados encontrados:", legacyDocs.length);
-      console.log("📋 AdminDashboard: Documentos novos encontrados:", newDocs.length);
-      console.log("📋 AdminDashboard: Documentos novos detalhados:", newDocs);
 
       if (documentsResult.error) {
         console.error("Error loading legacy documents:", documentsResult.error);
@@ -826,9 +820,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       });
 
       // Add new representative documents
-      console.log('📋 Adicionando novos documentos:', newDocs);
       newDocs.forEach((doc) => {
-        console.log(`📄 Processando documento novo:`, doc);
         if (doc.representative_id) {
           if (!groupedDocs[doc.representative_id]) {
             groupedDocs[doc.representative_id] = [];
@@ -837,14 +829,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
             ...doc,
             isLegacy: false,
           });
-          console.log(`✅ Documento adicionado ao grupo ${doc.representative_id}`);
-        } else {
-          console.log(`⚠️ Documento sem representative_id:`, doc);
         }
       });
 
-      console.log('📊 Documentos agrupados:', groupedDocs);
-      console.log('📊 Total de representantes com documentos:', Object.keys(groupedDocs).length);
       setRepresentativeDocuments(groupedDocs);
     } catch (error) {
       console.error("Error loading documents:", error);

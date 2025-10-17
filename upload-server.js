@@ -845,45 +845,12 @@ app.post('/api/upload-contract-document', upload.single('file'), async (req, res
   }
 });
 
-// Endpoint de teste
-app.get('/api/test', (req, res) => {
-  res.json({ message: 'Servidor funcionando!', timestamp: new Date().toISOString() });
-});
-
-// Endpoint para testar estrutura da tabela
-app.get('/api/test-table', async (req, res) => {
-  try {
-    const { data, error } = await supabase
-      .from('representative_documents')
-      .select('*')
-      .limit(5);
-    
-    res.json({ 
-      message: 'Teste da tabela representative_documents',
-      data: data,
-      error: error,
-      count: data?.length || 0
-    });
-  } catch (err) {
-    res.json({ 
-      message: 'Erro ao testar tabela',
-      error: err.message 
-    });
-  }
-});
-
 // Rota para upload de documentos
 app.post('/api/upload-document', upload.single('file'), validateFile, (req, res) => {
   try {
     console.log('📤 Recebendo upload...');
     console.log('📋 Body:', req.body);
     console.log('📁 File:', req.file);
-    
-    // Verificar se req.file existe
-    if (!req.file) {
-      console.error('❌ Nenhum arquivo recebido');
-      return res.status(400).json({ error: 'Nenhum arquivo foi enviado' });
-    }
     
     const { cpfCnpj, documentType } = req.body;
     
@@ -2988,63 +2955,6 @@ app.get('/api/test/asaas-customer/:customerId', async (req, res) => {
       message: 'Erro ao verificar cliente ASAAS',
       error: error.message
     });
-  }
-});
-
-// Test endpoint to check database content
-app.get('/api/test-db', async (req, res) => {
-  try {
-    console.log('🔍 Testando conexão com banco de dados...');
-    
-    // Test Supabase connection
-    const { data, error } = await supabase
-      .from('representative_documents')
-      .select('*')
-      .limit(10);
-    
-    if (error) {
-      console.error('❌ Erro na consulta:', error);
-      return res.status(500).json({ error: error.message });
-    }
-    
-    console.log('📋 Documentos encontrados:', data);
-    res.json({ 
-      success: true, 
-      count: data.length, 
-      documents: data 
-    });
-  } catch (error) {
-    console.error('❌ Erro no teste:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// Test endpoint to check specific representative documents
-app.get('/api/test-rep-docs/:representativeId', async (req, res) => {
-  try {
-    const { representativeId } = req.params;
-    console.log('🔍 Testando documentos do representante:', representativeId);
-    
-    const { data, error } = await supabase
-      .from('representative_documents')
-      .select('*')
-      .eq('representative_id', representativeId);
-    
-    if (error) {
-      console.error('❌ Erro na consulta:', error);
-      return res.status(500).json({ error: error.message });
-    }
-    
-    console.log('📋 Documentos do representante encontrados:', data);
-    res.json({ 
-      success: true, 
-      representativeId,
-      count: data.length, 
-      documents: data 
-    });
-  } catch (error) {
-    console.error('❌ Erro no teste:', error);
-    res.status(500).json({ error: error.message });
   }
 });
 

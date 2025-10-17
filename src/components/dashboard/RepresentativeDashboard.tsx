@@ -51,6 +51,7 @@ import {
 } from "lucide-react";
 import DocumentNotification from './DocumentNotification';
 import DocumentUploadModal from './DocumentUploadModal';
+import DocumentUploadInline from './DocumentUploadInline';
 import { withdrawalService } from "../../lib/withdrawal.service";
 import {
   Dialog,
@@ -68,9 +69,7 @@ import {
   authService,
   contractService,
   clientService,
-  supabase,
 } from "@/lib/supabase";
-import { uploadService, DocumentInfo } from "@/lib/upload.service";
 import ContractCreationFlow from "@/components/sales/ContractCreationFlow";
 import ContractDetails from "@/components/sales/ContractDetails";
 
@@ -160,14 +159,6 @@ const RepresentativeDashboard: React.FC<RepresentativeDashboardProps> = ({
     cnpj: "",
     address: "",
   });
-  
-  // Document upload modal state
-  const [showDocumentUploadModal, setShowDocumentUploadModal] = useState(false);
-  
-  // Document management states
-  const [requiredDocuments, setRequiredDocuments] = useState<any[]>([]);
-  const [isLoadingRequiredDocuments, setIsLoadingRequiredDocuments] = useState(false);
-  const [uploadingDocuments, setUploadingDocuments] = useState<Set<string>>(new Set());
 
   const displayName =
     representativeName || currentUser?.name || "Representante";
@@ -300,12 +291,9 @@ const RepresentativeDashboard: React.FC<RepresentativeDashboardProps> = ({
 
   // Load documents when My Account tab is active
   useEffect(() => {
-    console.log('🔄 useEffect My Account triggered:', { activeTab, currentUserId: currentUser?.id });
     if (activeTab === "my-account" && currentUser?.id) {
-      console.log('📋 Carregando documentos para My Account...');
       loadRepresentativeDocuments();
       loadProfileData();
-      loadRequiredDocuments();
     }
   }, [activeTab, currentUser?.id]);
 
@@ -332,17 +320,9 @@ const RepresentativeDashboard: React.FC<RepresentativeDashboardProps> = ({
     
     try {
       setIsLoadingDocuments(true);
-      const { data: documents, error } = await supabase
-        .from('representative_documents')
-        .select('*')
-        .eq('representative_id', currentUser.id);
-      
-      if (error) {
-        console.error("Error loading representative documents:", error);
-        setRepresentativeDocuments([]);
-      } else {
-        setRepresentativeDocuments(documents || []);
-      }
+      const { documentService } = await import("../../lib/supabase");
+      const documents = await documentService.getByRepresentativeId(currentUser.id);
+      setRepresentativeDocuments(documents || []);
     } catch (error) {
       console.error("Error loading representative documents:", error);
       setRepresentativeDocuments([]);
@@ -393,190 +373,7 @@ const RepresentativeDashboard: React.FC<RepresentativeDashboardProps> = ({
     }
   };
 
-  // Handle document upload modal
-  const handleOpenDocumentUpload = () => {
-    setShowDocumentUploadModal(true);
-  };
-
-  const handleCloseDocumentUpload = () => {
-    setShowDocumentUploadModal(false);
-  };
-
-  const handleDocumentUploadComplete = () => {
-    // Reload documents after upload
-    loadRepresentativeDocuments();
-    setShowDocumentUploadModal(false);
-  };
-
-  // Load required documents with status
-  const loadRequiredDocuments = async () => {
-    if (!currentUser?.id) return;
-    
-    try {
-      setIsLoadingRequiredDocuments(true);
-      
-      // Lista de documentos obrigatórios
-      const documentTypes = [
-        'cartilha de credenciamento preenchida',
-        'cartão cnpj',
-        'contrato social e última alteração',
-        'comprovante de endereço em nome da empresa',
-        'dados bancários para recebimento das comissões',
-        'cartilha de credenciamento pf',
-        'comprovante de endereço em nome do sócio',
-        'certidão de antecedentes criminais',
-        'certidão negativa cível de 1º grau',
-        'certidão negativa criminal de 1º grau',
-        'foto de identidade ou cnh (frente)',
-        'foto de identidade ou cnh (verso)'
-      ];
-
-      // Buscar documentos existentes no banco
-      console.log('🔍 Buscando documentos existentes para:', currentUser.id);
-      const { data: existingDocs, error } = await supabase
-        .from('representative_documents')
-        .select('*')
-        .eq('representative_id', currentUser.id);
-
-      console.log('📋 Documentos encontrados no banco:', existingDocs);
-      console.log('❌ Erro na busca:', error);
-
-      if (error) {
-        console.error('Error loading existing documents:', error);
-      }
-
-      // Criar lista completa de documentos com status
-      const documentsWithStatus = documentTypes.map(type => {
-        // Buscar TODOS os documentos deste tipo e pegar o mais recente com arquivo
-        const docsOfType = existingDocs?.filter(doc => doc.document_type === type) || [];
-        
-        // Ordenar por data de upload (mais recente primeiro) e pegar o primeiro que tem file_url
-        const latestDocWithFile = docsOfType
-          .filter(doc => doc.file_url && doc.file_url.trim() !== '')
-          .sort((a, b) => new Date(b.uploaded_at).getTime() - new Date(a.uploaded_at).getTime())[0];
-        
-        // Se não encontrar com arquivo, pegar o mais recente de qualquer forma
-        const latestDoc = latestDocWithFile || docsOfType
-          .sort((a, b) => new Date(b.uploaded_at).getTime() - new Date(a.uploaded_at).getTime())[0];
-        
-        console.log(`🔍 Processando documento: ${type}`);
-        console.log(`📄 Total de documentos deste tipo: ${docsOfType.length}`);
-        console.log(`📄 Documento mais recente com arquivo:`, latestDocWithFile);
-        console.log(`📄 Documento mais recente geral:`, latestDoc);
-        
-        const result = {
-          id: type,
-          type: type,
-          status: latestDoc ? latestDoc.status : 'Pendente',
-          file_url: latestDoc?.file_url || null,
-          uploaded_at: latestDoc?.uploaded_at || null,
-          approved_at: latestDoc?.approved_at || null,
-          rejection_reason: latestDoc?.rejection_reason || null,
-          file: null
-        };
-        
-        console.log(`✅ Resultado final para ${type}:`, result);
-        return result;
-      });
-
-      console.log('📋 Lista final de documentos com status:', documentsWithStatus);
-      setRequiredDocuments(documentsWithStatus);
-      console.log('✅ requiredDocuments atualizado com:', documentsWithStatus.length, 'documentos');
-    } catch (error) {
-      console.error('Error loading required documents:', error);
-    } finally {
-      setIsLoadingRequiredDocuments(false);
-    }
-  };
-
-  // Handle individual document upload
-  const handleDocumentFileSelect = (documentId: string, file: File) => {
-    setRequiredDocuments(prev => prev.map(doc => 
-      doc.id === documentId ? { ...doc, file } : doc
-    ));
-  };
-
-  const handleUploadDocument = async (documentId: string) => {
-    if (!currentUser?.id) return;
-    
-    const document = requiredDocuments.find(doc => doc.id === documentId);
-    if (!document || !document.file) return;
-
-    try {
-      setUploadingDocuments(prev => new Set(prev).add(documentId));
-      
-      console.log('🚀 Iniciando upload do documento:', document.type);
-      console.log('📁 Arquivo:', document.file.name, document.file.size, 'bytes');
-      console.log('👤 Representante:', currentUser.id, currentUser.cnpj);
-      
-      // Preparar dados do documento
-      const docInfo: DocumentInfo = {
-        representativeId: currentUser.id,
-        cpfCnpj: currentUser.cnpj || '',
-        documentType: document.type,
-        fileName: document.file.name,
-        fileSize: document.file.size,
-        fileType: document.file.type
-      };
-
-      console.log('📋 Document Info:', docInfo);
-
-      // Upload do arquivo
-      const result = await uploadService.uploadComplete(document.file, docInfo);
-      
-      console.log('📤 Resultado do upload:', result);
-      
-      if (!result.success) {
-        throw new Error(result.error || 'Erro ao fazer upload do arquivo');
-      }
-
-      // Salvar no banco de dados
-      console.log('💾 Salvando no banco de dados...');
-      const dataToSave = {
-        representative_id: currentUser.id,
-        document_type: document.type,
-        file_url: result.data?.filePath || result.data?.directory,
-        status: 'Pendente',
-        uploaded_at: new Date().toISOString()
-      };
-      console.log('📋 Dados para salvar:', dataToSave);
-
-      const { data: savedData, error: dbError } = await supabase
-        .from('representative_documents')
-        .upsert(dataToSave)
-        .select();
-
-      console.log('💾 Resultado do salvamento:', { savedData, dbError });
-      console.log('🔍 Dados salvos detalhados:', savedData);
-      console.log('❌ Erro detalhado:', dbError);
-
-      if (dbError) {
-        console.error('❌ Erro ao salvar no banco:', dbError);
-        throw new Error(`Erro ao salvar no banco: ${dbError.message}`);
-      }
-
-      console.log('✅ Documento salvo no banco com sucesso!');
-
-      // Atualizar status do documento
-      setRequiredDocuments(prev => prev.map(doc => 
-        doc.id === documentId 
-          ? { ...doc, status: 'Pendente', file_url: result.data?.filePath || result.data?.directory, uploaded_at: new Date().toISOString(), file: null }
-          : doc
-      ));
-
-      alert('Documento enviado com sucesso!');
-      
-    } catch (error) {
-      console.error('Error uploading document:', error);
-      alert(`Erro ao enviar documento: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
-    } finally {
-      setUploadingDocuments(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(documentId);
-        return newSet;
-      });
-    }
-  };
+  // Document upload functions removed - now using inline component
 
   const handleWithdrawalRequest = async () => {
     try {
@@ -1779,184 +1576,15 @@ const RepresentativeDashboard: React.FC<RepresentativeDashboardProps> = ({
                   </Card>
                 </div>
 
-                {/* Documents Section */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <FileText className="h-5 w-5" />
-                      Documentos Obrigatórios
-                    </CardTitle>
-                    <CardDescription>
-                      Gerencie seus documentos obrigatórios para ativação do perfil
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    {isLoadingRequiredDocuments ? (
-                      <div className="flex items-center justify-center py-8">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600"></div>
-                        <span className="ml-2 text-muted-foreground">Carregando documentos...</span>
-                      </div>
-                    ) : (
-                      <div className="space-y-6">
-                        {/* Documentos da Empresa */}
-                        <div className="space-y-4">
-                          <div className="flex items-center gap-2 mb-4">
-                            <div className="h-1 w-8 bg-blue-600"></div>
-                            <h4 className="text-lg font-semibold text-blue-800">Documentos da Empresa</h4>
-                            <Badge variant="outline" className="bg-blue-50 text-blue-700">
-                              {requiredDocuments.filter(d => d.type.includes('empresa') || d.type.includes('cnpj') || d.type.includes('contrato') || d.type.includes('bancários') || d.type.includes('cartilha de credenciamento preenchida')).length} documentos
-                            </Badge>
-                          </div>
-
-                          {requiredDocuments.filter(doc => doc.type.includes('empresa') || doc.type.includes('cnpj') || doc.type.includes('contrato') || doc.type.includes('bancários') || doc.type.includes('cartilha de credenciamento preenchida')).map((doc) => (
-                            <div key={doc.id} className="flex items-center justify-between p-4 border rounded-lg">
-                              <div className="flex items-center gap-3 flex-1">
-                                <div className="p-2 bg-blue-100 rounded-lg">
-                                  <FileText className="h-5 w-5 text-blue-600" />
-                                </div>
-                                <div className="flex-1">
-                                  <p className="font-medium">{doc.type}</p>
-                                  <p className="text-sm text-muted-foreground">
-                                    {doc.status === 'Pendente' && !doc.file_url ? 'Não enviado' : 
-                                     doc.status === 'Pendente' ? `Enviado em ${new Date(doc.uploaded_at).toLocaleDateString("pt-BR")}` :
-                                     doc.status === 'Aprovado' ? `Aprovado em ${new Date(doc.approved_at).toLocaleDateString("pt-BR")}` :
-                                     `Rejeitado - ${doc.rejection_reason || 'Motivo não informado'}`}
-                                  </p>
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <Badge variant={doc.status === "Aprovado" ? "default" : doc.status === "Reprovado" ? "destructive" : "secondary"}>
-                                  {doc.status}
-                                </Badge>
-                                {doc.file_url && (
-                                  <>
-                                    <Button variant="outline" size="sm">
-                                      <Eye className="h-4 w-4" />
-                                    </Button>
-                                    <Button variant="outline" size="sm">
-                                      <Download className="h-4 w-4" />
-                                    </Button>
-                                  </>
-                                )}
-                                {doc.status !== 'Aprovado' && (
-                                  <div className="flex items-center gap-2">
-                                    <Input
-                                      type="file"
-                                      accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
-                                      onChange={(e) => {
-                                        const file = e.target.files?.[0];
-                                        if (file) {
-                                          handleDocumentFileSelect(doc.id, file);
-                                        }
-                                      }}
-                                      className="w-48"
-                                      disabled={uploadingDocuments.has(doc.id)}
-                                    />
-                                    <Button
-                                      size="sm"
-                                      onClick={() => handleUploadDocument(doc.id)}
-                                      disabled={!doc.file || uploadingDocuments.has(doc.id)}
-                                    >
-                                      {uploadingDocuments.has(doc.id) ? (
-                                        <>
-                                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                                          Enviando...
-                                        </>
-                                      ) : (
-                                        <>
-                                          <Upload className="h-4 w-4 mr-2" />
-                                          Enviar
-                                        </>
-                                      )}
-                                    </Button>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-
-                        {/* Documentos do Sócio */}
-                        <div className="space-y-4">
-                          <div className="flex items-center gap-2 mb-4">
-                            <div className="h-1 w-8 bg-green-600"></div>
-                            <h4 className="text-lg font-semibold text-green-800">Documentos do Sócio</h4>
-                            <Badge variant="outline" className="bg-green-50 text-green-700">
-                              {requiredDocuments.filter(doc => doc.type.includes('sócio') || doc.type.includes('pf') || doc.type.includes('certidão') || doc.type.includes('foto') || doc.type.includes('cnh') || doc.type.includes('identidade')).length} documentos
-                            </Badge>
-                          </div>
-
-                          {requiredDocuments.filter(doc => doc.type.includes('sócio') || doc.type.includes('pf') || doc.type.includes('certidão') || doc.type.includes('foto') || doc.type.includes('cnh') || doc.type.includes('identidade')).map((doc) => (
-                            <div key={doc.id} className="flex items-center justify-between p-4 border rounded-lg">
-                              <div className="flex items-center gap-3 flex-1">
-                                <div className="p-2 bg-green-100 rounded-lg">
-                                  <FileText className="h-5 w-5 text-green-600" />
-                                </div>
-                                <div className="flex-1">
-                                  <p className="font-medium">{doc.type}</p>
-                                  <p className="text-sm text-muted-foreground">
-                                    {doc.status === 'Pendente' && !doc.file_url ? 'Não enviado' : 
-                                     doc.status === 'Pendente' ? `Enviado em ${new Date(doc.uploaded_at).toLocaleDateString("pt-BR")}` :
-                                     doc.status === 'Aprovado' ? `Aprovado em ${new Date(doc.approved_at).toLocaleDateString("pt-BR")}` :
-                                     `Rejeitado - ${doc.rejection_reason || 'Motivo não informado'}`}
-                                  </p>
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <Badge variant={doc.status === "Aprovado" ? "default" : doc.status === "Reprovado" ? "destructive" : "secondary"}>
-                                  {doc.status}
-                                </Badge>
-                                {doc.file_url && (
-                                  <>
-                                    <Button variant="outline" size="sm">
-                                      <Eye className="h-4 w-4" />
-                                    </Button>
-                                    <Button variant="outline" size="sm">
-                                      <Download className="h-4 w-4" />
-                                    </Button>
-                                  </>
-                                )}
-                                {doc.status !== 'Aprovado' && (
-                                  <div className="flex items-center gap-2">
-                                    <Input
-                                      type="file"
-                                      accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
-                                      onChange={(e) => {
-                                        const file = e.target.files?.[0];
-                                        if (file) {
-                                          handleDocumentFileSelect(doc.id, file);
-                                        }
-                                      }}
-                                      className="w-48"
-                                      disabled={uploadingDocuments.has(doc.id)}
-                                    />
-                                    <Button
-                                      size="sm"
-                                      onClick={() => handleUploadDocument(doc.id)}
-                                      disabled={!doc.file || uploadingDocuments.has(doc.id)}
-                                    >
-                                      {uploadingDocuments.has(doc.id) ? (
-                                        <>
-                                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                                          Enviando...
-                                        </>
-                                      ) : (
-                                        <>
-                                          <Upload className="h-4 w-4 mr-2" />
-                                          Enviar
-                                        </>
-                                      )}
-                                    </Button>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
+                {/* Documents Section - Inline Upload */}
+                {currentUser && (
+                  <DocumentUploadInline
+                    representativeId={currentUser.id}
+                    representativeName={currentUser.name || currentUser.full_name || 'Representante'}
+                    representativeCpfCnpj={currentUser.cnpj || ''}
+                    onUploadComplete={loadRepresentativeDocuments}
+                  />
+                )}
               </div>
             )}
         </main>
@@ -2044,16 +1672,7 @@ const RepresentativeDashboard: React.FC<RepresentativeDashboardProps> = ({
         </DialogContent>
       </Dialog>
 
-      {/* Document Upload Modal */}
-      {showDocumentUploadModal && currentUser && (
-        <DocumentUploadModal
-          representativeId={currentUser.id}
-          representativeName={currentUser.name || currentUser.full_name || 'Representante'}
-          representativeCpfCnpj={currentUser.cnpj || ''}
-          onClose={handleCloseDocumentUpload}
-          onUploadComplete={handleDocumentUploadComplete}
-        />
-      )}
+      {/* Document Upload Modal - Removed, now using inline component */}
     </div>
   );
 };
