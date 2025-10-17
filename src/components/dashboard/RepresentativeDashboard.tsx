@@ -202,6 +202,7 @@ const RepresentativeDashboard: React.FC<RepresentativeDashboardProps> = ({
       
       // Definir currentUser
       setCurrentUser(user);
+      console.log("✅ CurrentUser definido:", user);
       return true;
     };
 
@@ -300,7 +301,9 @@ const RepresentativeDashboard: React.FC<RepresentativeDashboardProps> = ({
 
   // Load documents when My Account tab is active
   useEffect(() => {
+    console.log('🔄 useEffect My Account triggered:', { activeTab, currentUserId: currentUser?.id });
     if (activeTab === "my-account" && currentUser?.id) {
+      console.log('📋 Carregando documentos para My Account...');
       loadRepresentativeDocuments();
       loadProfileData();
       loadRequiredDocuments();
@@ -466,6 +469,7 @@ const RepresentativeDashboard: React.FC<RepresentativeDashboardProps> = ({
 
       console.log('📋 Lista final de documentos com status:', documentsWithStatus);
       setRequiredDocuments(documentsWithStatus);
+      console.log('✅ requiredDocuments atualizado com:', documentsWithStatus.length, 'documentos');
     } catch (error) {
       console.error('Error loading required documents:', error);
     } finally {
