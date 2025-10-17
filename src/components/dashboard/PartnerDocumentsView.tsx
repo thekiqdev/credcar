@@ -32,6 +32,7 @@ import { uploadService } from '../../lib/upload.service';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { createClient } from '@supabase/supabase-js';
 
 interface PartnerDocument {
   id: number;
@@ -69,6 +70,11 @@ const PartnerDocumentsView: React.FC<PartnerDocumentsViewProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Criar instância do Supabase
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+  const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+  const supabase = createClient(supabaseUrl, supabaseKey);
 
   useEffect(() => {
     if (isOpen && partnerId) {
