@@ -272,7 +272,23 @@ const PartnerDocumentsApproval: React.FC = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Usuário não autenticado');
 
-      // Update document status
+      console.log('🗑️ Iniciando reprovação e exclusão do documento:', selectedDocument.document_type);
+      console.log('📁 File URL:', selectedDocument.file_url);
+
+      // 1. Primeiro, excluir o arquivo físico do servidor
+      if (selectedDocument.file_url) {
+        console.log('🗑️ Excluindo arquivo físico...');
+        const fileDeleted = await uploadService.deleteFile(selectedDocument.file_url);
+        
+        if (fileDeleted) {
+          console.log('✅ Arquivo físico excluído com sucesso');
+        } else {
+          console.warn('⚠️ Falha ao excluir arquivo físico, mas continuando com reprovação');
+        }
+      }
+
+      // 2. Atualizar status no banco de dados
+      console.log('📝 Atualizando status no banco de dados...');
       await partnersService.updateDocumentStatus(
         selectedDocument.id,
         'Reprovado',
@@ -280,18 +296,7 @@ const PartnerDocumentsApproval: React.FC = () => {
         rejectionReason
       );
 
-      // Excluir arquivo fisicamente do servidor
-      if (selectedDocument.file_url) {
-        console.log('🗑️ Excluindo arquivo fisicamente:', selectedDocument.file_url);
-        const deleteResult = await uploadService.deleteFile(selectedDocument.file_url);
-        
-        if (deleteResult.success) {
-          console.log('✅ Arquivo excluído com sucesso:', deleteResult.message);
-        } else {
-          console.warn('⚠️ Erro ao excluir arquivo (continuando):', deleteResult.error);
-          // Não falha a operação se não conseguir excluir o arquivo
-        }
-      }
+      console.log('✅ Documento reprovado e arquivo excluído com sucesso');
 
       setShowRejectDialog(false);
       setSelectedDocument(null);
@@ -299,7 +304,7 @@ const PartnerDocumentsApproval: React.FC = () => {
       await loadData();
       
     } catch (error) {
-      console.error('Error rejecting document:', error);
+      console.error('❌ Error rejecting document:', error);
       setError('Erro ao reprovar documento');
     } finally {
       setIsProcessing(false);
