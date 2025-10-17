@@ -887,6 +887,144 @@ export type Database = {
           },
         ]
       }
+      partners: {
+        Row: {
+          id: string
+          representative_id: string
+          name: string
+          cpf: string
+          email: string | null
+          phone: string | null
+          address: string | null
+          birth_date: string | null
+          nationality: string | null
+          marital_status: string | null
+          spouse_name: string | null
+          spouse_phone: string | null
+          position: string | null
+          participation_percentage: number | null
+          status: string | null
+          documents_approved: boolean | null
+          documents_approved_at: string | null
+          documents_approved_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          representative_id: string
+          name: string
+          cpf: string
+          email?: string | null
+          phone?: string | null
+          address?: string | null
+          birth_date?: string | null
+          nationality?: string | null
+          marital_status?: string | null
+          spouse_name?: string | null
+          spouse_phone?: string | null
+          position?: string | null
+          participation_percentage?: number | null
+          status?: string | null
+          documents_approved?: boolean | null
+          documents_approved_at?: string | null
+          documents_approved_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          representative_id?: string
+          name?: string
+          cpf?: string
+          email?: string | null
+          phone?: string | null
+          address?: string | null
+          birth_date?: string | null
+          nationality?: string | null
+          marital_status?: string | null
+          spouse_name?: string | null
+          spouse_phone?: string | null
+          position?: string | null
+          participation_percentage?: number | null
+          status?: string | null
+          documents_approved?: boolean | null
+          documents_approved_at?: string | null
+          documents_approved_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partners_representative_id_fkey"
+            columns: ["representative_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partners_documents_approved_by_fkey"
+            columns: ["documents_approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      partner_documents: {
+        Row: {
+          id: number
+          partner_id: string
+          document_type: string
+          file_url: string
+          status: string | null
+          uploaded_at: string | null
+          reviewed_by: string | null
+          reviewed_at: string | null
+          rejection_reason: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: number
+          partner_id: string
+          document_type: string
+          file_url: string
+          status?: string | null
+          uploaded_at?: string | null
+          reviewed_by?: string | null
+          reviewed_at?: string | null
+          rejection_reason?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: number
+          partner_id?: string
+          document_type?: string
+          file_url?: string
+          status?: string | null
+          uploaded_at?: string | null
+          reviewed_by?: string | null
+          reviewed_at?: string | null
+          rejection_reason?: string | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partner_documents_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_documents_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       representative_documents: {
         Row: {
           document_type: string

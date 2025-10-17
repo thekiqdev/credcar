@@ -52,6 +52,7 @@ import {
 import DocumentNotification from './DocumentNotification';
 import DocumentUploadModal from './DocumentUploadModal';
 import DocumentUploadInline from './DocumentUploadInline';
+import PartnersManagement from './PartnersManagement';
 import { withdrawalService } from "../../lib/withdrawal.service";
 import {
   Dialog,
@@ -1584,6 +1585,17 @@ const RepresentativeDashboard: React.FC<RepresentativeDashboardProps> = ({
                     representativeName={currentUser.name || currentUser.full_name || 'Representante'}
                     representativeCpfCnpj={currentUser.cnpj || ''}
                     onUploadComplete={loadRepresentativeDocuments}
+                  />
+                )}
+
+                {/* Partners Section */}
+                {currentUser && (
+                  <PartnersManagement
+                    representativeId={currentUser.id}
+                    onPartnersChange={() => {
+                      // Callback para recarregar dados se necessário
+                      console.log('Partners updated');
+                    }}
                   />
                 )}
               </div>

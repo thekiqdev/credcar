@@ -3795,3 +3795,280 @@ export const signatureService = {
     }
   },
 };
+
+// Partners service
+export const partnersService = {
+  // Get all partners for a representative
+  async getByRepresentativeId(representativeId: string) {
+    try {
+      const { data, error } = await supabase
+        .from("partners")
+        .select("*")
+        .eq("representative_id", representativeId)
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        console.error("Error fetching partners:", error);
+        throw error;
+      }
+
+      return data || [];
+    } catch (error) {
+      console.error("Error in partnersService.getByRepresentativeId:", error);
+      throw error;
+    }
+  },
+
+  // Get partner by ID
+  async getById(partnerId: string) {
+    try {
+      const { data, error } = await supabase
+        .from("partners")
+        .select("*")
+        .eq("id", partnerId)
+        .single();
+
+      if (error) {
+        console.error("Error fetching partner:", error);
+        throw error;
+      }
+
+      return data;
+    } catch (error) {
+      console.error("Error in partnersService.getById:", error);
+      throw error;
+    }
+  },
+
+  // Create new partner
+  async create(partnerData: Database["public"]["Tables"]["partners"]["Insert"]) {
+    try {
+      const { data, error } = await supabase
+        .from("partners")
+        .insert(partnerData)
+        .select()
+        .single();
+
+      if (error) {
+        console.error("Error creating partner:", error);
+        throw error;
+      }
+
+      return data;
+    } catch (error) {
+      console.error("Error in partnersService.create:", error);
+      throw error;
+    }
+  },
+
+  // Update partner
+  async update(partnerId: string, updates: Database["public"]["Tables"]["partners"]["Update"]) {
+    try {
+      const { data, error } = await supabase
+        .from("partners")
+        .update(updates)
+        .eq("id", partnerId)
+        .select()
+        .single();
+
+      if (error) {
+        console.error("Error updating partner:", error);
+        throw error;
+      }
+
+      return data;
+    } catch (error) {
+      console.error("Error in partnersService.update:", error);
+      throw error;
+    }
+  },
+
+  // Delete partner
+  async delete(partnerId: string) {
+    try {
+      const { error } = await supabase
+        .from("partners")
+        .delete()
+        .eq("id", partnerId);
+
+      if (error) {
+        console.error("Error deleting partner:", error);
+        throw error;
+      }
+
+      return true;
+    } catch (error) {
+      console.error("Error in partnersService.delete:", error);
+      throw error;
+    }
+  },
+
+  // Get partner documents
+  async getPartnerDocuments(partnerId: string) {
+    try {
+      const { data, error } = await supabase
+        .from("partner_documents")
+        .select("*")
+        .eq("partner_id", partnerId)
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        console.error("Error fetching partner documents:", error);
+        throw error;
+      }
+
+      return data || [];
+    } catch (error) {
+      console.error("Error in partnersService.getPartnerDocuments:", error);
+      throw error;
+    }
+  },
+
+  // Upload partner document
+  async uploadDocument(documentData: Database["public"]["Tables"]["partner_documents"]["Insert"]) {
+    try {
+      const { data, error } = await supabase
+        .from("partner_documents")
+        .insert({
+          ...documentData,
+          uploaded_at: new Date().toISOString(),
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error("Error uploading partner document:", error);
+        throw error;
+      }
+
+      return data;
+    } catch (error) {
+      console.error("Error in partnersService.uploadDocument:", error);
+      throw error;
+    }
+  },
+
+  // Update partner document status
+  async updateDocumentStatus(
+    documentId: number,
+    status: string,
+    reviewedBy?: string,
+    rejectionReason?: string
+  ) {
+    try {
+      const updateData: Database["public"]["Tables"]["partner_documents"]["Update"] = {
+        status,
+        reviewed_at: new Date().toISOString(),
+      };
+
+      if (reviewedBy) {
+        updateData.reviewed_by = reviewedBy;
+      }
+
+      if (rejectionReason) {
+        updateData.rejection_reason = rejectionReason;
+      }
+
+      const { data, error } = await supabase
+        .from("partner_documents")
+        .update(updateData)
+        .eq("id", documentId)
+        .select()
+        .single();
+
+      if (error) {
+        console.error("Error updating partner document status:", error);
+        throw error;
+      }
+
+      return data;
+    } catch (error) {
+      console.error("Error in partnersService.updateDocumentStatus:", error);
+      throw error;
+    }
+  },
+
+  // Check if all partner documents are approved
+  async checkAllDocumentsApproved(partnerId: string): Promise<boolean> {
+    try {
+      const requiredDocuments = [
+        "cartilha de credenciamento pf",
+        "comprovante de endereço em nome do sócio",
+        "certidão de antecedentes criminais",
+        "certidão negativa cível de 1º grau",
+        "certidão negativa criminal de 1º grau",
+        "foto de identidade ou cnh (frente)",
+        "foto de identidade ou cnh (verso)"
+      ];
+
+      const { data, error } = await supabase
+        .from("partner_documents")
+        .select("document_type, status")
+        .eq("partner_id", partnerId)
+        .in("document_type", requiredDocuments);
+
+      if (error) {
+        console.error("Error checking partner document approval status:", error);
+        throw error;
+      }
+
+      // Check if all required documents are approved
+      const approvedDocuments = (data || []).filter(
+        (doc) => doc.status === "Aprovado",
+      );
+      return approvedDocuments.length === requiredDocuments.length;
+    } catch (error) {
+      console.error(
+        "Error in partnersService.checkAllDocumentsApproved:",
+        error,
+      );
+      return false;
+    }
+  },
+
+  // Approve all partner documents
+  async approveAllDocuments(partnerId: string, approvedBy: string) {
+    try {
+      // First, approve all documents
+      const { error: docsError } = await supabase
+        .from("partner_documents")
+        .update({
+          status: "Aprovado",
+          reviewed_by: approvedBy,
+          reviewed_at: new Date().toISOString(),
+        })
+        .eq("partner_id", partnerId);
+
+      if (docsError) {
+        console.error("Error approving partner documents:", docsError);
+        throw docsError;
+      }
+
+      // Then update the partner to mark documents as approved
+      const { data, error } = await supabase
+        .from("partners")
+        .update({
+          documents_approved: true,
+          documents_approved_at: new Date().toISOString(),
+          documents_approved_by: approvedBy,
+        })
+        .eq("id", partnerId)
+        .select()
+        .single();
+
+      if (error) {
+        console.error("Error updating partner approval status:", error);
+        throw error;
+      }
+
+      console.log(
+        "Partner documents approved and partner activated for:",
+        partnerId,
+      );
+      return data;
+    } catch (error) {
+      console.error("Error in partnersService.approveAllDocuments:", error);
+      throw error;
+    }
+  },
+};
