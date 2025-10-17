@@ -42,7 +42,7 @@ import {
 import { partnersService } from '../../lib/supabase';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import PartnerDocumentUpload from './PartnerDocumentUpload';
-import PartnerDocumentViewer from './PartnerDocumentViewer';
+import PartnerDocumentsView from './PartnerDocumentsView';
 
 interface Partner {
   id: string;
@@ -85,7 +85,7 @@ const PartnersManagement: React.FC<PartnersManagementProps> = ({
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showDocumentUpload, setShowDocumentUpload] = useState(false);
   const [selectedPartnerForUpload, setSelectedPartnerForUpload] = useState<Partner | null>(null);
-  const [showDocumentViewer, setShowDocumentViewer] = useState(false);
+  const [showDocumentsView, setShowDocumentsView] = useState(false);
   const [selectedPartnerForView, setSelectedPartnerForView] = useState<Partner | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -220,14 +220,19 @@ const PartnersManagement: React.FC<PartnersManagementProps> = ({
     onPartnersChange?.();
   };
 
-  const handleOpenDocumentViewer = (partner: Partner) => {
+  const handleOpenDocumentsView = (partner: Partner) => {
     setSelectedPartnerForView(partner);
-    setShowDocumentViewer(true);
+    setShowDocumentsView(true);
   };
 
-  const handleCloseDocumentViewer = () => {
-    setShowDocumentViewer(false);
+  const handleCloseDocumentsView = () => {
+    setShowDocumentsView(false);
     setSelectedPartnerForView(null);
+  };
+
+  const handleDocumentsStatusChange = () => {
+    loadPartners();
+    onPartnersChange?.();
   };
 
   const getStatusIcon = (status: string) => {
@@ -403,7 +408,7 @@ const PartnersManagement: React.FC<PartnersManagementProps> = ({
                         <Button 
                           variant="outline" 
                           size="sm"
-                          onClick={() => handleOpenDocumentViewer(partner)}
+                          onClick={() => handleOpenDocumentsView(partner)}
                           title="Visualizar documentos do sócio"
                         >
                           <Eye className="h-4 w-4" />
@@ -516,12 +521,15 @@ const PartnersManagement: React.FC<PartnersManagementProps> = ({
         />
       )}
 
-      {/* Partner Document Viewer Modal */}
-      {showDocumentViewer && selectedPartnerForView && (
-        <PartnerDocumentViewer
-          partner={selectedPartnerForView}
-          isOpen={showDocumentViewer}
-          onClose={handleCloseDocumentViewer}
+      {/* Partner Documents View Modal */}
+      {showDocumentsView && selectedPartnerForView && (
+        <PartnerDocumentsView
+          partnerId={selectedPartnerForView.id}
+          partnerName={selectedPartnerForView.name}
+          partnerCpf={selectedPartnerForView.cpf}
+          isOpen={showDocumentsView}
+          onClose={handleCloseDocumentsView}
+          onStatusChange={handleDocumentsStatusChange}
         />
       )}
     </div>
