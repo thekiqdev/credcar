@@ -485,21 +485,6 @@ class AsaasService {
     }
   }
 
-  /**
-   * Delete customer
-   */
-  async deleteCustomer(customerId: string): Promise<boolean> {
-    await this.updateConfig();
-    
-    try {
-      await this.client.delete(`/customers/${customerId}`);
-      console.log('Customer deleted successfully');
-      return true;
-    } catch (error) {
-      console.error('Error deleting customer:', error);
-      return false;
-    }
-  }
 
   /**
    * Create payment link

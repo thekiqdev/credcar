@@ -542,26 +542,6 @@ class UploadService {
     }
   }
 
-  /**
-   * Deletar arquivo
-   */
-  async deleteFile(filePath: string): Promise<boolean> {
-    try {
-      const response = await fetch(`${this.baseUrl}/delete-file`, {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ filePath })
-      });
-
-      const data = await response.json();
-      return data.success;
-    } catch (error) {
-      console.error('❌ Erro ao deletar arquivo:', error);
-      return false;
-    }
-  }
 
   /**
    * Upload completo: criar pastas + upload
