@@ -903,10 +903,11 @@ app.post('/api/upload-document', upload.single('file'), validateFile, (req, res)
     console.log('📋 Body:', req.body);
     console.log('📁 File:', req.file);
     
-    const { cpfCnpj, documentType } = req.body;
+    const { cpfCnpj, documentType, partnerCpf } = req.body;
     
     console.log('🔍 Document Type:', documentType);
     console.log('👤 CPF/CNPJ:', cpfCnpj);
+    console.log('👤 Partner CPF:', partnerCpf);
     console.log('📏 File Size:', req.file.size, 'bytes');
     console.log('📄 MIME Type:', req.file.mimetype);
     
@@ -958,6 +959,13 @@ app.post('/api/upload-document', upload.single('file'), validateFile, (req, res)
     const baseDir = path.join(__dirname, 'documentos');
     const sanitizedCpfCnpj = cpfCnpj.replace(/[^a-zA-Z0-9]/g, '');
     
+    // Verificar se é um documento de sócio
+    const isPartnerDocument = partnerCpf && partnerCpf.trim() !== '';
+    const sanitizedPartnerCpf = isPartnerDocument ? partnerCpf.replace(/[^a-zA-Z0-9]/g, '') : '';
+    
+    console.log('🔍 Is Partner Document:', isPartnerDocument);
+    console.log('🔍 Sanitized Partner CPF:', sanitizedPartnerCpf);
+    
     // Mapear tipos de documento para nomes corretos (nova estrutura)
     const documentTypeMap = {
       // Documentos da Empresa
@@ -992,7 +1000,17 @@ app.post('/api/upload-document', upload.single('file'), validateFile, (req, res)
     
     console.log('🔍 Final Mapped Path:', mappedPath);
     
-    const finalPath = path.join(baseDir, sanitizedCpfCnpj, mappedPath);
+    // Construir caminho final baseado no tipo de documento
+    let finalPath;
+    if (isPartnerDocument) {
+      // Para documentos de sócios: documentos/cpf_representante/socio/cpf_socio/tipo_documento/
+      const partnerPath = path.join('socio', sanitizedPartnerCpf, mappedPath.split('/')[1]);
+      finalPath = path.join(baseDir, sanitizedCpfCnpj, partnerPath);
+    } else {
+      // Para documentos de representantes: documentos/cpf_representante/tipo_documento/
+      finalPath = path.join(baseDir, sanitizedCpfCnpj, mappedPath);
+    }
+    
     console.log('🔍 Final Path:', finalPath);
     
     // Criar diretório final se não existir
