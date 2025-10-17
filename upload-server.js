@@ -850,6 +850,28 @@ app.get('/api/test', (req, res) => {
   res.json({ message: 'Servidor funcionando!', timestamp: new Date().toISOString() });
 });
 
+// Endpoint para testar estrutura da tabela
+app.get('/api/test-table', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('representative_documents')
+      .select('*')
+      .limit(5);
+    
+    res.json({ 
+      message: 'Teste da tabela representative_documents',
+      data: data,
+      error: error,
+      count: data?.length || 0
+    });
+  } catch (err) {
+    res.json({ 
+      message: 'Erro ao testar tabela',
+      error: err.message 
+    });
+  }
+});
+
 // Rota para upload de documentos
 app.post('/api/upload-document', upload.single('file'), validateFile, (req, res) => {
   try {

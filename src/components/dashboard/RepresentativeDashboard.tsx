@@ -430,10 +430,14 @@ const RepresentativeDashboard: React.FC<RepresentativeDashboardProps> = ({
       ];
 
       // Buscar documentos existentes no banco
+      console.log('🔍 Buscando documentos existentes para:', currentUser.id);
       const { data: existingDocs, error } = await supabase
         .from('representative_documents')
         .select('*')
         .eq('representative_id', currentUser.id);
+
+      console.log('📋 Documentos encontrados no banco:', existingDocs);
+      console.log('❌ Erro na busca:', error);
 
       if (error) {
         console.error('Error loading existing documents:', error);
@@ -504,7 +508,16 @@ const RepresentativeDashboard: React.FC<RepresentativeDashboardProps> = ({
       }
 
       // Salvar no banco de dados
-      const { error: dbError } = await supabase
+      console.log('💾 Salvando no banco de dados...');
+      console.log('📋 Dados para salvar:', {
+        representative_id: currentUser.id,
+        document_type: document.type,
+        file_url: result.data?.filePath || result.data?.directory,
+        status: 'Pendente',
+        uploaded_at: new Date().toISOString()
+      });
+
+      const { data: savedData, error: dbError } = await supabase
         .from('representative_documents')
         .upsert({
           representative_id: currentUser.id,
@@ -512,11 +525,17 @@ const RepresentativeDashboard: React.FC<RepresentativeDashboardProps> = ({
           file_url: result.data?.filePath || result.data?.directory,
           status: 'Pendente',
           uploaded_at: new Date().toISOString()
-        });
+        })
+        .select();
+
+      console.log('💾 Resultado do salvamento:', { savedData, dbError });
 
       if (dbError) {
+        console.error('❌ Erro ao salvar no banco:', dbError);
         throw new Error(`Erro ao salvar no banco: ${dbError.message}`);
       }
+
+      console.log('✅ Documento salvo no banco com sucesso!');
 
       // Atualizar status do documento
       setRequiredDocuments(prev => prev.map(doc => 

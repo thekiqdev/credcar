@@ -820,6 +820,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       });
 
       // Add new representative documents
+      console.log('📋 Adicionando novos documentos:', newDocs);
       newDocs.forEach((doc) => {
         if (doc.representative_id) {
           if (!groupedDocs[doc.representative_id]) {
@@ -832,6 +833,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
         }
       });
 
+      console.log('📊 Documentos agrupados:', groupedDocs);
       setRepresentativeDocuments(groupedDocs);
     } catch (error) {
       console.error("Error loading documents:", error);
