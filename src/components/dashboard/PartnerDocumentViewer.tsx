@@ -28,7 +28,8 @@ import {
   FileText,
   AlertCircle
 } from 'lucide-react';
-import { partnersService, uploadService } from '../../lib/supabase';
+import { partnersService } from '../../lib/supabase';
+import { uploadService } from '../../lib/upload.service';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
