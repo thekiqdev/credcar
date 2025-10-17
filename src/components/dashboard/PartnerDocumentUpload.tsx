@@ -369,14 +369,13 @@ const PartnerDocumentUpload: React.FC<PartnerDocumentUploadProps> = ({
             fileSize: doc.file.size,
             fileType: doc.file.type,
             // Adicionar informações específicas do sócio
-            partnerId: partnerId,
             partnerCpf: partnerCpf
           };
 
           console.log('📋 Document Info (Partner):', docInfo);
 
-          // Upload completo: criar pastas + salvar arquivo
-          const result = await uploadService.uploadComplete(doc.file, docInfo);
+          // Upload específico para documentos de sócios
+          const result = await uploadService.uploadPartnerDocument(doc.file, docInfo);
 
           if (!result.success) {
             throw new Error(result.error || 'Erro ao salvar arquivo');

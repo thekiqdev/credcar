@@ -13,6 +13,7 @@ interface DocumentInfo {
   fileType: string;
   category?: string;
   subType?: string;
+  partnerCpf?: string; // CPF do sócio para documentos de sócios
 }
 
 interface UploadResult {
@@ -114,6 +115,67 @@ class UploadService {
       console.error('❌ Servidor de upload não está funcionando:', error);
       console.error('🔗 URL tentada:', `${this.baseUrl}/health`);
       return false;
+    }
+  }
+
+  /**
+   * Criar estrutura de pastas do sócio (nova estrutura)
+   */
+  async createPartnerFolder(partnerCpf: string): Promise<UploadResult> {
+    try {
+      console.log('📁 Criando estrutura de pastas para sócio...');
+      console.log('👤 Partner CPF:', partnerCpf);
+      console.log('📡 Endpoint:', `${this.baseUrl}/create-folder`);
+      
+      // Validar CPF
+      if (!partnerCpf || partnerCpf.trim() === '') {
+        console.error('❌ CPF do sócio é obrigatório para criar pasta');
+        throw new Error('CPF do sócio é obrigatório para criar pasta');
+      }
+
+      const requestBody = {
+        cpfCnpj: partnerCpf
+      };
+      
+      console.log('📤 Enviando requisição:', requestBody);
+
+      const response = await fetch(`${this.baseUrl}/create-folder`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody)
+      });
+
+      const data = await response.json();
+      
+      console.log('📥 Resposta recebida:', data);
+
+      if (data.success) {
+        console.log('✅ Estrutura de pastas criada com sucesso');
+        console.log('📂 Caminho base:', data.path);
+        console.log('📋 Mensagem:', data.message);
+        
+        return {
+          success: true,
+          message: data.message,
+          data: {
+            filePath: data.path,
+            fileName: '',
+            directory: data.path,
+            originalName: '',
+            size: 0,
+            type: ''
+          }
+        };
+      } else {
+        console.error('❌ Erro na resposta:', data.error);
+        throw new Error(data.error || 'Erro ao criar estrutura de pastas');
+      }
+    } catch (error) {
+      console.error('❌ Erro ao criar estrutura de pastas:', error);
+      console.error('🔍 Detalhes do erro:', { partnerCpf, error: error.message });
+      throw error;
     }
   }
 
@@ -479,6 +541,86 @@ class UploadService {
     } catch (error) {
       console.error('❌ Erro ao deletar arquivo:', error);
       return false;
+    }
+  }
+
+  /**
+   * Upload completo para documentos de sócios: criar pastas + salvar arquivo
+   */
+  async uploadPartnerDocument(file: File, docInfo: DocumentInfo): Promise<UploadResult> {
+    try {
+      console.log('📤 === INÍCIO uploadPartnerDocument ===');
+      console.log('📋 Document Info:', docInfo);
+      console.log('📁 File:', file.name, file.size, 'bytes');
+      
+      // Validar dados obrigatórios
+      if (!docInfo.partnerCpf) {
+        throw new Error('CPF do sócio é obrigatório');
+      }
+      
+      if (!docInfo.documentType) {
+        throw new Error('Tipo de documento é obrigatório');
+      }
+
+      // 1. Criar estrutura de pastas para o sócio
+      console.log('📁 Criando estrutura de pastas para sócio...');
+      const folderResult = await this.createPartnerFolder(docInfo.partnerCpf);
+      
+      if (!folderResult.success) {
+        throw new Error(folderResult.message || 'Erro ao criar estrutura de pastas');
+      }
+
+      // 2. Preparar dados para upload
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('documentType', docInfo.documentType);
+      formData.append('partnerCpf', docInfo.partnerCpf);
+      
+      // Adicionar dados opcionais se disponíveis
+      if (docInfo.representativeId) {
+        formData.append('representativeId', docInfo.representativeId);
+      }
+
+      console.log('📤 Enviando arquivo para upload...');
+      console.log('📋 Document Type:', docInfo.documentType);
+      console.log('👤 Partner CPF:', docInfo.partnerCpf);
+
+      // 3. Fazer upload do arquivo
+      const response = await fetch(`${this.baseUrl}/api/upload-partner-document`, {
+        method: 'POST',
+        body: formData
+      });
+
+      const data = await response.json();
+      
+      console.log('📥 Resposta do upload:', data);
+
+      if (data.success) {
+        console.log('✅ Upload de documento de sócio realizado com sucesso');
+        console.log('📁 File Path:', data.filePath);
+        console.log('📋 Document Type:', data.documentType);
+        
+        return {
+          success: true,
+          message: 'Documento de sócio enviado com sucesso',
+          data: {
+            filePath: data.filePath,
+            fileName: data.fileName,
+            directory: data.directory,
+            originalName: data.originalName,
+            size: data.size,
+            type: data.type,
+            documentType: data.documentType,
+            partnerCpf: docInfo.partnerCpf
+          }
+        };
+      } else {
+        console.error('❌ Erro no upload:', data.error);
+        throw new Error(data.error || 'Erro ao fazer upload do documento');
+      }
+    } catch (error) {
+      console.error('❌ Erro no uploadPartnerDocument:', error);
+      throw error;
     }
   }
 
