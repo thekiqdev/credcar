@@ -41,6 +41,7 @@ import {
 } from 'lucide-react';
 import { partnersService } from '../../lib/supabase';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import PartnerDocumentUpload from './PartnerDocumentUpload';
 
 interface Partner {
   id: string;
@@ -81,6 +82,8 @@ const PartnersManagement: React.FC<PartnersManagementProps> = ({
   const [editingPartner, setEditingPartner] = useState<Partner | null>(null);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
+  const [showDocumentUpload, setShowDocumentUpload] = useState(false);
+  const [selectedPartnerForUpload, setSelectedPartnerForUpload] = useState<Partner | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   // Form data for creating/editing partners - Simplified
@@ -198,6 +201,22 @@ const PartnersManagement: React.FC<PartnersManagementProps> = ({
     setShowEditDialog(true);
   };
 
+  const handleOpenDocumentUpload = (partner: Partner) => {
+    setSelectedPartnerForUpload(partner);
+    setShowDocumentUpload(true);
+  };
+
+  const handleCloseDocumentUpload = () => {
+    setShowDocumentUpload(false);
+    setSelectedPartnerForUpload(null);
+  };
+
+  const handleDocumentUploadComplete = () => {
+    // Recarregar lista de sócios para atualizar status dos documentos
+    loadPartners();
+    onPartnersChange?.();
+  };
+
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'Ativo':
@@ -238,16 +257,17 @@ const PartnersManagement: React.FC<PartnersManagementProps> = ({
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Users className="h-5 w-5" />
-          Gerenciar Sócios
-        </CardTitle>
-        <CardDescription>
-          Adicione e gerencie os sócios da sua empresa
-        </CardDescription>
-      </CardHeader>
+    <div>
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Users className="h-5 w-5" />
+            Gerenciar Sócios
+          </CardTitle>
+          <CardDescription>
+            Adicione e gerencie os sócios da sua empresa
+          </CardDescription>
+        </CardHeader>
 
       <CardContent className="space-y-6">
         {/* Error Alert */}
@@ -370,7 +390,12 @@ const PartnersManagement: React.FC<PartnersManagementProps> = ({
                         <Button variant="outline" size="sm">
                           <Eye className="h-4 w-4" />
                         </Button>
-                        <Button variant="outline" size="sm">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => handleOpenDocumentUpload(partner)}
+                          title="Enviar documentos do sócio"
+                        >
                           <Upload className="h-4 w-4" />
                         </Button>
                         <Button 
@@ -460,7 +485,19 @@ const PartnersManagement: React.FC<PartnersManagementProps> = ({
         </Dialog>
       </CardContent>
     </Card>
-  );
-};
+
+    {/* Partner Document Upload Modal */}
+    {showDocumentUpload && selectedPartnerForUpload && (
+      <PartnerDocumentUpload
+        partnerId={selectedPartnerForUpload.id}
+        partnerName={selectedPartnerForUpload.name}
+        partnerCpf={selectedPartnerForUpload.cpf}
+        representativeId={representativeId}
+        onClose={handleCloseDocumentUpload}
+        onUploadComplete={handleDocumentUploadComplete}
+      />
+    )}
+  </div>
+);
 
 export default PartnersManagement;

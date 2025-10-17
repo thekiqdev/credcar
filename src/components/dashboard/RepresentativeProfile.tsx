@@ -8,6 +8,7 @@ import {
 } from "../../lib/supabase";
 import DocumentApproval from "./DocumentApproval";
 import RepresentativeContractUpload from "./RepresentativeContractUpload";
+import PartnersManagement from "./PartnersManagement";
 import { Database } from "../../types/supabase";
 import {
   Card,
@@ -787,6 +788,15 @@ const RepresentativeProfile: React.FC<RepresentativeProfileProps> = () => {
             )}
           </CardContent>
         </Card>
+
+        {/* Partners Management Section */}
+        <PartnersManagement 
+          representativeId={id || ''} 
+          onPartnersChange={() => {
+            // Recarregar dados se necessário
+            console.log('Partners updated');
+          }}
+        />
       </div>
 
       {/* Password Change Dialog */}

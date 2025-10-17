@@ -6935,6 +6935,22 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
               </div>
             )}
 
+            {activeSection === "partner-documents" && (
+              <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h1 className="text-2xl font-bold tracking-tight">
+                      Documentos de Sócios
+                    </h1>
+                    <p className="text-muted-foreground">
+                      Aprove ou reprove documentos enviados pelos sócios dos representantes.
+                    </p>
+                  </div>
+                </div>
+                <PartnerDocumentsApproval />
+              </div>
+            )}
+
             {activeSection === "collaborators" && (
               <div className="space-y-6">
                 <div className="flex items-center justify-between">
