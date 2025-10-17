@@ -202,14 +202,15 @@ const PartnerDocumentsView: React.FC<PartnerDocumentsViewProps> = ({
       console.log('🗑️ Iniciando exclusão do documento:', document.document_type);
       console.log('🗑️ File URL:', document.file_url);
       
-      // 1. Excluir arquivo do servidor
+      // 1. Tentar excluir arquivo do servidor
       const deleteResult = await uploadService.deleteFile(document.file_url, partnerCpf);
       
-      if (!deleteResult.success) {
-        throw new Error(`Erro ao excluir arquivo: ${deleteResult.error}`);
+      if (deleteResult.success) {
+        console.log('✅ Arquivo excluído do servidor com sucesso');
+      } else {
+        console.log('⚠️ Arquivo não encontrado no servidor (pode já ter sido excluído):', deleteResult.error);
+        // Continuar mesmo se o arquivo não existir - pode ter sido excluído anteriormente
       }
-      
-      console.log('✅ Arquivo excluído do servidor com sucesso');
       
       // 2. Excluir registro do banco de dados
       const { error: deleteError } = await supabase
