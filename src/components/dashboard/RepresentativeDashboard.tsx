@@ -660,17 +660,18 @@ const RepresentativeDashboard: React.FC<RepresentativeDashboardProps> = ({
 
         {/* Main Dashboard Content */}
         <main className="flex-1 overflow-y-auto p-6">
-          {/* Document Notification - Fixa até todos documentos enviados */}
-          {currentUser && currentUser.status === 'Pendente de Aprovação' && (
+          {/* Document Notification - Fixa até todos documentos aprovados */}
+          {currentUser && !currentUser.documents_approved && (
             <>
               {console.log('🔍 Current User:', currentUser)}
               {console.log('🔍 CPF/CNPJ:', currentUser.cnpj)}
+              {console.log('🔍 Documents Approved:', currentUser.documents_approved)}
               <DocumentNotification 
                 representativeId={currentUser.id}
                 representativeName={currentUser.name || currentUser.full_name || 'Representante'}
                 representativeCpfCnpj={currentUser.cnpj || ''}
                 onClose={() => {
-                  // Notificação não pode ser fechada - sempre visível até documentos enviados
+                  // Notificação não pode ser fechada - sempre visível até documentos aprovados
                   console.log('Notificação obrigatória - não pode ser fechada');
                 }}
               />

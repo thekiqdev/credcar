@@ -72,22 +72,25 @@ export const DocumentNotification: React.FC<DocumentNotificationProps> = ({
 
       setDocuments(data || []);
 
-      // Se todos os documentos estão aprovados, atualizar status do representante
+      // Se todos os documentos estão aprovados, atualizar campos do representante
       if (data && data.length > 0) {
         const allApproved = data.every(doc => doc.status === 'Aprovado');
         if (allApproved) {
-          // Atualizar status do representante para "Ativo"
+          // Atualizar campos de aprovação de documentos
           const { error: updateError } = await supabase
             .from('profiles')
-            .update({ status: 'Ativo' })
+            .update({ 
+              documents_approved: true,
+              documents_approved_at: new Date().toISOString(),
+              documents_approved_by: 'system'
+            })
             .eq('id', representativeId);
 
           if (updateError) {
-            console.error('Error updating representative status:', updateError);
+            console.error('Error updating representative documents approval:', updateError);
           } else {
-            console.log('✅ Representative status updated to Ativo');
-            // Não recarregar a página - apenas atualizar o estado local
-            // A notificação desaparecerá automaticamente devido ao getDocumentProgress() === 100
+            console.log('✅ Representative documents approved - documents_approved set to true');
+            // A notificação desaparecerá automaticamente devido à nova condição !currentUser.documents_approved
           }
         }
       }
