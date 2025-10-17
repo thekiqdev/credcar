@@ -1069,7 +1069,7 @@ app.post('/api/upload-document', upload.single('file'), validateFile, (req, res)
 // Rota para excluir arquivo
 app.post('/api/delete-file', (req, res) => {
   try {
-    console.log('🗑️ Recebendo requisição de exclusão de arquivo...');
+    console.log('🗑️ Recebendo requisição de exclusão...');
     console.log('📋 Body:', req.body);
     
     const { filePath } = req.body;
@@ -1079,20 +1079,19 @@ app.post('/api/delete-file', (req, res) => {
       return res.status(400).json({ error: 'Caminho do arquivo é obrigatório' });
     }
     
-    console.log('🔍 File Path:', filePath);
+    console.log('🗑️ Arquivo a ser excluído:', filePath);
     
     // Construir caminho absoluto
     const baseDir = path.join(__dirname, 'documentos');
     const fullPath = path.join(baseDir, filePath);
     
-    console.log('🔍 Base Directory:', baseDir);
-    console.log('🔍 Full Path:', fullPath);
+    console.log('🗑️ Caminho completo:', fullPath);
     
     // Verificar se o arquivo está dentro do diretório documentos (segurança)
-    const resolvedPath = path.resolve(fullPath);
     const resolvedBaseDir = path.resolve(baseDir);
+    const resolvedFilePath = path.resolve(fullPath);
     
-    if (!resolvedPath.startsWith(resolvedBaseDir)) {
+    if (!resolvedFilePath.startsWith(resolvedBaseDir)) {
       console.log('❌ Tentativa de acesso fora do diretório documentos');
       return res.status(403).json({ error: 'Acesso negado: arquivo fora do diretório permitido' });
     }
@@ -1103,13 +1102,6 @@ app.post('/api/delete-file', (req, res) => {
       return res.status(404).json({ error: 'Arquivo não encontrado' });
     }
     
-    // Verificar se é um arquivo (não diretório)
-    const stats = fs.statSync(fullPath);
-    if (!stats.isFile()) {
-      console.log('❌ Caminho não é um arquivo:', fullPath);
-      return res.status(400).json({ error: 'Caminho não é um arquivo válido' });
-    }
-    
     // Excluir o arquivo
     fs.unlinkSync(fullPath);
     console.log('✅ Arquivo excluído com sucesso:', fullPath);
@@ -1117,7 +1109,7 @@ app.post('/api/delete-file', (req, res) => {
     res.json({
       success: true,
       message: 'Arquivo excluído com sucesso',
-      deletedPath: filePath
+      deletedPath: fullPath
     });
     
   } catch (error) {

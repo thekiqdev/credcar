@@ -642,7 +642,7 @@ class UploadService {
    */
   async deleteFile(fileUrl: string): Promise<{ success: boolean; error?: string }> {
     try {
-      console.log('🗑️ Iniciando exclusão de arquivo:', fileUrl);
+      console.log('🗑️ Excluindo arquivo:', fileUrl);
       
       // Extrair caminho relativo do fileUrl
       let relativePath = fileUrl;

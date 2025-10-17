@@ -48,7 +48,6 @@ import {
   Filter
 } from 'lucide-react';
 import { partnersService, supabase } from '../../lib/supabase';
-import { uploadService } from '../../lib/upload.service';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface Partner {
@@ -91,7 +90,9 @@ const PartnerDocumentsApproval: React.FC = () => {
   // Dialog states
   const [showViewDialog, setShowViewDialog] = useState(false);
   const [showApproveDialog, setShowApproveDialog] = useState(false);
+  const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState<PartnerDocument | null>(null);
+  const [rejectionReason, setRejectionReason] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
 
   // Statistics
@@ -214,39 +215,10 @@ const PartnerDocumentsApproval: React.FC = () => {
     setShowApproveDialog(true);
   };
 
-  const handleDeleteDocument = async (document: PartnerDocument) => {
-    try {
-      console.log('🗑️ Iniciando exclusão do documento:', document);
-      
-      setIsProcessing(true);
-      
-      // 1. Excluir arquivo do servidor
-      console.log('🗑️ Excluindo arquivo do servidor:', document.file_url);
-      const deleteResult = await uploadService.deleteFile(document.file_url);
-      
-      if (!deleteResult.success) {
-        console.error('❌ Erro ao excluir arquivo do servidor:', deleteResult.error);
-        setError(`Erro ao excluir arquivo: ${deleteResult.error}`);
-        return;
-      }
-      
-      console.log('✅ Arquivo excluído do servidor com sucesso');
-      
-      // 2. Excluir registro do banco de dados
-      console.log('🗑️ Excluindo registro do banco de dados:', document.id);
-      await partnersService.deleteDocument(document.id);
-      
-      console.log('✅ Documento excluído completamente');
-      
-      // 3. Recarregar dados
-      await loadData();
-      
-    } catch (error) {
-      console.error('❌ Erro ao excluir documento:', error);
-      setError('Erro ao excluir documento. Tente novamente.');
-    } finally {
-      setIsProcessing(false);
-    }
+  const handleOpenDeleteDialog = (document: PartnerDocument) => {
+    setSelectedDocument(document);
+    setRejectionReason('');
+    setShowRejectDialog(true);
   };
 
   const handleApproveDocument = async () => {
@@ -286,6 +258,41 @@ const PartnerDocumentsApproval: React.FC = () => {
     }
   };
 
+  const handleDeleteDocument = async () => {
+    if (!selectedDocument) return;
+
+    if (!confirm(`Tem certeza que deseja excluir o documento "${selectedDocument.document_type}"? Esta ação não pode ser desfeita e o sócio poderá enviar o arquivo novamente.`)) {
+      return;
+    }
+
+    try {
+      setIsProcessing(true);
+      console.log('🗑️ Excluindo documento:', selectedDocument);
+      
+      // 1. Excluir arquivo físico do servidor
+      await uploadService.deleteFile(selectedDocument.file_url);
+      console.log('✅ Arquivo físico excluído do servidor');
+      
+      // 2. Excluir registro do banco de dados
+      await partnersService.deletePartnerDocument(selectedDocument.id);
+      console.log('✅ Registro excluído do banco de dados');
+      
+      // 3. Fechar dialog e limpar estado
+      setShowRejectDialog(false);
+      setSelectedDocument(null);
+      setRejectionReason('');
+      
+      // 4. Recarregar dados
+      await loadData();
+      
+      console.log('✅ Documento excluído com sucesso');
+    } catch (error) {
+      console.error('❌ Erro ao excluir documento:', error);
+      setError('Erro ao excluir documento. Tente novamente.');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
 
   const handleDownloadDocument = (fileUrl: string) => {
     window.open(fileUrl, '_blank');
@@ -514,8 +521,7 @@ const PartnerDocumentsApproval: React.FC = () => {
                               variant="outline" 
                               size="sm"
                               className="text-red-600 hover:text-red-700"
-                              onClick={() => handleDeleteDocument(document)}
-                              disabled={isProcessing}
+                              onClick={() => handleOpenDeleteDialog(document)}
                               title="Excluir Documento"
                             >
                               <XCircle className="h-4 w-4" />
@@ -632,6 +638,53 @@ const PartnerDocumentsApproval: React.FC = () => {
         </AlertDialogContent>
       </AlertDialog>
 
+      {/* Reject Document Dialog */}
+      <Dialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Excluir Documento</DialogTitle>
+            <DialogDescription>
+              Tem certeza que deseja excluir o documento "{selectedDocument?.document_type}" enviado por {selectedDocument?.partners?.name || 'o sócio'}? Esta ação não pode ser desfeita e o sócio poderá enviar o arquivo novamente.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Documento</Label>
+              <p className="font-medium">
+                {selectedDocument?.document_type} - {selectedDocument?.partners?.name}
+              </p>
+            </div>
+            <div>
+              <Label>Sócio</Label>
+              <p className="font-medium">
+                {selectedDocument?.partners?.name} ({selectedDocument?.partners?.cpf})
+              </p>
+            </div>
+            <div>
+              <Label>Representante</Label>
+              <p className="font-medium">
+                {selectedDocument?.partners?.profiles?.name}
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setShowRejectDialog(false)}
+              disabled={isProcessing}
+            >
+              Fechar
+            </Button>
+            <Button 
+              onClick={handleDeleteDocument}
+              disabled={isProcessing}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {isProcessing ? 'Excluindo...' : 'Excluir Documento'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
