@@ -474,6 +474,57 @@ app.post('/api/create-folder', (req, res) => {
   }
 });
 
+// Endpoint para criar estrutura de pastas específica para sócios
+app.post('/api/create-partner-folder', (req, res) => {
+  try {
+    const { representativeCpfCnpj, partnerCpf } = req.body;
+    
+    if (!representativeCpfCnpj || !partnerCpf) {
+      return res.status(400).json({ error: 'CPF/CNPJ do representante e CPF do sócio são obrigatórios' });
+    }
+
+    const baseDir = path.join(__dirname, 'documentos');
+    const sanitizedRepCpfCnpj = representativeCpfCnpj.replace(/[^a-zA-Z0-9]/g, '');
+    const sanitizedPartnerCpf = partnerCpf.replace(/[^a-zA-Z0-9]/g, '');
+    
+    // Estrutura: documentos / cpf_representante / socio / cpf_socio /
+    const folderPath = path.join(baseDir, sanitizedRepCpfCnpj, 'socio', sanitizedPartnerCpf);
+
+    // Documentos específicos do sócio
+    const socioDocs = [
+      'cartilha_credenciamento_pf',
+      'comprovante_endereco_socio',
+      'certidao_antecedentes_criminais',
+      'certidao_negativa_civel_1grau',
+      'certidao_negativa_criminal_1grau',
+      'foto_identidade_frente',
+      'foto_identidade_verso'
+    ];
+
+    // Criar pasta principal do sócio
+    fs.mkdirSync(folderPath, { recursive: true });
+
+    // Criar subpastas para cada tipo de documento do sócio
+    socioDocs.forEach(docType => {
+      const docPath = path.join(folderPath, docType);
+      fs.mkdirSync(docPath, { recursive: true });
+    });
+
+    console.log(`✅ Estrutura de pastas criada para sócio: ${sanitizedPartnerCpf}`);
+    console.log(`📂 Caminho: ${folderPath}`);
+
+    res.json({ 
+      success: true, 
+      message: 'Estrutura de pastas do sócio criada com sucesso',
+      path: folderPath,
+      partnerCpf: sanitizedPartnerCpf
+    });
+  } catch (error) {
+    console.error('Erro ao criar pasta do sócio:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
 // Middleware para validar arquivo antes do processamento
 const validateFile = (req, res, next) => {
   if (!req.file) {
@@ -752,69 +803,6 @@ app.delete('/api/delete-representative-contract', async (req, res) => {
   } catch (error) {
     console.error('❌ Erro ao deletar contrato:', error);
     res.status(500).json({ error: error.message || 'Erro interno do servidor' });
-  }
-});
-
-// Endpoint para upload de documentos de sócios
-app.post('/api/upload-partner-document', upload.single('file'), validateFile, async (req, res) => {
-  try {
-    const { documentType, partnerCpf, representativeId } = req.body;
-    
-    if (!documentType) {
-      return res.status(400).json({ error: 'Tipo de documento é obrigatório' });
-    }
-    
-    if (!partnerCpf) {
-      return res.status(400).json({ error: 'CPF do sócio é obrigatório' });
-    }
-
-    const baseDir = path.join(__dirname, 'documentos');
-    const sanitizedCpf = partnerCpf.replace(/[^a-zA-Z0-9]/g, '');
-    const socioPath = path.join(baseDir, sanitizedCpf, 'socio');
-    
-    // Mapear tipos de documento para nomes de pasta
-    const docTypeMap = {
-      'cartilha de credenciamento pf': 'cartilha_credenciamento_pf',
-      'comprovante de endereço em nome do sócio': 'comprovante_endereco_socio',
-      'certidão de antecedentes criminais': 'certidao_antecedentes_criminais',
-      'certidão negativa cível de 1º grau': 'certidao_negativa_civel_1grau',
-      'certidão negativa criminal de 1º grau': 'certidao_negativa_criminal_1grau',
-      'foto de identidade ou cnh (frente)': 'foto_identidade_frente',
-      'foto de identidade ou cnh (verso)': 'foto_identidade_verso'
-    };
-
-    const folderName = docTypeMap[documentType] || documentType.toLowerCase().replace(/\s+/g, '_');
-    const finalPath = path.join(socioPath, folderName);
-    
-    // Criar pasta se não existir
-    fs.mkdirSync(finalPath, { recursive: true });
-    
-    // Gerar nome único para o arquivo
-    const timestamp = Date.now();
-    const extension = path.extname(req.file.originalname);
-    const filename = `SOCIO_${String(timestamp).padStart(10, '0')}_${timestamp}${extension}`;
-    const filePath = path.join(finalPath, filename);
-    
-    // Mover arquivo da pasta temporária para o destino final
-    fs.renameSync(req.file.path, filePath);
-    
-    console.log('✅ Documento de sócio salvo:', filePath);
-    
-    res.json({
-      success: true,
-      message: 'Documento de sócio enviado com sucesso',
-      filePath: filePath,
-      fileName: filename,
-      directory: finalPath,
-      originalName: req.file.originalname,
-      size: req.file.size,
-      type: req.file.mimetype,
-      documentType: documentType,
-      partnerCpf: partnerCpf
-    });
-  } catch (error) {
-    console.error('❌ Erro ao salvar documento de sócio:', error);
-    res.status(500).json({ error: 'Erro interno do servidor' });
   }
 });
 

@@ -158,12 +158,41 @@ const PartnerDocumentUpload: React.FC<PartnerDocumentUploadProps> = ({
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [representativeCpfCnpj, setRepresentativeCpfCnpj] = useState<string>('');
 
-  // Carregar status dos documentos do banco
+  // Carregar status dos documentos do banco e CPF do representante
   useEffect(() => {
     console.log('🔄 PartnerDocumentUpload: Carregando status dos documentos...');
     loadDocumentStatus();
+    loadRepresentativeCpfCnpj();
   }, [partnerId]);
+
+  const loadRepresentativeCpfCnpj = async () => {
+    try {
+      if (representativeCpfCnpj) {
+        setRepresentativeCpfCnpj(representativeCpfCnpj);
+        return;
+      }
+
+      // Buscar CPF/CNPJ do representante se não foi fornecido
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('cnpj')
+        .eq('id', representativeId)
+        .single();
+
+      if (error) {
+        console.error('Error loading representative CPF/CNPJ:', error);
+        return;
+      }
+
+      if (data?.cnpj) {
+        setRepresentativeCpfCnpj(data.cnpj);
+      }
+    } catch (error) {
+      console.error('Error loading representative CPF/CNPJ:', error);
+    }
+  };
 
   const loadDocumentStatus = async () => {
     try {
@@ -363,19 +392,20 @@ const PartnerDocumentUpload: React.FC<PartnerDocumentUploadProps> = ({
           // Preparar dados do documento específico para sócio
           const docInfo: DocumentInfo = {
             representativeId: representativeId,
-            cpfCnpj: representativeCpfCnpj,
+            cpfCnpj: representativeCpfCnpj || '', // Usar CPF/CNPJ do representante para criar estrutura
             documentType: doc.type,
             fileName: doc.file.name,
             fileSize: doc.file.size,
             fileType: doc.file.type,
             // Adicionar informações específicas do sócio
+            partnerId: partnerId,
             partnerCpf: partnerCpf
           };
 
           console.log('📋 Document Info (Partner):', docInfo);
 
-          // Upload específico para documentos de sócios
-          const result = await uploadService.uploadPartnerDocument(doc.file, docInfo);
+          // Upload completo: criar pastas + salvar arquivo
+          const result = await uploadService.uploadComplete(doc.file, docInfo);
 
           if (!result.success) {
             throw new Error(result.error || 'Erro ao salvar arquivo');
@@ -421,7 +451,7 @@ const PartnerDocumentUpload: React.FC<PartnerDocumentUploadProps> = ({
             
             const retryResult = await uploadService.uploadComplete(doc.file, {
               representativeId: representativeId,
-              cpfCnpj: representativeCpfCnpj,
+              cpfCnpj: representativeCpfCnpj || '', // Usar CPF/CNPJ do representante para criar estrutura
               documentType: doc.type,
               fileName: doc.file.name,
               fileSize: doc.file.size,

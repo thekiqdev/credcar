@@ -13,7 +13,9 @@ interface DocumentInfo {
   fileType: string;
   category?: string;
   subType?: string;
-  partnerCpf?: string; // CPF do sócio para documentos de sócios
+  // Campos específicos para sócios
+  partnerId?: string;
+  partnerCpf?: string;
 }
 
 interface UploadResult {
@@ -119,27 +121,34 @@ class UploadService {
   }
 
   /**
-   * Criar estrutura de pastas do sócio (nova estrutura)
+   * Criar estrutura de pastas específica para sócios
    */
-  async createPartnerFolder(partnerCpf: string): Promise<UploadResult> {
+  async createPartnerFolder(representativeCpfCnpj: string, partnerCpf: string): Promise<UploadResult> {
     try {
       console.log('📁 Criando estrutura de pastas para sócio...');
+      console.log('👤 Representative CPF/CNPJ:', representativeCpfCnpj);
       console.log('👤 Partner CPF:', partnerCpf);
-      console.log('📡 Endpoint:', `${this.baseUrl}/create-folder`);
+      console.log('📡 Endpoint:', `${this.baseUrl}/create-partner-folder`);
       
-      // Validar CPF
+      // Validar CPF/CNPJ
+      if (!representativeCpfCnpj || representativeCpfCnpj.trim() === '') {
+        console.error('❌ CPF/CNPJ do representante é obrigatório para criar pasta');
+        throw new Error('CPF/CNPJ do representante é obrigatório para criar pasta');
+      }
+
       if (!partnerCpf || partnerCpf.trim() === '') {
         console.error('❌ CPF do sócio é obrigatório para criar pasta');
         throw new Error('CPF do sócio é obrigatório para criar pasta');
       }
 
       const requestBody = {
-        cpfCnpj: partnerCpf
+        representativeCpfCnpj,
+        partnerCpf
       };
       
       console.log('📤 Enviando requisição:', requestBody);
 
-      const response = await fetch(`${this.baseUrl}/create-folder`, {
+      const response = await fetch(`${this.baseUrl}/create-partner-folder`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -152,7 +161,7 @@ class UploadService {
       console.log('📥 Resposta recebida:', data);
 
       if (data.success) {
-        console.log('✅ Estrutura de pastas criada com sucesso');
+        console.log('✅ Estrutura de pastas do sócio criada com sucesso');
         console.log('📂 Caminho base:', data.path);
         console.log('📋 Mensagem:', data.message);
         
@@ -169,12 +178,12 @@ class UploadService {
           }
         };
       } else {
-        console.error('❌ Erro na resposta:', data.error);
-        throw new Error(data.error || 'Erro ao criar estrutura de pastas');
+        console.error('❌ Erro ao criar estrutura de pastas do sócio:', data.error);
+        throw new Error(data.error || 'Erro ao criar estrutura de pastas do sócio');
       }
     } catch (error) {
-      console.error('❌ Erro ao criar estrutura de pastas:', error);
-      console.error('🔍 Detalhes do erro:', { partnerCpf, error: error.message });
+      console.error('❌ Erro ao criar estrutura de pastas do sócio:', error);
+      console.error('🔍 Detalhes do erro:', { representativeCpfCnpj, partnerCpf, error });
       throw error;
     }
   }
@@ -545,92 +554,23 @@ class UploadService {
   }
 
   /**
-   * Upload completo para documentos de sócios: criar pastas + salvar arquivo
-   */
-  async uploadPartnerDocument(file: File, docInfo: DocumentInfo): Promise<UploadResult> {
-    try {
-      console.log('📤 === INÍCIO uploadPartnerDocument ===');
-      console.log('📋 Document Info:', docInfo);
-      console.log('📁 File:', file.name, file.size, 'bytes');
-      
-      // Validar dados obrigatórios
-      if (!docInfo.partnerCpf) {
-        throw new Error('CPF do sócio é obrigatório');
-      }
-      
-      if (!docInfo.documentType) {
-        throw new Error('Tipo de documento é obrigatório');
-      }
-
-      // 1. Criar estrutura de pastas para o sócio
-      console.log('📁 Criando estrutura de pastas para sócio...');
-      const folderResult = await this.createPartnerFolder(docInfo.partnerCpf);
-      
-      if (!folderResult.success) {
-        throw new Error(folderResult.message || 'Erro ao criar estrutura de pastas');
-      }
-
-      // 2. Preparar dados para upload
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('documentType', docInfo.documentType);
-      formData.append('partnerCpf', docInfo.partnerCpf);
-      
-      // Adicionar dados opcionais se disponíveis
-      if (docInfo.representativeId) {
-        formData.append('representativeId', docInfo.representativeId);
-      }
-
-      console.log('📤 Enviando arquivo para upload...');
-      console.log('📋 Document Type:', docInfo.documentType);
-      console.log('👤 Partner CPF:', docInfo.partnerCpf);
-
-      // 3. Fazer upload do arquivo
-      const response = await fetch(`${this.baseUrl}/api/upload-partner-document`, {
-        method: 'POST',
-        body: formData
-      });
-
-      const data = await response.json();
-      
-      console.log('📥 Resposta do upload:', data);
-
-      if (data.success) {
-        console.log('✅ Upload de documento de sócio realizado com sucesso');
-        console.log('📁 File Path:', data.filePath);
-        console.log('📋 Document Type:', data.documentType);
-        
-        return {
-          success: true,
-          message: 'Documento de sócio enviado com sucesso',
-          data: {
-            filePath: data.filePath,
-            fileName: data.fileName,
-            directory: data.directory,
-            originalName: data.originalName,
-            size: data.size,
-            type: data.type,
-            documentType: data.documentType,
-            partnerCpf: docInfo.partnerCpf
-          }
-        };
-      } else {
-        console.error('❌ Erro no upload:', data.error);
-        throw new Error(data.error || 'Erro ao fazer upload do documento');
-      }
-    } catch (error) {
-      console.error('❌ Erro no uploadPartnerDocument:', error);
-      throw error;
-    }
-  }
-
-  /**
    * Upload completo: criar pastas + upload
    */
   async uploadComplete(file: File, docInfo: DocumentInfo): Promise<UploadResult> {
     try {
       // 1. Criar estrutura de pastas
-      const folderResult = await this.createRepresentativeFolder(docInfo.representativeId, docInfo.cpfCnpj);
+      let folderResult;
+      
+      // Verificar se é um documento de sócio (tem partnerId e partnerCpf)
+      if (docInfo.partnerId && docInfo.partnerCpf) {
+        console.log('📁 Detectado documento de sócio, criando estrutura específica...');
+        // Para sócios, usar o CPF do representante e do sócio
+        folderResult = await this.createPartnerFolder(docInfo.cpfCnpj, docInfo.partnerCpf);
+      } else {
+        console.log('📁 Detectado documento de representante, criando estrutura padrão...');
+        // Para representantes, usar a função padrão
+        folderResult = await this.createRepresentativeFolder(docInfo.representativeId, docInfo.cpfCnpj);
+      }
       
       if (!folderResult.success) {
         return folderResult;
