@@ -50,6 +50,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import DocumentNotification from './DocumentNotification';
+import DocumentUploadModal from './DocumentUploadModal';
 import { withdrawalService } from "../../lib/withdrawal.service";
 import {
   Dialog,
@@ -157,6 +158,9 @@ const RepresentativeDashboard: React.FC<RepresentativeDashboardProps> = ({
     cnpj: "",
     address: "",
   });
+  
+  // Document upload modal state
+  const [showDocumentUploadModal, setShowDocumentUploadModal] = useState(false);
 
   const displayName =
     representativeName || currentUser?.name || "Representante";
@@ -369,6 +373,21 @@ const RepresentativeDashboard: React.FC<RepresentativeDashboardProps> = ({
       console.error("Error updating profile:", error);
       alert("Erro ao atualizar perfil. Tente novamente.");
     }
+  };
+
+  // Handle document upload modal
+  const handleOpenDocumentUpload = () => {
+    setShowDocumentUploadModal(true);
+  };
+
+  const handleCloseDocumentUpload = () => {
+    setShowDocumentUploadModal(false);
+  };
+
+  const handleDocumentUploadComplete = () => {
+    // Reload documents after upload
+    loadRepresentativeDocuments();
+    setShowDocumentUploadModal(false);
   };
 
   const handleWithdrawalRequest = async () => {
@@ -1627,7 +1646,7 @@ const RepresentativeDashboard: React.FC<RepresentativeDashboardProps> = ({
                         <p className="text-muted-foreground mb-4">
                           Seus documentos aparecerão aqui quando forem enviados.
                         </p>
-                        <Button variant="outline">
+                        <Button variant="outline" onClick={handleOpenDocumentUpload}>
                           <Upload className="mr-2 h-4 w-4" />
                           Enviar Documento
                         </Button>
@@ -1721,6 +1740,17 @@ const RepresentativeDashboard: React.FC<RepresentativeDashboardProps> = ({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Document Upload Modal */}
+      {showDocumentUploadModal && currentUser && (
+        <DocumentUploadModal
+          representativeId={currentUser.id}
+          representativeName={currentUser.name || currentUser.full_name || 'Representante'}
+          representativeCpfCnpj={currentUser.cnpj || ''}
+          onClose={handleCloseDocumentUpload}
+          onUploadComplete={handleDocumentUploadComplete}
+        />
+      )}
     </div>
   );
 };
