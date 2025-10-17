@@ -175,54 +175,45 @@ const PartnerDocumentsView: React.FC<PartnerDocumentsViewProps> = ({
 
   const handleDownloadDocument = async (fileUrl: string, documentType: string) => {
     try {
-      console.log('📥 Iniciando download:', fileUrl);
+      console.log('📄 Downloading document:', fileUrl);
       
-      // Extrair apenas o caminho relativo do file_url
+      // Extract path after /documentos/
       let relativePath = fileUrl;
-      
-      // Se contém caminho do servidor de produção, extrair apenas a parte após 'documentos/'
-      if (fileUrl.includes('/var/www/CredCar-Finance/documentos/')) {
-        relativePath = fileUrl.split('/var/www/CredCar-Finance/documentos/')[1];
-      } else if (fileUrl.includes('documentos/')) {
-        // Se contém 'documentos/', pegar apenas a parte após isso
-        relativePath = fileUrl.split('documentos/')[1];
+      if (fileUrl.includes('/documentos/')) {
+        relativePath = fileUrl.split('/documentos/')[1];
       }
       
-      console.log('🔍 Original file_url:', fileUrl);
-      console.log('🔍 Extracted relative path:', relativePath);
+      // Decode the path
+      relativePath = decodeURIComponent(relativePath);
       
-      // Extrair nome do arquivo da URL
-      const fileName = relativePath.split('/').pop() || `${documentType}.pdf`;
+      // Replace backslashes with forward slashes
+      relativePath = relativePath.replace(/\\/g, '/');
       
-      // Determinar URL base baseada no ambiente
-      const baseUrl = window.location.hostname === 'localhost' 
+      console.log('📄 Relative path:', relativePath);
+      
+      // Determine base URL based on environment
+      const hostname = window.location.hostname;
+      const baseUrl = hostname === 'localhost' 
         ? 'http://localhost:3001' 
         : 'https://sistema.credcarmultimarcas.com.br';
       
-      console.log('🌐 Base URL:', baseUrl);
+      // Check file type
+      const fileExtension = relativePath.split('.').pop()?.toLowerCase();
+      const viewableTypes = ['pdf'];
       
-      // Fazer download do arquivo usando a URL correta
-      const response = await fetch(`${baseUrl}/api/download-file?path=${encodeURIComponent(relativePath)}`);
-      
-      if (!response.ok) {
-        throw new Error(`Erro ao baixar arquivo: ${response.statusText}`);
+      if (viewableTypes.includes(fileExtension || '')) {
+        // Open viewable files in new tab
+        const viewUrl = `${baseUrl}/api/view-file?path=${encodeURIComponent(relativePath)}`;
+        console.log('👁️ Opening view URL:', viewUrl);
+        window.open(viewUrl, '_blank');
+      } else {
+        // For non-viewable files (DOC, DOCX), download them
+        const downloadUrl = `${baseUrl}/api/download-file?path=${encodeURIComponent(relativePath)}`;
+        console.log('⬇️ Opening download URL:', downloadUrl);
+        window.open(downloadUrl, '_blank');
       }
-      
-      const blob = await response.blob();
-      
-      // Criar link de download
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = fileName;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-      
-      console.log('✅ Download concluído:', fileName);
-    } catch (error) {
-      console.error('❌ Erro no download:', error);
+    } catch (err) {
+      console.error('Error downloading document:', err);
       alert('Erro ao baixar documento. Tente novamente.');
     }
   };
@@ -404,9 +395,11 @@ const PartnerDocumentsView: React.FC<PartnerDocumentsViewProps> = ({
             <div className="space-y-2">
               <label className="text-sm font-medium">Link do Documento:</label>
               <a
-                href={selectedDocument?.file_url ? `${window.location.hostname === 'localhost' ? 'http://localhost:3001' : 'https://sistema.credcarmultimarcas.com.br'}/api/download-file?path=${encodeURIComponent(selectedDocument.file_url.includes('documentos/') ? selectedDocument.file_url.split('documentos/')[1] : selectedDocument.file_url)}` : '#'}
-                target="_blank"
-                rel="noopener noreferrer"
+                href="#"
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleDownloadDocument(selectedDocument?.file_url || '', selectedDocument?.document_type || '');
+                }}
                 className="text-blue-600 hover:underline flex items-center gap-1"
               >
                 {selectedDocument?.file_url ? 'Visualizar/Baixar' : 'N/A'} <Eye className="h-4 w-4" />
