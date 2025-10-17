@@ -903,10 +903,11 @@ app.post('/api/upload-document', upload.single('file'), validateFile, (req, res)
     console.log('📋 Body:', req.body);
     console.log('📁 File:', req.file);
     
-    const { cpfCnpj, documentType, partnerCpf } = req.body;
+    const { cpfCnpj, documentType, partnerId, partnerCpf } = req.body;
     
     console.log('🔍 Document Type:', documentType);
     console.log('👤 CPF/CNPJ:', cpfCnpj);
+    console.log('👤 Partner ID:', partnerId);
     console.log('👤 Partner CPF:', partnerCpf);
     console.log('📏 File Size:', req.file.size, 'bytes');
     console.log('📄 MIME Type:', req.file.mimetype);
@@ -959,13 +960,6 @@ app.post('/api/upload-document', upload.single('file'), validateFile, (req, res)
     const baseDir = path.join(__dirname, 'documentos');
     const sanitizedCpfCnpj = cpfCnpj.replace(/[^a-zA-Z0-9]/g, '');
     
-    // Verificar se é um documento de sócio
-    const isPartnerDocument = partnerCpf && partnerCpf.trim() !== '';
-    const sanitizedPartnerCpf = isPartnerDocument ? partnerCpf.replace(/[^a-zA-Z0-9]/g, '') : '';
-    
-    console.log('🔍 Is Partner Document:', isPartnerDocument);
-    console.log('🔍 Sanitized Partner CPF:', sanitizedPartnerCpf);
-    
     // Mapear tipos de documento para nomes corretos (nova estrutura)
     const documentTypeMap = {
       // Documentos da Empresa
@@ -1000,18 +994,19 @@ app.post('/api/upload-document', upload.single('file'), validateFile, (req, res)
     
     console.log('🔍 Final Mapped Path:', mappedPath);
     
-    // Construir caminho final baseado no tipo de documento
+    // Determinar o caminho final baseado se é documento de sócio ou não
     let finalPath;
-    if (isPartnerDocument) {
-      // Para documentos de sócios: documentos/cpf_representante/socio/cpf_socio/tipo_documento/
-      const partnerPath = path.join('socio', sanitizedPartnerCpf, mappedPath.split('/')[1]);
-      finalPath = path.join(baseDir, sanitizedCpfCnpj, partnerPath);
+    if (partnerId && partnerCpf) {
+      // Documento de sócio: documentos/cpf_representante/socio/cpf_socio/tipo_documento
+      const sanitizedPartnerCpf = partnerCpf.replace(/[^a-zA-Z0-9]/g, '');
+      const docType = mappedPath.split('/')[1]; // Extrair apenas o tipo do documento (ex: cartilha_credenciamento_pf)
+      finalPath = path.join(baseDir, sanitizedCpfCnpj, 'socio', sanitizedPartnerCpf, docType);
+      console.log('🔍 Documento de sócio - Final Path:', finalPath);
     } else {
-      // Para documentos de representantes: documentos/cpf_representante/tipo_documento/
+      // Documento de representante: documentos/cpf_representante/tipo_documento
       finalPath = path.join(baseDir, sanitizedCpfCnpj, mappedPath);
+      console.log('🔍 Documento de representante - Final Path:', finalPath);
     }
-    
-    console.log('🔍 Final Path:', finalPath);
     
     // Criar diretório final se não existir
     fs.mkdirSync(finalPath, { recursive: true });
