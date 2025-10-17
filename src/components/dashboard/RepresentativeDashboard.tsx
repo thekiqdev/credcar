@@ -309,12 +309,6 @@ const RepresentativeDashboard: React.FC<RepresentativeDashboardProps> = ({
     }
   }, [activeTab, currentUser?.id]);
 
-  // Monitor changes to requiredDocuments
-  useEffect(() => {
-    console.log('📋 requiredDocuments state changed:', requiredDocuments.length, 'documents');
-    console.log('📋 requiredDocuments details:', requiredDocuments);
-  }, [requiredDocuments]);
-
   const salesProgress =
     (performanceData.totalSales / performanceData.targetSales) * 100;
   const availableBalance = performanceData.pendingCommission;
@@ -551,29 +545,11 @@ const RepresentativeDashboard: React.FC<RepresentativeDashboardProps> = ({
       console.log('✅ Documento salvo no banco com sucesso!');
 
       // Atualizar status do documento
-      console.log('🔄 Atualizando estado local do documento...');
-      console.log('📋 Documento antes da atualização:', document);
-      console.log('📋 Resultado do upload:', result);
-      
-      const updatedDocument = {
-        ...document,
-        status: 'Pendente',
-        file_url: result.data?.filePath || result.data?.directory,
-        uploaded_at: new Date().toISOString(),
-        file: null
-      };
-      
-      console.log('📋 Documento após atualização:', updatedDocument);
-      
-      setRequiredDocuments(prev => {
-        const updated = prev.map(doc => 
-          doc.id === documentId 
-            ? updatedDocument
-            : doc
-        );
-        console.log('📋 Lista de documentos atualizada:', updated);
-        return updated;
-      });
+      setRequiredDocuments(prev => prev.map(doc => 
+        doc.id === documentId 
+          ? { ...doc, status: 'Pendente', file_url: result.data?.filePath || result.data?.directory, uploaded_at: new Date().toISOString(), file: null }
+          : doc
+      ));
 
       alert('Documento enviado com sucesso!');
       
