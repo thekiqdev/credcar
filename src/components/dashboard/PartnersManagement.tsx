@@ -486,18 +486,19 @@ const PartnersManagement: React.FC<PartnersManagementProps> = ({
       </CardContent>
     </Card>
 
-    {/* Partner Document Upload Modal */}
-    {showDocumentUpload && selectedPartnerForUpload && (
-      <PartnerDocumentUpload
-        partnerId={selectedPartnerForUpload.id}
-        partnerName={selectedPartnerForUpload.name}
-        partnerCpf={selectedPartnerForUpload.cpf}
-        representativeId={representativeId}
-        onClose={handleCloseDocumentUpload}
-        onUploadComplete={handleDocumentUploadComplete}
-      />
-    )}
-  </div>
-);
+      {/* Partner Document Upload Modal */}
+      {showDocumentUpload && selectedPartnerForUpload && (
+        <PartnerDocumentUpload
+          partnerId={selectedPartnerForUpload.id}
+          partnerName={selectedPartnerForUpload.name}
+          partnerCpf={selectedPartnerForUpload.cpf}
+          representativeId={representativeId}
+          onClose={handleCloseDocumentUpload}
+          onUploadComplete={handleDocumentUploadComplete}
+        />
+      )}
+    </div>
+  );
+};
 
 export default PartnersManagement;
