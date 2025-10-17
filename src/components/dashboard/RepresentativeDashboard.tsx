@@ -202,7 +202,6 @@ const RepresentativeDashboard: React.FC<RepresentativeDashboardProps> = ({
       
       // Definir currentUser
       setCurrentUser(user);
-      console.log("✅ CurrentUser definido:", user);
       return true;
     };
 
