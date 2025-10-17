@@ -68,7 +68,9 @@ import {
   authService,
   contractService,
   clientService,
+  supabase,
 } from "@/lib/supabase";
+import { uploadService, DocumentInfo } from "@/lib/upload.service";
 import ContractCreationFlow from "@/components/sales/ContractCreationFlow";
 import ContractDetails from "@/components/sales/ContractDetails";
 
@@ -161,6 +163,11 @@ const RepresentativeDashboard: React.FC<RepresentativeDashboardProps> = ({
   
   // Document upload modal state
   const [showDocumentUploadModal, setShowDocumentUploadModal] = useState(false);
+  
+  // Document management states
+  const [requiredDocuments, setRequiredDocuments] = useState<any[]>([]);
+  const [isLoadingRequiredDocuments, setIsLoadingRequiredDocuments] = useState(false);
+  const [uploadingDocuments, setUploadingDocuments] = useState<Set<string>>(new Set());
 
   const displayName =
     representativeName || currentUser?.name || "Representante";
@@ -296,6 +303,7 @@ const RepresentativeDashboard: React.FC<RepresentativeDashboardProps> = ({
     if (activeTab === "my-account" && currentUser?.id) {
       loadRepresentativeDocuments();
       loadProfileData();
+      loadRequiredDocuments();
     }
   }, [activeTab, currentUser?.id]);
 
@@ -388,6 +396,131 @@ const RepresentativeDashboard: React.FC<RepresentativeDashboardProps> = ({
     // Reload documents after upload
     loadRepresentativeDocuments();
     setShowDocumentUploadModal(false);
+  };
+
+  // Load required documents with status
+  const loadRequiredDocuments = async () => {
+    if (!currentUser?.id) return;
+    
+    try {
+      setIsLoadingRequiredDocuments(true);
+      
+      // Lista de documentos obrigatórios
+      const documentTypes = [
+        'cartilha de credenciamento preenchida',
+        'cartão cnpj',
+        'contrato social e última alteração',
+        'comprovante de endereço em nome da empresa',
+        'dados bancários para recebimento das comissões',
+        'cartilha de credenciamento pf',
+        'comprovante de endereço em nome do sócio',
+        'certidão de antecedentes criminais',
+        'certidão negativa cível de 1º grau',
+        'certidão negativa criminal de 1º grau',
+        'foto de identidade ou cnh (frente)',
+        'foto de identidade ou cnh (verso)'
+      ];
+
+      // Buscar documentos existentes no banco
+      const { data: existingDocs, error } = await supabase
+        .from('representative_documents')
+        .select('*')
+        .eq('representative_id', currentUser.id);
+
+      if (error) {
+        console.error('Error loading existing documents:', error);
+      }
+
+      // Criar lista completa de documentos com status
+      const documentsWithStatus = documentTypes.map(type => {
+        const existingDoc = existingDocs?.find(doc => doc.document_type === type);
+        return {
+          id: type,
+          type: type,
+          status: existingDoc ? existingDoc.status : 'Pendente',
+          file_url: existingDoc?.file_url || null,
+          uploaded_at: existingDoc?.uploaded_at || null,
+          approved_at: existingDoc?.approved_at || null,
+          rejection_reason: existingDoc?.rejection_reason || null,
+          file: null
+        };
+      });
+
+      setRequiredDocuments(documentsWithStatus);
+    } catch (error) {
+      console.error('Error loading required documents:', error);
+    } finally {
+      setIsLoadingRequiredDocuments(false);
+    }
+  };
+
+  // Handle individual document upload
+  const handleDocumentFileSelect = (documentId: string, file: File) => {
+    setRequiredDocuments(prev => prev.map(doc => 
+      doc.id === documentId ? { ...doc, file } : doc
+    ));
+  };
+
+  const handleUploadDocument = async (documentId: string) => {
+    if (!currentUser?.id) return;
+    
+    const document = requiredDocuments.find(doc => doc.id === documentId);
+    if (!document || !document.file) return;
+
+    try {
+      setUploadingDocuments(prev => new Set(prev).add(documentId));
+      
+      // Preparar dados do documento
+      const docInfo: DocumentInfo = {
+        representativeId: currentUser.id,
+        cpfCnpj: currentUser.cnpj || '',
+        documentType: document.type,
+        fileName: document.file.name,
+        fileSize: document.file.size,
+        fileType: document.file.type
+      };
+
+      // Upload do arquivo
+      const result = await uploadService.uploadComplete(document.file, docInfo);
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Erro ao fazer upload do arquivo');
+      }
+
+      // Salvar no banco de dados
+      const { error: dbError } = await supabase
+        .from('representative_documents')
+        .upsert({
+          representative_id: currentUser.id,
+          document_type: document.type,
+          file_url: result.data?.filePath || result.data?.directory,
+          status: 'Pendente',
+          uploaded_at: new Date().toISOString()
+        });
+
+      if (dbError) {
+        throw new Error(`Erro ao salvar no banco: ${dbError.message}`);
+      }
+
+      // Atualizar status do documento
+      setRequiredDocuments(prev => prev.map(doc => 
+        doc.id === documentId 
+          ? { ...doc, status: 'Pendente', file_url: result.data?.filePath || result.data?.directory, uploaded_at: new Date().toISOString(), file: null }
+          : doc
+      ));
+
+      alert('Documento enviado com sucesso!');
+      
+    } catch (error) {
+      console.error('Error uploading document:', error);
+      alert(`Erro ao enviar documento: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
+    } finally {
+      setUploadingDocuments(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(documentId);
+        return newSet;
+      });
+    }
   };
 
   const handleWithdrawalRequest = async () => {
@@ -1596,60 +1729,175 @@ const RepresentativeDashboard: React.FC<RepresentativeDashboardProps> = ({
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <FileText className="h-5 w-5" />
-                      Documentos
+                      Documentos Obrigatórios
                     </CardTitle>
                     <CardDescription>
-                      Gerencie seus documentos enviados e pendentes
+                      Gerencie seus documentos obrigatórios para ativação do perfil
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    {isLoadingDocuments ? (
+                    {isLoadingRequiredDocuments ? (
                       <div className="flex items-center justify-center py-8">
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600"></div>
                         <span className="ml-2 text-muted-foreground">Carregando documentos...</span>
                       </div>
-                    ) : representativeDocuments.length > 0 ? (
-                      <div className="space-y-4">
-                        <div className="grid gap-4">
-                          {representativeDocuments.map((doc) => (
+                    ) : (
+                      <div className="space-y-6">
+                        {/* Documentos da Empresa */}
+                        <div className="space-y-4">
+                          <div className="flex items-center gap-2 mb-4">
+                            <div className="h-1 w-8 bg-blue-600"></div>
+                            <h4 className="text-lg font-semibold text-blue-800">Documentos da Empresa</h4>
+                            <Badge variant="outline" className="bg-blue-50 text-blue-700">
+                              {requiredDocuments.filter(d => d.type.includes('empresa') || d.type.includes('cnpj') || d.type.includes('contrato') || d.type.includes('bancários') || d.type.includes('cartilha de credenciamento preenchida')).length} documentos
+                            </Badge>
+                          </div>
+
+                          {requiredDocuments.filter(doc => doc.type.includes('empresa') || doc.type.includes('cnpj') || doc.type.includes('contrato') || doc.type.includes('bancários') || doc.type.includes('cartilha de credenciamento preenchida')).map((doc) => (
                             <div key={doc.id} className="flex items-center justify-between p-4 border rounded-lg">
-                              <div className="flex items-center gap-3">
+                              <div className="flex items-center gap-3 flex-1">
                                 <div className="p-2 bg-blue-100 rounded-lg">
                                   <FileText className="h-5 w-5 text-blue-600" />
                                 </div>
-                                <div>
-                                  <p className="font-medium">{doc.document_type}</p>
+                                <div className="flex-1">
+                                  <p className="font-medium">{doc.type}</p>
                                   <p className="text-sm text-muted-foreground">
-                                    Enviado em {new Date(doc.created_at).toLocaleDateString("pt-BR")}
+                                    {doc.status === 'Pendente' && !doc.file_url ? 'Não enviado' : 
+                                     doc.status === 'Pendente' ? `Enviado em ${new Date(doc.uploaded_at).toLocaleDateString("pt-BR")}` :
+                                     doc.status === 'Aprovado' ? `Aprovado em ${new Date(doc.approved_at).toLocaleDateString("pt-BR")}` :
+                                     `Rejeitado - ${doc.rejection_reason || 'Motivo não informado'}`}
                                   </p>
                                 </div>
                               </div>
                               <div className="flex items-center gap-2">
-                                <Badge variant={doc.status === "Aprovado" ? "default" : doc.status === "Rejeitado" ? "destructive" : "secondary"}>
+                                <Badge variant={doc.status === "Aprovado" ? "default" : doc.status === "Reprovado" ? "destructive" : "secondary"}>
                                   {doc.status}
                                 </Badge>
-                                <Button variant="outline" size="sm">
-                                  <Eye className="h-4 w-4" />
-                                </Button>
-                                <Button variant="outline" size="sm">
-                                  <Download className="h-4 w-4" />
-                                </Button>
+                                {doc.file_url && (
+                                  <>
+                                    <Button variant="outline" size="sm">
+                                      <Eye className="h-4 w-4" />
+                                    </Button>
+                                    <Button variant="outline" size="sm">
+                                      <Download className="h-4 w-4" />
+                                    </Button>
+                                  </>
+                                )}
+                                {doc.status !== 'Aprovado' && (
+                                  <div className="flex items-center gap-2">
+                                    <Input
+                                      type="file"
+                                      accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                                      onChange={(e) => {
+                                        const file = e.target.files?.[0];
+                                        if (file) {
+                                          handleDocumentFileSelect(doc.id, file);
+                                        }
+                                      }}
+                                      className="w-48"
+                                      disabled={uploadingDocuments.has(doc.id)}
+                                    />
+                                    <Button
+                                      size="sm"
+                                      onClick={() => handleUploadDocument(doc.id)}
+                                      disabled={!doc.file || uploadingDocuments.has(doc.id)}
+                                    >
+                                      {uploadingDocuments.has(doc.id) ? (
+                                        <>
+                                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                                          Enviando...
+                                        </>
+                                      ) : (
+                                        <>
+                                          <Upload className="h-4 w-4 mr-2" />
+                                          Enviar
+                                        </>
+                                      )}
+                                    </Button>
+                                  </div>
+                                )}
                               </div>
                             </div>
                           ))}
                         </div>
-                      </div>
-                    ) : (
-                      <div className="text-center py-8">
-                        <FileText className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
-                        <p className="text-lg font-medium mb-2">Nenhum documento encontrado</p>
-                        <p className="text-muted-foreground mb-4">
-                          Seus documentos aparecerão aqui quando forem enviados.
-                        </p>
-                        <Button variant="outline" onClick={handleOpenDocumentUpload}>
-                          <Upload className="mr-2 h-4 w-4" />
-                          Enviar Documento
-                        </Button>
+
+                        {/* Documentos do Sócio */}
+                        <div className="space-y-4">
+                          <div className="flex items-center gap-2 mb-4">
+                            <div className="h-1 w-8 bg-green-600"></div>
+                            <h4 className="text-lg font-semibold text-green-800">Documentos do Sócio</h4>
+                            <Badge variant="outline" className="bg-green-50 text-green-700">
+                              {requiredDocuments.filter(d => d.type.includes('sócio') || d.type.includes('pf') || d.type.includes('certidão') || d.type.includes('foto') || d.type.includes('cnh') || d.type.includes('identidade')).length} documentos
+                            </Badge>
+                          </div>
+
+                          {requiredDocuments.filter(doc => doc.type.includes('sócio') || doc.type.includes('pf') || d.type.includes('certidão') || doc.type.includes('foto') || doc.type.includes('cnh') || doc.type.includes('identidade')).map((doc) => (
+                            <div key={doc.id} className="flex items-center justify-between p-4 border rounded-lg">
+                              <div className="flex items-center gap-3 flex-1">
+                                <div className="p-2 bg-green-100 rounded-lg">
+                                  <FileText className="h-5 w-5 text-green-600" />
+                                </div>
+                                <div className="flex-1">
+                                  <p className="font-medium">{doc.type}</p>
+                                  <p className="text-sm text-muted-foreground">
+                                    {doc.status === 'Pendente' && !doc.file_url ? 'Não enviado' : 
+                                     doc.status === 'Pendente' ? `Enviado em ${new Date(doc.uploaded_at).toLocaleDateString("pt-BR")}` :
+                                     doc.status === 'Aprovado' ? `Aprovado em ${new Date(doc.approved_at).toLocaleDateString("pt-BR")}` :
+                                     `Rejeitado - ${doc.rejection_reason || 'Motivo não informado'}`}
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Badge variant={doc.status === "Aprovado" ? "default" : doc.status === "Reprovado" ? "destructive" : "secondary"}>
+                                  {doc.status}
+                                </Badge>
+                                {doc.file_url && (
+                                  <>
+                                    <Button variant="outline" size="sm">
+                                      <Eye className="h-4 w-4" />
+                                    </Button>
+                                    <Button variant="outline" size="sm">
+                                      <Download className="h-4 w-4" />
+                                    </Button>
+                                  </>
+                                )}
+                                {doc.status !== 'Aprovado' && (
+                                  <div className="flex items-center gap-2">
+                                    <Input
+                                      type="file"
+                                      accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                                      onChange={(e) => {
+                                        const file = e.target.files?.[0];
+                                        if (file) {
+                                          handleDocumentFileSelect(doc.id, file);
+                                        }
+                                      }}
+                                      className="w-48"
+                                      disabled={uploadingDocuments.has(doc.id)}
+                                    />
+                                    <Button
+                                      size="sm"
+                                      onClick={() => handleUploadDocument(doc.id)}
+                                      disabled={!doc.file || uploadingDocuments.has(doc.id)}
+                                    >
+                                      {uploadingDocuments.has(doc.id) ? (
+                                        <>
+                                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                                          Enviando...
+                                        </>
+                                      ) : (
+                                        <>
+                                          <Upload className="h-4 w-4 mr-2" />
+                                          Enviar
+                                        </>
+                                      )}
+                                    </Button>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     )}
                   </CardContent>
