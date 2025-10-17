@@ -83,20 +83,12 @@ const PartnersManagement: React.FC<PartnersManagementProps> = ({
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Form data for creating/editing partners
+  // Form data for creating/editing partners - Simplified
   const [formData, setFormData] = useState({
     name: '',
     cpf: '',
     email: '',
     phone: '',
-    address: '',
-    birth_date: '',
-    nationality: 'Brasileira',
-    marital_status: '',
-    spouse_name: '',
-    spouse_phone: '',
-    position: 'Sócio',
-    participation_percentage: 0,
   });
 
   useEffect(() => {
@@ -127,14 +119,6 @@ const PartnersManagement: React.FC<PartnersManagementProps> = ({
         cpf: formData.cpf,
         email: formData.email || null,
         phone: formData.phone || null,
-        address: formData.address || null,
-        birth_date: formData.birth_date || null,
-        nationality: formData.nationality,
-        marital_status: formData.marital_status || null,
-        spouse_name: formData.spouse_name || null,
-        spouse_phone: formData.spouse_phone || null,
-        position: formData.position,
-        participation_percentage: formData.participation_percentage,
         status: 'Ativo',
         documents_approved: false,
       };
@@ -147,14 +131,6 @@ const PartnersManagement: React.FC<PartnersManagementProps> = ({
         cpf: '',
         email: '',
         phone: '',
-        address: '',
-        birth_date: '',
-        nationality: 'Brasileira',
-        marital_status: '',
-        spouse_name: '',
-        spouse_phone: '',
-        position: 'Sócio',
-        participation_percentage: 0,
       });
 
       setShowCreateDialog(false);
@@ -180,14 +156,6 @@ const PartnersManagement: React.FC<PartnersManagementProps> = ({
         cpf: formData.cpf,
         email: formData.email || null,
         phone: formData.phone || null,
-        address: formData.address || null,
-        birth_date: formData.birth_date || null,
-        nationality: formData.nationality,
-        marital_status: formData.marital_status || null,
-        spouse_name: formData.spouse_name || null,
-        spouse_phone: formData.spouse_phone || null,
-        position: formData.position,
-        participation_percentage: formData.participation_percentage,
       };
 
       await partnersService.update(editingPartner.id, updateData);
@@ -226,14 +194,6 @@ const PartnersManagement: React.FC<PartnersManagementProps> = ({
       cpf: partner.cpf,
       email: partner.email || '',
       phone: partner.phone || '',
-      address: partner.address || '',
-      birth_date: partner.birth_date || '',
-      nationality: partner.nationality || 'Brasileira',
-      marital_status: partner.marital_status || '',
-      spouse_name: partner.spouse_name || '',
-      spouse_phone: partner.spouse_phone || '',
-      position: partner.position || 'Sócio',
-      participation_percentage: partner.participation_percentage || 0,
     });
     setShowEditDialog(true);
   };
@@ -355,82 +315,6 @@ const PartnersManagement: React.FC<PartnersManagementProps> = ({
                     placeholder="(00) 00000-0000"
                   />
                 </div>
-                <div className="col-span-2">
-                  <Label htmlFor="address">Endereço</Label>
-                  <Input
-                    id="address"
-                    value={formData.address}
-                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                    placeholder="Endereço completo"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="birth_date">Data de Nascimento</Label>
-                  <Input
-                    id="birth_date"
-                    type="date"
-                    value={formData.birth_date}
-                    onChange={(e) => setFormData({ ...formData, birth_date: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="nationality">Nacionalidade</Label>
-                  <Input
-                    id="nationality"
-                    value={formData.nationality}
-                    onChange={(e) => setFormData({ ...formData, nationality: e.target.value })}
-                    placeholder="Brasileira"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="marital_status">Estado Civil</Label>
-                  <Input
-                    id="marital_status"
-                    value={formData.marital_status}
-                    onChange={(e) => setFormData({ ...formData, marital_status: e.target.value })}
-                    placeholder="Solteiro, Casado, etc."
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="spouse_name">Nome do Cônjuge</Label>
-                  <Input
-                    id="spouse_name"
-                    value={formData.spouse_name}
-                    onChange={(e) => setFormData({ ...formData, spouse_name: e.target.value })}
-                    placeholder="Nome do cônjuge"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="spouse_phone">Telefone do Cônjuge</Label>
-                  <Input
-                    id="spouse_phone"
-                    value={formData.spouse_phone}
-                    onChange={(e) => setFormData({ ...formData, spouse_phone: e.target.value })}
-                    placeholder="(00) 00000-0000"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="position">Cargo/Posição</Label>
-                  <Input
-                    id="position"
-                    value={formData.position}
-                    onChange={(e) => setFormData({ ...formData, position: e.target.value })}
-                    placeholder="Sócio, Diretor, etc."
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="participation_percentage">Percentual de Participação (%)</Label>
-                  <Input
-                    id="participation_percentage"
-                    type="number"
-                    min="0"
-                    max="100"
-                    step="0.01"
-                    value={formData.participation_percentage}
-                    onChange={(e) => setFormData({ ...formData, participation_percentage: parseFloat(e.target.value) || 0 })}
-                    placeholder="0.00"
-                  />
-                </div>
               </div>
 
               <DialogFooter>
@@ -454,9 +338,9 @@ const PartnersManagement: React.FC<PartnersManagementProps> = ({
                   <TableHead>Nome</TableHead>
                   <TableHead>CPF</TableHead>
                   <TableHead>Email</TableHead>
+                  <TableHead>Telefone</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Documentos</TableHead>
-                  <TableHead>Participação</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
@@ -466,6 +350,7 @@ const PartnersManagement: React.FC<PartnersManagementProps> = ({
                     <TableCell className="font-medium">{partner.name}</TableCell>
                     <TableCell>{partner.cpf}</TableCell>
                     <TableCell>{partner.email || 'Não informado'}</TableCell>
+                    <TableCell>{partner.phone || 'Não informado'}</TableCell>
                     <TableCell>
                       <Badge className={getStatusColor(partner.status || 'Inativo')}>
                         {getStatusIcon(partner.status || 'Inativo')}
@@ -477,7 +362,6 @@ const PartnersManagement: React.FC<PartnersManagementProps> = ({
                         {partner.documents_approved ? 'Aprovados' : 'Pendentes'}
                       </Badge>
                     </TableCell>
-                    <TableCell>{partner.participation_percentage || 0}%</TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-2">
                         <Button variant="outline" size="sm" onClick={() => openEditDialog(partner)}>
@@ -560,82 +444,6 @@ const PartnersManagement: React.FC<PartnersManagementProps> = ({
                   value={formData.phone}
                   onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                   placeholder="(00) 00000-0000"
-                />
-              </div>
-              <div className="col-span-2">
-                <Label htmlFor="edit-address">Endereço</Label>
-                <Input
-                  id="edit-address"
-                  value={formData.address}
-                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                  placeholder="Endereço completo"
-                />
-              </div>
-              <div>
-                <Label htmlFor="edit-birth_date">Data de Nascimento</Label>
-                <Input
-                  id="edit-birth_date"
-                  type="date"
-                  value={formData.birth_date}
-                  onChange={(e) => setFormData({ ...formData, birth_date: e.target.value })}
-                />
-              </div>
-              <div>
-                <Label htmlFor="edit-nationality">Nacionalidade</Label>
-                <Input
-                  id="edit-nationality"
-                  value={formData.nationality}
-                  onChange={(e) => setFormData({ ...formData, nationality: e.target.value })}
-                  placeholder="Brasileira"
-                />
-              </div>
-              <div>
-                <Label htmlFor="edit-marital_status">Estado Civil</Label>
-                <Input
-                  id="edit-marital_status"
-                  value={formData.marital_status}
-                  onChange={(e) => setFormData({ ...formData, marital_status: e.target.value })}
-                  placeholder="Solteiro, Casado, etc."
-                />
-              </div>
-              <div>
-                <Label htmlFor="edit-spouse_name">Nome do Cônjuge</Label>
-                <Input
-                  id="edit-spouse_name"
-                  value={formData.spouse_name}
-                  onChange={(e) => setFormData({ ...formData, spouse_name: e.target.value })}
-                  placeholder="Nome do cônjuge"
-                />
-              </div>
-              <div>
-                <Label htmlFor="edit-spouse_phone">Telefone do Cônjuge</Label>
-                <Input
-                  id="edit-spouse_phone"
-                  value={formData.spouse_phone}
-                  onChange={(e) => setFormData({ ...formData, spouse_phone: e.target.value })}
-                  placeholder="(00) 00000-0000"
-                />
-              </div>
-              <div>
-                <Label htmlFor="edit-position">Cargo/Posição</Label>
-                <Input
-                  id="edit-position"
-                  value={formData.position}
-                  onChange={(e) => setFormData({ ...formData, position: e.target.value })}
-                  placeholder="Sócio, Diretor, etc."
-                />
-              </div>
-              <div>
-                <Label htmlFor="edit-participation_percentage">Percentual de Participação (%)</Label>
-                <Input
-                  id="edit-participation_percentage"
-                  type="number"
-                  min="0"
-                  max="100"
-                  step="0.01"
-                  value={formData.participation_percentage}
-                  onChange={(e) => setFormData({ ...formData, participation_percentage: parseFloat(e.target.value) || 0 })}
-                  placeholder="0.00"
                 />
               </div>
             </div>
