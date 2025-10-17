@@ -140,7 +140,7 @@ const PartnerDocumentUpload: React.FC<PartnerDocumentUploadProps> = ({
   partnerName,
   partnerCpf,
   representativeId,
-  representativeCpfCnpj = '',
+  representativeCpfCnpj: initialRepresentativeCpfCnpj = '',
   onClose,
   onUploadComplete
 }) => {
@@ -169,8 +169,8 @@ const PartnerDocumentUpload: React.FC<PartnerDocumentUploadProps> = ({
 
   const loadRepresentativeCpfCnpj = async () => {
     try {
-      if (representativeCpfCnpj) {
-        setRepresentativeCpfCnpj(representativeCpfCnpj);
+      if (initialRepresentativeCpfCnpj) {
+        setRepresentativeCpfCnpj(initialRepresentativeCpfCnpj);
         return;
       }
 
