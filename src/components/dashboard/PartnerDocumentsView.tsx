@@ -67,9 +67,6 @@ const PartnerDocumentsView: React.FC<PartnerDocumentsViewProps> = ({
   const [documents, setDocuments] = useState<PartnerDocument[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [selectedDocument, setSelectedDocument] = useState<PartnerDocument | null>(null);
-  const [showReviewDialog, setShowReviewDialog] = useState(false);
-  const [rejectionReason, setRejectionReason] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
@@ -130,19 +127,55 @@ const PartnerDocumentsView: React.FC<PartnerDocumentsViewProps> = ({
     }
   };
 
-  const handleReviewDocument = (document: PartnerDocument) => {
-    setSelectedDocument(document);
-    setRejectionReason(document.rejection_reason || '');
-    setShowReviewDialog(true);
+  const handleViewDocument = async (fileUrl: string, documentType: string) => {
+    try {
+      console.log('👁️ Viewing document:', fileUrl);
+      
+      // Extract path after /documentos/
+      let relativePath = fileUrl;
+      if (fileUrl.includes('/documentos/')) {
+        relativePath = fileUrl.split('/documentos/')[1];
+      }
+      
+      // Decode the path
+      relativePath = decodeURIComponent(relativePath);
+      
+      // Replace backslashes with forward slashes
+      relativePath = relativePath.replace(/\\/g, '/');
+      
+      console.log('👁️ Relative path:', relativePath);
+      
+      // Determine base URL based on environment
+      const hostname = window.location.hostname;
+      const baseUrl = hostname === 'localhost' 
+        ? 'http://localhost:3001' 
+        : 'https://sistema.credcarmultimarcas.com.br';
+      
+      // Check file type
+      const fileExtension = relativePath.split('.').pop()?.toLowerCase();
+      const viewableTypes = ['pdf'];
+      
+      if (viewableTypes.includes(fileExtension || '')) {
+        // Open viewable files in new tab
+        const viewUrl = `${baseUrl}/api/view-file?path=${encodeURIComponent(relativePath)}`;
+        console.log('👁️ Opening view URL:', viewUrl);
+        window.open(viewUrl, '_blank');
+      } else {
+        // For non-viewable files (DOC, DOCX), download them
+        const downloadUrl = `${baseUrl}/api/download-file?path=${encodeURIComponent(relativePath)}`;
+        console.log('⬇️ Opening download URL:', downloadUrl);
+        window.open(downloadUrl, '_blank');
+      }
+    } catch (err) {
+      console.error('Error viewing document:', err);
+      alert('Erro ao visualizar documento. Tente novamente.');
+    }
   };
 
-  const handleApproveDocument = async () => {
-    if (!selectedDocument) return;
-    
+  const handleApproveDocument = async (document: PartnerDocument) => {
     setIsSubmitting(true);
     try {
-      await partnersService.updateDocumentStatus(selectedDocument.id, 'Aprovado');
-      setShowReviewDialog(false);
+      await partnersService.updateDocumentStatus(document.id, 'Aprovado');
       loadPartnerDocuments();
       onStatusChange?.();
     } catch (err) {
@@ -153,16 +186,15 @@ const PartnerDocumentsView: React.FC<PartnerDocumentsViewProps> = ({
     }
   };
 
-  const handleRejectDocument = async () => {
-    if (!selectedDocument || !rejectionReason.trim()) {
-      alert('Por favor, forneça um motivo para a rejeição.');
+  const handleRejectDocument = async (document: PartnerDocument) => {
+    const rejectionReason = prompt('Por favor, forneça um motivo para a rejeição:');
+    if (!rejectionReason || !rejectionReason.trim()) {
       return;
     }
     
     setIsSubmitting(true);
     try {
-      await partnersService.updateDocumentStatus(selectedDocument.id, 'Reprovado', rejectionReason);
-      setShowReviewDialog(false);
+      await partnersService.updateDocumentStatus(document.id, 'Reprovado', rejectionReason);
       loadPartnerDocuments();
       onStatusChange?.();
     } catch (err) {
@@ -319,7 +351,7 @@ const PartnerDocumentsView: React.FC<PartnerDocumentsViewProps> = ({
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => handleReviewDocument(doc)}
+                            onClick={() => handleViewDocument(doc.file_url, doc.document_type)}
                             title="Visualizar Documento"
                           >
                             <Eye className="h-4 w-4" />
@@ -329,18 +361,20 @@ const PartnerDocumentsView: React.FC<PartnerDocumentsViewProps> = ({
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => handleReviewDocument(doc)}
-                                title="Revisar Documento"
-                                className="text-blue-600 hover:text-blue-700"
+                                onClick={() => handleApproveDocument(doc)}
+                                title="Aprovar Documento"
+                                className="text-green-600 hover:text-green-700"
+                                disabled={isSubmitting || doc.status === 'Aprovado'}
                               >
                                 <CheckCircle className="h-4 w-4" />
                               </Button>
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => handleReviewDocument(doc)}
+                                onClick={() => handleRejectDocument(doc)}
                                 title="Reprovar Documento"
                                 className="text-red-600 hover:text-red-700"
+                                disabled={isSubmitting || doc.status === 'Reprovado'}
                               >
                                 <XCircle className="h-4 w-4" />
                               </Button>
@@ -359,101 +393,6 @@ const PartnerDocumentsView: React.FC<PartnerDocumentsViewProps> = ({
             <Button variant="outline" onClick={onClose}>
               Fechar
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Review Document Dialog */}
-      <Dialog open={showReviewDialog} onOpenChange={setShowReviewDialog}>
-        <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader>
-            <DialogTitle>Revisar Documento</DialogTitle>
-            <DialogDescription>
-              Revise o documento: {selectedDocument?.document_type}
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="grid gap-4 py-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Sócio:</label>
-              <p className="text-sm text-gray-600">{partnerName} ({partnerCpf})</p>
-            </div>
-            
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Tipo de Documento:</label>
-              <p className="text-sm text-gray-600">{selectedDocument?.document_type}</p>
-            </div>
-            
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Status Atual:</label>
-              <Badge variant={getStatusBadgeVariant(selectedDocument?.status || 'Pendente')}>
-                {getStatusIcon(selectedDocument?.status || 'Pendente')}
-                {selectedDocument?.status || 'Pendente'}
-              </Badge>
-            </div>
-            
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Link do Documento:</label>
-              <a
-                href="#"
-                onClick={(e) => {
-                  e.preventDefault();
-                  handleDownloadDocument(selectedDocument?.file_url || '', selectedDocument?.document_type || '');
-                }}
-                className="text-blue-600 hover:underline flex items-center gap-1"
-              >
-                {selectedDocument?.file_url ? 'Visualizar/Baixar' : 'N/A'} <Eye className="h-4 w-4" />
-              </a>
-            </div>
-            
-            {selectedDocument?.status === 'Reprovado' && selectedDocument?.rejection_reason && (
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Motivo da Rejeição Anterior:</label>
-                <p className="text-sm text-gray-600 bg-gray-50 p-2 rounded">
-                  {selectedDocument.rejection_reason}
-                </p>
-              </div>
-            )}
-            
-            {isAdminMode && selectedDocument?.status !== 'Aprovado' && (
-              <div className="space-y-2">
-                <label htmlFor="rejectionReason" className="text-sm font-medium">
-                  Motivo da Rejeição (se reprovar)
-                </label>
-                <textarea
-                  id="rejectionReason"
-                  value={rejectionReason}
-                  onChange={(e) => setRejectionReason(e.target.value)}
-                  placeholder="Descreva o motivo da rejeição do documento..."
-                  className="w-full p-2 border rounded-md resize-none"
-                  rows={3}
-                />
-              </div>
-            )}
-          </div>
-          
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowReviewDialog(false)} disabled={isSubmitting}>
-              Cancelar
-            </Button>
-            {isAdminMode && selectedDocument?.status !== 'Aprovado' && (
-              <Button 
-                onClick={handleApproveDocument} 
-                disabled={isSubmitting} 
-                className="bg-green-600 hover:bg-green-700"
-              >
-                {isSubmitting ? 'Aprovando...' : 'Aprovar'}
-              </Button>
-            )}
-            {isAdminMode && selectedDocument?.status !== 'Reprovado' && (
-              <Button 
-                onClick={handleRejectDocument} 
-                disabled={isSubmitting || !rejectionReason.trim()} 
-                className="bg-red-600 hover:bg-red-700"
-              >
-                {isSubmitting ? 'Reprovando...' : 'Reprovar'}
-              </Button>
-            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
