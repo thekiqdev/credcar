@@ -131,16 +131,19 @@ const PartnerDocumentsView: React.FC<PartnerDocumentsViewProps> = ({
     try {
       console.log('👁️ Viewing document:', fileUrl);
       
-      // Extract path after /documentos/
+      // Extract path after /documentos/ - handle both Windows and Unix paths
       let relativePath = fileUrl;
-      if (fileUrl.includes('/documentos/')) {
+      
+      // Handle Windows paths (C:\CURSOR\credcar\documentos\...)
+      if (fileUrl.includes('\\documentos\\')) {
+        relativePath = fileUrl.split('\\documentos\\')[1];
+      }
+      // Handle Unix paths (/documentos/...)
+      else if (fileUrl.includes('/documentos/')) {
         relativePath = fileUrl.split('/documentos/')[1];
       }
       
-      // Decode the path
-      relativePath = decodeURIComponent(relativePath);
-      
-      // Replace backslashes with forward slashes
+      // Replace backslashes with forward slashes for consistency
       relativePath = relativePath.replace(/\\/g, '/');
       
       console.log('👁️ Relative path:', relativePath);
@@ -209,16 +212,19 @@ const PartnerDocumentsView: React.FC<PartnerDocumentsViewProps> = ({
     try {
       console.log('📄 Downloading document:', fileUrl);
       
-      // Extract path after /documentos/
+      // Extract path after /documentos/ - handle both Windows and Unix paths
       let relativePath = fileUrl;
-      if (fileUrl.includes('/documentos/')) {
+      
+      // Handle Windows paths (C:\CURSOR\credcar\documentos\...)
+      if (fileUrl.includes('\\documentos\\')) {
+        relativePath = fileUrl.split('\\documentos\\')[1];
+      }
+      // Handle Unix paths (/documentos/...)
+      else if (fileUrl.includes('/documentos/')) {
         relativePath = fileUrl.split('/documentos/')[1];
       }
       
-      // Decode the path
-      relativePath = decodeURIComponent(relativePath);
-      
-      // Replace backslashes with forward slashes
+      // Replace backslashes with forward slashes for consistency
       relativePath = relativePath.replace(/\\/g, '/');
       
       console.log('📄 Relative path:', relativePath);
@@ -229,21 +235,10 @@ const PartnerDocumentsView: React.FC<PartnerDocumentsViewProps> = ({
         ? 'http://localhost:3001' 
         : 'https://sistema.credcarmultimarcas.com.br';
       
-      // Check file type
-      const fileExtension = relativePath.split('.').pop()?.toLowerCase();
-      const viewableTypes = ['pdf'];
-      
-      if (viewableTypes.includes(fileExtension || '')) {
-        // Open viewable files in new tab
-        const viewUrl = `${baseUrl}/api/view-file?path=${encodeURIComponent(relativePath)}`;
-        console.log('👁️ Opening view URL:', viewUrl);
-        window.open(viewUrl, '_blank');
-      } else {
-        // For non-viewable files (DOC, DOCX), download them
-        const downloadUrl = `${baseUrl}/api/download-file?path=${encodeURIComponent(relativePath)}`;
-        console.log('⬇️ Opening download URL:', downloadUrl);
-        window.open(downloadUrl, '_blank');
-      }
+      // For downloads, use download-file endpoint
+      const downloadUrl = `${baseUrl}/api/download-file?path=${encodeURIComponent(relativePath)}`;
+      console.log('📄 Opening download URL:', downloadUrl);
+      window.open(downloadUrl, '_blank');
     } catch (err) {
       console.error('Error downloading document:', err);
       alert('Erro ao baixar documento. Tente novamente.');
