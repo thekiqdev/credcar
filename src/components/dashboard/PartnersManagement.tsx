@@ -42,6 +42,7 @@ import {
 import { partnersService } from '../../lib/supabase';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import PartnerDocumentUpload from './PartnerDocumentUpload';
+import PartnerDocumentViewer from './PartnerDocumentViewer';
 
 interface Partner {
   id: string;
@@ -84,6 +85,8 @@ const PartnersManagement: React.FC<PartnersManagementProps> = ({
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showDocumentUpload, setShowDocumentUpload] = useState(false);
   const [selectedPartnerForUpload, setSelectedPartnerForUpload] = useState<Partner | null>(null);
+  const [showDocumentViewer, setShowDocumentViewer] = useState(false);
+  const [selectedPartnerForView, setSelectedPartnerForView] = useState<Partner | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   // Form data for creating/editing partners - Simplified
@@ -215,6 +218,16 @@ const PartnersManagement: React.FC<PartnersManagementProps> = ({
     // Recarregar lista de sócios para atualizar status dos documentos
     loadPartners();
     onPartnersChange?.();
+  };
+
+  const handleOpenDocumentViewer = (partner: Partner) => {
+    setSelectedPartnerForView(partner);
+    setShowDocumentViewer(true);
+  };
+
+  const handleCloseDocumentViewer = () => {
+    setShowDocumentViewer(false);
+    setSelectedPartnerForView(null);
   };
 
   const getStatusIcon = (status: string) => {
@@ -387,7 +400,12 @@ const PartnersManagement: React.FC<PartnersManagementProps> = ({
                         <Button variant="outline" size="sm" onClick={() => openEditDialog(partner)}>
                           <Edit className="h-4 w-4" />
                         </Button>
-                        <Button variant="outline" size="sm">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => handleOpenDocumentViewer(partner)}
+                          title="Visualizar documentos do sócio"
+                        >
                           <Eye className="h-4 w-4" />
                         </Button>
                         <Button 
@@ -495,6 +513,15 @@ const PartnersManagement: React.FC<PartnersManagementProps> = ({
           representativeId={representativeId}
           onClose={handleCloseDocumentUpload}
           onUploadComplete={handleDocumentUploadComplete}
+        />
+      )}
+
+      {/* Partner Document Viewer Modal */}
+      {showDocumentViewer && selectedPartnerForView && (
+        <PartnerDocumentViewer
+          partner={selectedPartnerForView}
+          isOpen={showDocumentViewer}
+          onClose={handleCloseDocumentViewer}
         />
       )}
     </div>
