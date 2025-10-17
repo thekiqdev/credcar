@@ -1066,6 +1066,66 @@ app.post('/api/upload-document', upload.single('file'), validateFile, (req, res)
   }
 });
 
+// Rota para excluir arquivo
+app.post('/api/delete-file', (req, res) => {
+  try {
+    console.log('🗑️ Recebendo requisição de exclusão de arquivo...');
+    console.log('📋 Body:', req.body);
+    
+    const { filePath } = req.body;
+    
+    if (!filePath) {
+      console.log('❌ Caminho do arquivo não fornecido');
+      return res.status(400).json({ error: 'Caminho do arquivo é obrigatório' });
+    }
+    
+    console.log('🔍 File Path:', filePath);
+    
+    // Construir caminho absoluto
+    const baseDir = path.join(__dirname, 'documentos');
+    const fullPath = path.join(baseDir, filePath);
+    
+    console.log('🔍 Base Directory:', baseDir);
+    console.log('🔍 Full Path:', fullPath);
+    
+    // Verificar se o arquivo está dentro do diretório documentos (segurança)
+    const resolvedPath = path.resolve(fullPath);
+    const resolvedBaseDir = path.resolve(baseDir);
+    
+    if (!resolvedPath.startsWith(resolvedBaseDir)) {
+      console.log('❌ Tentativa de acesso fora do diretório documentos');
+      return res.status(403).json({ error: 'Acesso negado: arquivo fora do diretório permitido' });
+    }
+    
+    // Verificar se o arquivo existe
+    if (!fs.existsSync(fullPath)) {
+      console.log('❌ Arquivo não encontrado:', fullPath);
+      return res.status(404).json({ error: 'Arquivo não encontrado' });
+    }
+    
+    // Verificar se é um arquivo (não diretório)
+    const stats = fs.statSync(fullPath);
+    if (!stats.isFile()) {
+      console.log('❌ Caminho não é um arquivo:', fullPath);
+      return res.status(400).json({ error: 'Caminho não é um arquivo válido' });
+    }
+    
+    // Excluir o arquivo
+    fs.unlinkSync(fullPath);
+    console.log('✅ Arquivo excluído com sucesso:', fullPath);
+    
+    res.json({
+      success: true,
+      message: 'Arquivo excluído com sucesso',
+      deletedPath: filePath
+    });
+    
+  } catch (error) {
+    console.error('❌ Erro ao excluir arquivo:', error);
+    res.status(500).json({ error: error.message || 'Erro interno do servidor' });
+  }
+});
+
 // Rota para listar arquivos
 app.get('/api/list-files', (req, res) => {
   try {

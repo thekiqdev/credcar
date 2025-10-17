@@ -48,6 +48,7 @@ import {
   Filter
 } from 'lucide-react';
 import { partnersService, supabase } from '../../lib/supabase';
+import { uploadService } from '../../lib/upload.service';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface Partner {
@@ -278,6 +279,19 @@ const PartnerDocumentsApproval: React.FC = () => {
         user.id,
         rejectionReason
       );
+
+      // Excluir arquivo fisicamente do servidor
+      if (selectedDocument.file_url) {
+        console.log('🗑️ Excluindo arquivo fisicamente:', selectedDocument.file_url);
+        const deleteResult = await uploadService.deleteFile(selectedDocument.file_url);
+        
+        if (deleteResult.success) {
+          console.log('✅ Arquivo excluído com sucesso:', deleteResult.message);
+        } else {
+          console.warn('⚠️ Erro ao excluir arquivo (continuando):', deleteResult.error);
+          // Não falha a operação se não conseguir excluir o arquivo
+        }
+      }
 
       setShowRejectDialog(false);
       setSelectedDocument(null);

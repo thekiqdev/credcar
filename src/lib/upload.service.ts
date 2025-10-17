@@ -636,6 +636,64 @@ class UploadService {
       };
     }
   }
+
+  /**
+   * Excluir arquivo do servidor
+   */
+  async deleteFile(fileUrl: string): Promise<{ success: boolean; message: string; error?: string }> {
+    try {
+      console.log('🗑️ Iniciando exclusão de arquivo:', fileUrl);
+      
+      // Extrair caminho relativo do fileUrl
+      let relativePath = fileUrl;
+      
+      // Handle Windows paths (C:\CURSOR\credcar\documentos\...)
+      if (fileUrl.includes('\\documentos\\')) {
+        relativePath = fileUrl.split('\\documentos\\')[1];
+      }
+      // Handle Unix paths (/documentos/...)
+      else if (fileUrl.includes('/documentos/')) {
+        relativePath = fileUrl.split('/documentos/')[1];
+      }
+      
+      // Replace backslashes with forward slashes for consistency
+      relativePath = relativePath.replace(/\\/g, '/');
+      
+      console.log('🗑️ Caminho relativo para exclusão:', relativePath);
+      
+      const response = await fetch(`${this.baseUrl}/delete-file`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ filePath: relativePath })
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        console.log('✅ Arquivo excluído com sucesso:', relativePath);
+        return {
+          success: true,
+          message: data.message || 'Arquivo excluído com sucesso'
+        };
+      } else {
+        console.error('❌ Erro ao excluir arquivo:', data.error);
+        return {
+          success: false,
+          message: 'Erro ao excluir arquivo',
+          error: data.error
+        };
+      }
+    } catch (error) {
+      console.error('❌ Erro ao excluir arquivo:', error);
+      return {
+        success: false,
+        message: 'Erro ao excluir arquivo',
+        error: error instanceof Error ? error.message : 'Erro desconhecido'
+      };
+    }
+  }
 }
 
 // Instância global
