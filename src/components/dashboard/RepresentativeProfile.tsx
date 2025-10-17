@@ -9,6 +9,7 @@ import {
 import DocumentApproval from "./DocumentApproval";
 import RepresentativeContractUpload from "./RepresentativeContractUpload";
 import PartnersManagement from "./PartnersManagement";
+import PartnerDocumentsApproval from "./PartnerDocumentsApproval";
 import { Database } from "../../types/supabase";
 import {
   Card,
@@ -797,6 +798,9 @@ const RepresentativeProfile: React.FC<RepresentativeProfileProps> = () => {
             console.log('Partners updated');
           }}
         />
+
+        {/* Partner Documents Approval Section */}
+        <PartnerDocumentsApproval />
       </div>
 
       {/* Password Change Dialog */}
