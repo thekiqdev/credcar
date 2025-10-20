@@ -1291,38 +1291,65 @@ export const contractService = {
   // Delete contract (only for admin or representative with pending/rejected status)
   async delete(contractId: string, userId: string, isAdmin: boolean = false) {
     try {
-      // If not admin, check if user owns the contract and it has the right status
+      // First, get contract data including quota_id for quota release
+      const { data: contractData, error: fetchError } = await supabase
+        .from("contracts")
+        .select("representative_id, status, quota_id")
+        .eq("id", contractId)
+        .single();
+
+      if (fetchError) {
+        console.error("Error fetching contract for deletion:", fetchError);
+        throw new Error("Contrato não encontrado");
+      }
+
+      // If not admin, check permissions
       if (!isAdmin) {
-        const { data: contract, error: fetchError } = await supabase
-          .from("contracts")
-          .select("representative_id, status")
-          .eq("id", contractId)
-          .single();
-
-        if (fetchError) {
-          console.error("Error fetching contract for deletion:", fetchError);
-          throw new Error("Contrato não encontrado");
-        }
-
-        if (contract.representative_id !== userId) {
+        if (contractData.representative_id !== userId) {
           throw new Error("Você não tem permissão para excluir este contrato");
         }
 
-        if (contract.status !== "Pendente" && contract.status !== "Reprovado") {
+        if (contractData.status !== "Pendente" && contractData.status !== "Reprovado") {
           throw new Error(
             "Só é possível excluir contratos com status Pendente ou Reprovado",
           );
         }
       }
 
-      const { error } = await supabase
+      // Delete the contract
+      const { error: deleteError } = await supabase
         .from("contracts")
         .delete()
         .eq("id", contractId);
 
-      if (error) {
-        console.error("Error deleting contract:", error);
-        throw error;
+      if (deleteError) {
+        console.error("Error deleting contract:", deleteError);
+        throw deleteError;
+      }
+
+      // Release the associated quota if it exists
+      if (contractData.quota_id) {
+        console.log(`🔄 Liberando cota ${contractData.quota_id} após exclusão do contrato ${contractId}`);
+        
+        const { error: quotaError } = await supabase
+          .from("quotas")
+          .update({
+            status: "Disponível",
+            contract_id: null,
+            representative_id: null,
+            assigned_at: null,
+            updated_at: new Date().toISOString()
+          })
+          .eq("id", contractData.quota_id);
+
+        if (quotaError) {
+          console.error("Error releasing quota:", quotaError);
+          // Don't throw error here - contract is already deleted
+          // Just log the error for debugging
+          console.warn("⚠️ Contrato deletado, mas cota não foi liberada:", quotaError.message);
+        } else {
+          console.log(`✅ Cota ${contractData.quota_id} liberada com sucesso`);
+        }
       }
 
       return true;
