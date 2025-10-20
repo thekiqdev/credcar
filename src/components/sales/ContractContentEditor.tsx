@@ -19,7 +19,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { ArrowLeft, Save, FileText, PenTool } from "lucide-react";
-import { Editor } from "@tinymce/tinymce-react";
+import ReactQuill from 'react-quill';
+import 'react-quill/dist/quill.snow.css';
 import { contractTemplateService } from "../../lib/supabase";
 import SignatureCanvas from "@/components/ui/signature-canvas";
 import { mergePlaceholders, MergeData } from "@/lib/merge-fields";
@@ -565,63 +566,39 @@ const ContractContentEditor: React.FC<ContractContentEditorProps> = ({
       <div className="h-[calc(100vh-140px)] p-6">
         <div className="flex gap-4 h-full">
           <div className={showMergeFields ? "flex-1" : "w-full"}>
-          <Editor
-            apiKey="46lebzjws4vt4ywtma8d15683tj61n80shufdxg1spuuwpbm"
-            onInit={(evt, editor) => (editorRef.current = editor)}
-            initialValue={getDefaultContent()}
-            init={{
-              height: "calc(100vh - 260px)",
-              menubar: true,
-              promotion: false,
-              plugins: [
-                "advlist",
-                "autolink",
-                "lists",
-                "link",
-                "image",
-                "charmap",
-                "preview",
-                "anchor",
-                "searchreplace",
-                "visualblocks",
-                "code",
-                "fullscreen",
-                "insertdatetime",
-                "media",
-                "table",
-                "help",
-                "wordcount",
-                "emoticons",
-                "codesample",
-              ],
-              toolbar:
-                "undo redo | blocks | bold italic underline strikethrough | " +
-                "alignleft aligncenter alignright alignjustify | " +
-                "bullist numlist outdent indent | removeformat | help | " +
-                "table tabledelete | tableprops tablerowprops tablecellprops | " +
-                "tableinsertrowbefore tableinsertrowafter tabledeleterow | " +
-                "tableinsertcolbefore tableinsertcolafter tabledeletecol | " +
-                "link image media | signature | code preview fullscreen",
-              content_style:
-                "body { font-family: -apple-system, BlinkMacSystemFont, San Francisco, Segoe UI, Roboto, Helvetica Neue, sans-serif; font-size: 14px; line-height: 1.4; } .tox-promotion { display: none !important; }",
-              language: "pt_BR",
-              branding: false,
-              resize: false,
-              statusbar: true,
-              elementpath: false,
-              setup: (editor) => {
-                // Add signature button to toolbar
-                editor.ui.registry.addButton("signature", {
-                  text: "Assinatura",
-                  icon: "edit-block",
-                  tooltip: "Inserir campo de assinatura",
-                  onAction: () => {
-                    setIsSignatureModalOpen(true);
-                  },
-                });
-              },
-            }}
-          />
+            <ReactQuill
+              ref={editorRef}
+              value={getDefaultContent()}
+              theme="snow"
+              style={{ height: 'calc(100vh - 320px)', marginBottom: '50px' }}
+              modules={{
+                toolbar: {
+                  container: [
+                    [{ 'size': ['small', false, 'large', 'huge'] }],
+                    [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
+                    ['bold', 'italic', 'underline', 'strike'],
+                    [{ 'color': [] }, { 'background': [] }],
+                    [{ 'align': [] }],
+                    [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                    ['blockquote', 'code-block'],
+                    ['link', 'image'],
+                    ['clean']
+                  ]
+                },
+                clipboard: {
+                  matchVisual: false,
+                }
+              }}
+              formats={[
+                'header', 'size',
+                'bold', 'italic', 'underline', 'strike',
+                'color', 'background',
+                'list', 'bullet',
+                'align',
+                'blockquote', 'code-block',
+                'link', 'image'
+              ]}
+            />
           </div>
           
           {/* Painel Lateral de Campos de Mesclagem */}

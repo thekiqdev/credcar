@@ -53,7 +53,8 @@ import {
   PenTool,
   ExternalLink,
 } from "lucide-react";
-import { Editor } from "@tinymce/tinymce-react";
+import ReactQuill from 'react-quill';
+import 'react-quill/dist/quill.snow.css';
 import {
   supabase,
   authService,
@@ -147,21 +148,11 @@ const ContractDetails: React.FC<{
 
   // Check if edit mode should be enabled after contract is loaded
   useEffect(() => {
-    console.log("🔍 ContractDetails useEffect - Edit mode check:", {
-      contract: !!contract,
-      canEditOrDelete,
-      contractId,
-      contractStatus: contract?.status
-    });
-    
     if (contract && canEditOrDelete) {
       // Check if edit mode is requested via URL parameter
       const urlParams = new URLSearchParams(window.location.search);
       const editParam = urlParams.get("edit");
-      console.log("🔍 URL edit parameter:", editParam);
-      
       if (editParam === "true") {
-        console.log("✅ Activating edit mode from URL parameter");
         setIsEditMode(true);
         handleEditContent();
       }
@@ -262,7 +253,16 @@ const ContractDetails: React.FC<{
     const signatureShortcode = `[SIGNATURE id="${signatureId}" name="${signerName}" cpf="${cleanCPF}"]`;
 
     // Insert the shortcode into the editor
-    editorRef.current.insertContent(signatureShortcode);
+    if (editorRef.current) {
+      const quill = editorRef.current.getEditor();
+      const range = quill.getSelection();
+      if (range) {
+        quill.insertText(range.index, signatureShortcode);
+        quill.setSelection(range.index + signatureShortcode.length);
+      } else {
+        quill.insertText(quill.getLength(), signatureShortcode);
+      }
+    }
 
     // Reset form and close modal
     setSignatureBlockData({ signatoryName: "" });
@@ -782,7 +782,7 @@ const ContractDetails: React.FC<{
       console.log('💾 Starting to save contract content...');
 
       const content = editorRef.current
-        ? editorRef.current.getContent()
+        ? editorRef.current.getEditor().root.innerHTML
         : editedContent;
 
       console.log("Saving contract content:", {
@@ -831,7 +831,7 @@ const ContractDetails: React.FC<{
 
       // Preserve the editor content on error
       const currentContent = editorRef.current
-        ? editorRef.current.getContent()
+        ? editorRef.current.getEditor().root.innerHTML
         : editedContent;
       setEditedContent(currentContent);
 
@@ -876,19 +876,23 @@ const ContractDetails: React.FC<{
   };
 
   const handleEditContent = () => {
-    console.log("🔍 handleEditContent called");
     const currentContent = contract?.contract_content || "";
-    console.log("🔍 Current content length:", currentContent.length);
     setEditedContent(currentContent);
     setIsEditingContent(true);
     setIsEditMode(true);
-    console.log("✅ Edit mode activated - isEditingContent:", true);
   };
 
   // Função para inserir campos de mesclagem
   const handleInsertField = (placeholder: string) => {
     if (editorRef.current) {
-      editorRef.current.insertContent(placeholder);
+      const quill = editorRef.current.getEditor();
+      const range = quill.getSelection();
+      if (range) {
+        quill.insertText(range.index, placeholder);
+        quill.setSelection(range.index + placeholder.length);
+      } else {
+        quill.insertText(quill.getLength(), placeholder);
+      }
     }
   };
 
@@ -896,7 +900,8 @@ const ContractDetails: React.FC<{
   const handleApplyMerge = () => {
     if (!contract || !editorRef.current) return;
     
-    const currentContent = editorRef.current.getContent();
+    const quill = editorRef.current.getEditor();
+    const currentContent = quill.root.innerHTML;
     
     // Preparar dados do contrato existente para mesclagem
     const mergeData: MergeData = {
@@ -949,7 +954,7 @@ const ContractDetails: React.FC<{
     
     // Aplicar mesclagem
     const mergedContent = mergePlaceholders(currentContent, mergeData);
-    editorRef.current.setContent(mergedContent);
+    quill.clipboard.dangerouslyPasteHTML(mergedContent);
     setEditedContent(mergedContent);
   };
 
@@ -969,7 +974,8 @@ const ContractDetails: React.FC<{
       }
 
       // Get current content from editor
-      const currentContent = editorRef.current.getContent();
+      const quill = editorRef.current.getEditor();
+      const currentContent = quill.root.innerHTML;
 
       // Insert template content at cursor position or append if no cursor
       const templateContent = template.content;
@@ -979,7 +985,7 @@ const ContractDetails: React.FC<{
       const newContent = currentContent + separator + templateContent;
 
       // Set the new content in the editor
-      editorRef.current.setContent(newContent);
+      quill.clipboard.dangerouslyPasteHTML(newContent);
       setEditedContent(newContent);
 
       // Reset template selection
@@ -2909,139 +2915,43 @@ const ContractDetails: React.FC<{
                     {/* Editor Container with Merge Fields Panel */}
                     <div className="flex gap-4">
                       <div className={showMergeFields ? "flex-1" : "w-full"}>
-                    <Editor
-                      apiKey="46lebzjws4vt4ywtma8d15683tj61n80shufdxg1spuuwpbm"
-                      onInit={(evt, editor) => {
-                        editorRef.current = editor;
-                        console.log("✅ TinyMCE editor initialized successfully");
-                        console.log("🔍 Editor element:", editor.getElement());
-                        // Set content after initialization to prevent direction issues
-                        setTimeout(() => {
-                          if (editedContent && editor) {
-                            console.log("🔍 Setting editor content:", editedContent.substring(0, 100) + "...");
-                            editor.setContent(editedContent);
-                          }
-                        }, 200);
-                      }}
-                      initialValue=""
-                      init={{
-                        height: 500,
-                        menubar: false,
-                        directionality: "ltr",
-                        skin: "oxide",
-                        content_css: "default",
-                        promotion: false,
-                        convert_urls: false,
-                        relative_urls: false,
-                        remove_script_host: false,
-                        document_base_url: window.location.origin,
-                        plugins: [
-                          "advlist",
-                          "autolink",
-                          "lists",
-                          "link",
-                          "charmap",
-                          "anchor",
-                          "searchreplace",
-                          "visualblocks",
-                          "code",
-                          "insertdatetime",
-                          "table",
-                          "wordcount",
-                          "help",
-                        ],
-                        toolbar:
-                          "undo redo | formatselect | bold italic underline strikethrough | " +
-                          "alignleft aligncenter alignright alignjustify | " +
-                          "bullist numlist outdent indent | removeformat | " +
-                          "table | link | code | help",
-                        content_style:
-                          "body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif; font-size: 14px; line-height: 1.6; color: #333; } " +
-                          "p { margin: 0 0 1em 0; } " +
-                          "table { border-collapse: collapse; width: 100%; } " +
-                          "table td, table th { border: 1px solid #ddd; padding: 8px; } " +
-                          "table th { background-color: #f2f2f2; }",
-                        language: "pt_BR",
-                        branding: false,
-                        resize: true,
-                        statusbar: true,
-                        elementpath: true,
-                        browser_spellcheck: true,
-                        contextmenu: "link table",
-                        table_default_attributes: {
-                          border: "1",
-                        },
-                        table_default_styles: {
-                          "border-collapse": "collapse",
-                          width: "100%",
-                        },
-                        // Configurações para evitar travamentos
-                        inline_boundaries: false,
-                        object_resizing: true,
-                        paste_data_images: false,
-                        paste_as_text: false,
-                        paste_auto_cleanup_on_paste: true,
-                        paste_remove_styles: false,
-                        paste_remove_styles_if_webkit: false,
-                        paste_strip_class_attributes: "none",
-                        // Configurações de popup otimizadas
-                        popup_css_add: "",
-                        popup_css: "",
-                        // Desabilitar auto-save para evitar conflitos
-                        auto_save: {
-                          enabled: false,
-                        },
-                        // Configurações de inicialização
-                        init_instance_callback: (editor) => {
-                          console.log(
-                            "TinyMCE instance initialized:",
-                            editor.id,
-                          );
-                        },
-                        setup: (editor) => {
-                          // Configurar eventos de forma mais estável
-                          let contentChangeTimeout;
-
-                          editor.on("init", () => {
-                            console.log("TinyMCE editor setup complete");
-                            if (editedContent) {
-                              editor.setContent(editedContent);
+                        <ReactQuill
+                          ref={editorRef}
+                          value={editedContent}
+                          onChange={(content) => {
+                            setEditedContent(content);
+                            console.log("Editor content updated, length:", content.length);
+                          }}
+                          theme="snow"
+                          style={{ height: '500px', marginBottom: '50px' }}
+                          modules={{
+                            toolbar: {
+                              container: [
+                                [{ 'size': ['small', false, 'large', 'huge'] }],
+                                [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
+                                ['bold', 'italic', 'underline', 'strike'],
+                                [{ 'color': [] }, { 'background': [] }],
+                                [{ 'align': [] }],
+                                [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                                ['blockquote', 'code-block'],
+                                ['link', 'image'],
+                                ['clean']
+                              ]
+                            },
+                            clipboard: {
+                              matchVisual: false,
                             }
-                          });
-
-                          // Debounce para mudanças de conteúdo
-                          editor.on("input change paste keyup", () => {
-                            clearTimeout(contentChangeTimeout);
-                            contentChangeTimeout = setTimeout(() => {
-                              const content = editor.getContent();
-                              setEditedContent(content);
-                              console.log(
-                                "Editor content updated, length:",
-                                content.length,
-                              );
-                            }, 300);
-                          });
-
-                          // Prevenir travamentos em popups
-                          editor.on("BeforeOpenNotification", (e) => {
-                            console.log("Opening notification:", e);
-                          });
-
-                          editor.on("OpenWindow", (e) => {
-                            console.log("Opening window:", e);
-                          });
-
-                          // Limpar timeouts quando o editor for destruído
-                          editor.on("remove", () => {
-                            clearTimeout(contentChangeTimeout);
-                          });
-                        },
-                      }}
-                      onEditorChange={(content, editor) => {
-                        // Callback adicional para mudanças
-                        setEditedContent(content);
-                      }}
-                    />
+                          }}
+                          formats={[
+                            'header', 'size',
+                            'bold', 'italic', 'underline', 'strike',
+                            'color', 'background',
+                            'list', 'bullet',
+                            'align',
+                            'blockquote', 'code-block',
+                            'link', 'image'
+                          ]}
+                        />
                       </div>
                       
                       {/* Painel Lateral de Campos de Mesclagem */}
@@ -3064,7 +2974,7 @@ const ContractDetails: React.FC<{
                         onClick={() => {
                           // Preserve content when canceling
                           const currentContent = editorRef.current
-                            ? editorRef.current.getContent()
+                            ? editorRef.current.getEditor().root.innerHTML
                             : editedContent;
                           console.log(
                             "Canceling edit, preserving content length:",
