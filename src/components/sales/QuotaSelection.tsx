@@ -37,6 +37,8 @@ interface Quota {
   representative_id?: string;
   reserved_by?: string;
   reserved_at?: string;
+  contract_id?: number;
+  contract_status?: string;
 }
 
 interface CommissionPlan {
@@ -129,7 +131,13 @@ const QuotaSelection: React.FC<QuotaSelectionProps> = ({
 
       const { data, error } = await supabase
         .from("quotas")
-        .select("*")
+        .select(`
+          *,
+          contracts!quotas_contract_id_fkey (
+            id,
+            status
+          )
+        `)
         .eq("group_id", groupId)
         .order("quota_number");
 
@@ -137,7 +145,14 @@ const QuotaSelection: React.FC<QuotaSelectionProps> = ({
         console.error("Error fetching quotas:", error);
         throw error;
       }
-      setQuotas(data || []);
+      
+      // Process quotas to include contract status
+      const processedQuotas = (data || []).map((quota: any) => ({
+        ...quota,
+        contract_status: quota.contracts?.status || null
+      }));
+      
+      setQuotas(processedQuotas);
     } catch (error) {
       console.error("Error fetching quotas:", error);
       // Set empty array on error to prevent UI issues
@@ -201,6 +216,27 @@ const QuotaSelection: React.FC<QuotaSelectionProps> = ({
   };
 
   const getQuotaColor = (quota: Quota) => {
+    // Se a cota tem contrato associado, usar cor baseada no status do contrato
+    if (quota.contract_status) {
+      switch (quota.contract_status) {
+        case "Pendente":
+        case "Em Análise":
+          return "bg-orange-400 cursor-not-allowed"; // LARANJA para PENDENTE
+        case "Ativo":
+        case "Concluído":
+        case "Aprovado":
+        case "Faturado":
+          return "bg-green-500 cursor-not-allowed"; // VERDE para ATIVO/CONCLUÍDO
+        case "Cancelado":
+        case "Reprovado":
+        case "Em Atraso":
+          return "bg-red-500 cursor-not-allowed"; // VERMELHO para CANCELADO/RECUSADO
+        default:
+          return "bg-gray-400 cursor-not-allowed";
+      }
+    }
+    
+    // Se não tem contrato, usar cores baseadas no status da cota
     switch (quota.status) {
       case "Disponível":
         return "bg-gray-300 hover:bg-gray-400 cursor-pointer";
@@ -216,6 +252,27 @@ const QuotaSelection: React.FC<QuotaSelectionProps> = ({
   };
 
   const getQuotaTextColor = (quota: Quota) => {
+    // Se a cota tem contrato associado, usar cor de texto baseada no status do contrato
+    if (quota.contract_status) {
+      switch (quota.contract_status) {
+        case "Pendente":
+        case "Em Análise":
+          return "text-orange-800"; // Texto escuro para laranja
+        case "Ativo":
+        case "Concluído":
+        case "Aprovado":
+        case "Faturado":
+          return "text-white"; // Texto branco para verde
+        case "Cancelado":
+        case "Reprovado":
+        case "Em Atraso":
+          return "text-white"; // Texto branco para vermelho
+        default:
+          return "text-gray-800";
+      }
+    }
+    
+    // Se não tem contrato, usar cores baseadas no status da cota
     switch (quota.status) {
       case "Disponível":
         return "text-gray-700";
@@ -353,14 +410,25 @@ const QuotaSelection: React.FC<QuotaSelectionProps> = ({
                   <div className="w-4 h-4 bg-yellow-400 border-2 border-yellow-600 rounded mr-2"></div>
                   <span className="text-sm">Selecionada (clique para desmarcar)</span>
                 </div>
+                
+                {/* Separador para cores baseadas em contratos */}
+                <div className="mt-3 pt-2 border-t">
+                  <span className="text-xs font-medium text-gray-600 uppercase tracking-wide">Status do Contrato</span>
+                </div>
+                
+                <div className="flex items-center">
+                  <div className="w-4 h-4 bg-orange-400 rounded mr-2"></div>
+                  <span className="text-sm">Contrato Pendente/Em Análise</span>
+                </div>
                 <div className="flex items-center">
                   <div className="w-4 h-4 bg-green-500 rounded mr-2"></div>
-                  <span className="text-sm">Ocupada</span>
+                  <span className="text-sm">Contrato Ativo/Concluído</span>
                 </div>
                 <div className="flex items-center">
                   <div className="w-4 h-4 bg-red-500 rounded mr-2"></div>
-                  <span className="text-sm">Cancelada/Atraso</span>
+                  <span className="text-sm">Contrato Cancelado/Reprovado</span>
                 </div>
+                
                 <div className="flex items-center mt-2 pt-2 border-t">
                   <div className="w-4 h-4 bg-red-500 ring-4 ring-red-500 ring-opacity-75 rounded mr-2"></div>
                   <span className="text-sm font-medium">Selecionada</span>
@@ -412,7 +480,7 @@ const QuotaSelection: React.FC<QuotaSelectionProps> = ({
                           ${selectedQuota?.id === quota.id ? "ring-4 ring-red-500 ring-opacity-75 scale-110 shadow-xl" : ""}
                         `}
                         onClick={() => handleQuotaClick(quota)}
-                        title={`Cota ${quota.quota_number} - ${quota.status}`}
+                        title={`Cota ${quota.quota_number} - ${quota.contract_status ? `Contrato: ${quota.contract_status}` : quota.status}`}
                       >
                         {quota.quota_number}
                       </div>
@@ -461,3 +529,4 @@ const QuotaSelection: React.FC<QuotaSelectionProps> = ({
 };
 
 export default QuotaSelection;
+
