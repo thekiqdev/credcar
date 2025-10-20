@@ -82,6 +82,7 @@ const ContractContentEditor: React.FC<ContractContentEditorProps> = ({
   onBack,
 }) => {
   const editorRef = useRef<any>(null);
+  const [content, setContent] = useState<string>(getDefaultContent());
   const [templates, setTemplates] = useState<any[]>([]);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>("");
   const [isLoadingTemplates, setIsLoadingTemplates] = useState(true);
@@ -568,7 +569,7 @@ const ContractContentEditor: React.FC<ContractContentEditorProps> = ({
           <CKEditorComponent
             content={content}
             onChange={setContent}
-            height="calc(100vh - 400px)"
+            height="calc(100vh - 260px)"
             placeholder="Digite o conteúdo do contrato..."
             showMergeFields={showMergeFields}
             onInsertSignature={(signatoryName) => {
