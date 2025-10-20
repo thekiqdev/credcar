@@ -21,6 +21,8 @@ import {
 import { ArrowLeft, Save, FileText, PenTool } from "lucide-react";
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
+import '../../styles/quill-tables.css';
+import TableHandler from '../../lib/quill-table-module';
 import { contractTemplateService } from "../../lib/supabase";
 import SignatureCanvas from "@/components/ui/signature-canvas";
 import { mergePlaceholders, MergeData } from "@/lib/merge-fields";
@@ -582,12 +584,14 @@ const ContractContentEditor: React.FC<ContractContentEditorProps> = ({
                     [{ 'list': 'ordered'}, { 'list': 'bullet' }],
                     ['blockquote', 'code-block'],
                     ['link', 'image'],
+                    ['table'],
                     ['clean']
                   ]
                 },
                 clipboard: {
                   matchVisual: false,
-                }
+                },
+                tableHandler: true
               }}
               formats={[
                 'header', 'size',

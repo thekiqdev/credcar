@@ -56,7 +56,7 @@ import {
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import '../../styles/quill-tables.css';
-import { insertTable } from '../../lib/quill-table-helper';
+import TableHandler from '../../lib/quill-table-module';
 import {
   supabase,
   authService,
@@ -2914,28 +2914,6 @@ const ContractDetails: React.FC<{
                       </p>
                     </div>
 
-                    {/* Table Insert Section */}
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                      <h4 className="text-sm font-medium text-blue-800 mb-3">
-                        Inserir Tabela
-                      </h4>
-                      <Button
-                        variant="outline"
-                        onClick={() => {
-                          if (editorRef.current) {
-                            insertTable(editorRef.current.getEditor(), 3, 3);
-                          }
-                        }}
-                        className="bg-blue-600 text-white hover:bg-blue-700"
-                      >
-                        <FileText className="mr-2 h-4 w-4" />
-                        Inserir Tabela 3x3
-                      </Button>
-                      <p className="text-xs text-blue-600 mt-2">
-                        Clique para inserir uma tabela HTML. Para editar: clique dentro da célula e digite normalmente.
-                      </p>
-                    </div>
-
                     {/* Editor Container with Merge Fields Panel */}
                     <div className="flex gap-4">
                       <div className={showMergeFields ? "flex-1" : "w-full"}>
@@ -2959,12 +2937,14 @@ const ContractDetails: React.FC<{
                                 [{ 'list': 'ordered'}, { 'list': 'bullet' }],
                                 ['blockquote', 'code-block'],
                                 ['link', 'image'],
+                                ['table'],
                                 ['clean']
                               ]
                             },
                             clipboard: {
                               matchVisual: false,
-                            }
+                            },
+                            tableHandler: true
                           }}
                           formats={[
                             'header', 'size',
