@@ -946,7 +946,9 @@ const ContractDetails: React.FC<{
   const handleInsertTemplate = async () => {
     console.log("Debug - selectedTemplateId:", selectedTemplateId);
     console.log("Debug - selectedTemplateId type:", typeof selectedTemplateId);
+    console.log("Debug - selectedTemplateId length:", selectedTemplateId?.length);
     console.log("Debug - availableTemplates:", availableTemplates);
+    console.log("Debug - editorRef.current:", !!editorRef.current);
     
     if (!selectedTemplateId || selectedTemplateId === "" || !editorRef.current) {
       alert("Por favor, selecione um modelo primeiro");
