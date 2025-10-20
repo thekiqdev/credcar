@@ -2765,9 +2765,9 @@ const ContractDetails: React.FC<{
                   Visualize e edite o conteúdo HTML do contrato.
                 </CardDescription>
               </CardHeader>
-              <CardContent className="h-[calc(100vh-200px)] flex flex-col">
+              <CardContent>
                 {isEditingContent ? (
-                  <div className="space-y-4 flex-1 flex flex-col overflow-hidden">
+                  <div className="space-y-4">
                     {/* Template Selection */}
                     <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                       <h4 className="text-sm font-medium text-blue-800 mb-3">
@@ -2894,12 +2894,12 @@ const ContractDetails: React.FC<{
                     </div>
 
                     {/* Editor Container with Merge Fields Panel */}
-                    <div className="flex gap-4 flex-1 overflow-hidden">
-                      <div className={showMergeFields ? "flex-1" : "w-full"} style={{ height: 'calc(100vh - 400px)', minHeight: '400px' }}>
+                    <div className="flex gap-4">
+                      <div className={showMergeFields ? "flex-1" : "w-full"}>
                     <CKEditorComponent
                       content={editedContent}
                       onChange={setEditedContent}
-                      height="100%"
+                      height="calc(100vh - 400px)"
                       placeholder="Digite o conteúdo do contrato..."
                       showMergeFields={showMergeFields}
                       onInsertSignature={(signatoryName) => {
@@ -2922,13 +2922,13 @@ const ContractDetails: React.FC<{
                       
                       {/* Painel Lateral de Campos de Mesclagem */}
                       {showMergeFields && (
-                        <div className="w-80 flex-shrink-0 overflow-y-auto">
+                        <div className="w-80 flex-shrink-0">
                           <MergeFieldsHelper onInsertField={handleInsertField} />
                         </div>
                       )}
                     </div>
 
-                    <div className="flex gap-2 pt-4 border-t bg-white sticky bottom-0 z-10">
+                    <div className="flex gap-2">
                       <Button
                         onClick={handleSaveContent}
                         disabled={isProcessing}
