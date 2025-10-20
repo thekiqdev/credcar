@@ -1,40 +1,30 @@
 import Quill from 'quill';
 
-// Extend Quill to allow table elements in clipboard
-const Inline = Quill.import('blots/inline');
-const Block = Quill.import('blots/block');
+// Get the Block Embed class from Quill
 const BlockEmbed = Quill.import('blots/block/embed');
 
-// Allow table, tr, td, th tags
-class TableBlot extends BlockEmbed {
-  static blotName = 'table';
-  static tagName = 'TABLE';
+// Create a custom blot that allows raw HTML (including tables)
+class RawHTMLBlot extends BlockEmbed {
+  static create(value: string) {
+    const node = super.create(value);
+    node.innerHTML = value;
+    node.setAttribute('contenteditable', 'true');
+    return node;
+  }
+
+  static value(node: HTMLElement) {
+    return node.innerHTML;
+  }
 }
 
-class TableRowBlot extends Block {
-  static blotName = 'table-row';
-  static tagName = 'TR';
-}
+RawHTMLBlot.blotName = 'raw-html';
+RawHTMLBlot.tagName = 'div';
+RawHTMLBlot.className = 'ql-raw-html';
 
-class TableCellBlot extends Block {
-  static blotName = 'table-cell';
-  static tagName = 'TD';
-}
+// Register the custom blot
+Quill.register(RawHTMLBlot);
 
-class TableHeaderBlot extends Block {
-  static blotName = 'table-header';
-  static tagName = 'TH';
-}
-
-// Register table blots
-Quill.register({
-  'formats/table': TableBlot,
-  'formats/table-row': TableRowBlot,
-  'formats/table-cell': TableCellBlot,
-  'formats/table-header': TableHeaderBlot,
-}, true);
-
-// Modules configuration - simplified without better-table
+// Modules configuration with enhanced clipboard for tables
 export const quillModulesWithTable = {
   toolbar: {
     container: [
@@ -51,25 +41,10 @@ export const quillModulesWithTable = {
   },
   clipboard: {
     matchVisual: false,
-    matchers: [
-      // Allow table elements to be pasted
-      ['TABLE', (node: any, delta: any) => {
-        return delta;
-      }],
-      ['TR', (node: any, delta: any) => {
-        return delta;
-      }],
-      ['TD', (node: any, delta: any) => {
-        return delta;
-      }],
-      ['TH', (node: any, delta: any) => {
-        return delta;
-      }]
-    ]
   }
 };
 
-// Formats supported - including basic HTML table support
+// Formats supported
 export const quillFormatsWithTable = [
   'header', 'size',
   'bold', 'italic', 'underline', 'strike',
@@ -78,32 +53,65 @@ export const quillFormatsWithTable = [
   'align',
   'blockquote', 'code-block',
   'link', 'image',
-  'table', 'table-row', 'table-cell', 'table-header'
+  'raw-html'
 ];
 
 // Helper function to insert a simple HTML table
 export const insertTable = (quill: any, rows: number = 3, columns: number = 3) => {
+  console.log('🔵 insertTable chamada com:', { rows, columns });
+  
+  if (!quill) {
+    console.error('❌ Quill não está definido');
+    return;
+  }
+
   // Generate simple HTML table with better styling
-  let tableHTML = '<table border="1" style="border-collapse: collapse; width: 100%; margin: 10px 0; border: 1px solid #ddd;">\n';
+  let tableHTML = '<table border="1" style="border-collapse: collapse; width: 100%; margin: 10px 0; border: 1px solid #333;">\n';
   
   for (let i = 0; i < rows; i++) {
     tableHTML += '  <tr>\n';
     for (let j = 0; j < columns; j++) {
-      tableHTML += `    <td style="border: 1px solid #ddd; padding: 8px; min-width: 80px; min-height: 30px;">${i === 0 && j === 0 ? 'Edite aqui' : '&nbsp;'}</td>\n`;
+      tableHTML += `    <td style="border: 1px solid #333; padding: 8px; min-width: 80px; min-height: 30px;">${i === 0 && j === 0 ? 'Edite aqui' : '&nbsp;'}</td>\n`;
     }
     tableHTML += '  </tr>\n';
   }
   
   tableHTML += '</table>\n<p><br></p>';
   
-  // Insert at cursor position
-  const range = quill.getSelection();
-  if (range) {
-    quill.clipboard.dangerouslyPasteHTML(range.index, tableHTML);
-    quill.setSelection(range.index + 1);
-  } else {
-    const length = quill.getLength();
-    quill.clipboard.dangerouslyPasteHTML(length, tableHTML);
+  console.log('📋 HTML da tabela gerado:', tableHTML.substring(0, 200) + '...');
+  
+  try {
+    // Get current selection
+    const range = quill.getSelection(true);
+    console.log('📍 Range atual:', range);
+    
+    if (range) {
+      // Insert table HTML at cursor position
+      const delta = quill.clipboard.convert(tableHTML);
+      console.log('🔄 Delta gerado:', delta);
+      
+      quill.updateContents(delta, 'user');
+      quill.setSelection(range.index + 1, 'silent');
+      console.log('✅ Tabela inserida com sucesso');
+    } else {
+      // Fallback: insert at end
+      const length = quill.getLength();
+      const delta = quill.clipboard.convert(tableHTML);
+      quill.updateContents(delta, 'user');
+      console.log('✅ Tabela inserida no final');
+    }
+  } catch (error) {
+    console.error('❌ Erro ao inserir tabela:', error);
+    
+    // Fallback method: use dangerouslyPasteHTML
+    try {
+      const range = quill.getSelection(true);
+      const index = range ? range.index : quill.getLength();
+      quill.clipboard.dangerouslyPasteHTML(index, tableHTML, 'user');
+      console.log('✅ Tabela inserida via dangerouslyPasteHTML');
+    } catch (fallbackError) {
+      console.error('❌ Erro no fallback:', fallbackError);
+    }
   }
 };
 

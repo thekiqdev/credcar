@@ -14,6 +14,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ArrowLeft, Save, Upload, FileText, Users, Lock } from "lucide-react";
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
+import '../../styles/quill-tables.css';
 import { quillModulesWithTable, quillFormatsWithTable, insertTable } from '../../lib/quill-config';
 import mammoth from "mammoth";
 import MergeFieldsHelper from "./MergeFieldsHelper";
