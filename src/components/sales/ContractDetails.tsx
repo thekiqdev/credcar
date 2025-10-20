@@ -950,7 +950,7 @@ const ContractDetails: React.FC<{
     console.log("Debug - availableTemplates:", availableTemplates);
     console.log("Debug - editorRef.current:", !!editorRef.current);
     
-    if (!selectedTemplateId || selectedTemplateId === "" || !editorRef.current) {
+    if (!selectedTemplateId || selectedTemplateId === "") {
       alert("Por favor, selecione um modelo primeiro");
       return;
     }
@@ -964,8 +964,8 @@ const ContractDetails: React.FC<{
         return;
       }
 
-      // Get current content from editor
-      const currentContent = editorRef.current.getContent();
+      // Get current content from state instead of editorRef
+      const currentContent = editedContent;
 
       // Insert template content at cursor position or append if no cursor
       const templateContent = template.content;
@@ -974,8 +974,7 @@ const ContractDetails: React.FC<{
       const separator = currentContent.trim() ? "<br><br><hr><br><br>" : "";
       const newContent = currentContent + separator + templateContent;
 
-      // Set the new content in the editor
-      editorRef.current.setContent(newContent);
+      // Update the content state
       setEditedContent(newContent);
 
       // Reset template selection
