@@ -30,6 +30,26 @@ const CKEditorComponent: React.FC<CKEditorProps> = ({
   const handleInit = (editor: any) => {
     editorRef.current = editor;
     
+    // Configurar tabelas para largura completa por padrão
+    editor.model.schema.extend('table', {
+      allowAttributes: ['width', 'style']
+    });
+    
+    // Interceptar criação de tabelas para aplicar largura completa
+    editor.model.document.on('change:data', () => {
+      const root = editor.model.document.getRoot();
+      const tables = Array.from(root.getChildren()).filter(child => child.is('table'));
+      
+      tables.forEach(table => {
+        if (!table.hasAttribute('width')) {
+          editor.model.change(writer => {
+            writer.setAttribute('width', '100%', table);
+            writer.setAttribute('style', 'width: 100%;', table);
+          });
+        }
+      });
+    });
+    
     // Adicionar botões customizados para assinatura e campos de mesclagem
     editor.ui.componentFactory.add('signatureField', (locale: any) => {
       const buttonView = new editor.ui.ButtonView(locale);
@@ -157,7 +177,15 @@ const CKEditorComponent: React.FC<CKEditorProps> = ({
       contentToolbar: [
         'tableColumn', 'tableRow', 'mergeTableCells',
         'tableProperties', 'tableCellProperties'
-      ]
+      ],
+      tableProperties: {
+        borderColors: ['#000000', '#666666', '#cccccc'],
+        backgroundColors: ['#ffffff', '#f8f8f8', '#e8e8e8']
+      },
+      tableCellProperties: {
+        borderColors: ['#000000', '#666666', '#cccccc'],
+        backgroundColors: ['#ffffff', '#f8f8f8', '#e8e8e8']
+      }
     },
     fontSize: {
       options: [9, 11, 13, 'default', 17, 19, 21, 24, 28, 32]
@@ -247,20 +275,32 @@ const CKEditorComponent: React.FC<CKEditorProps> = ({
         
         .ckeditor-container .ck-editor__editable table {
           border-collapse: collapse;
-          width: 100%;
+          width: 100% !important;
           margin: 1em 0;
+          min-width: 100%;
+          table-layout: auto;
         }
         
         .ckeditor-container .ck-editor__editable table td,
         .ckeditor-container .ck-editor__editable table th {
           border: 1px solid #ddd;
-          padding: 8px;
+          padding: 8px 12px;
           text-align: left;
+          min-width: 100px;
+          word-wrap: break-word;
         }
         
         .ckeditor-container .ck-editor__editable table th {
           background-color: #f2f2f2;
           font-weight: bold;
+        }
+        
+        .ckeditor-container .ck-editor__editable table tr:nth-child(even) {
+          background-color: #f9f9f9;
+        }
+        
+        .ckeditor-container .ck-editor__editable table tr:hover {
+          background-color: #f5f5f5;
         }
         
         .ckeditor-container .ck-editor__editable h1,
