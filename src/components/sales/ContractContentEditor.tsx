@@ -22,7 +22,7 @@ import { ArrowLeft, Save, FileText, PenTool } from "lucide-react";
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import '../../styles/quill-tables.css';
-import { quillModulesWithTable, quillFormatsWithTable } from '../../lib/quill-config';
+import { quillModules, quillFormats, insertTable } from '../../lib/quill-config';
 import { contractTemplateService } from "../../lib/supabase";
 import SignatureCanvas from "@/components/ui/signature-canvas";
 import { mergePlaceholders, MergeData } from "@/lib/merge-fields";
@@ -573,8 +573,8 @@ const ContractContentEditor: React.FC<ContractContentEditorProps> = ({
               value={getDefaultContent()}
               theme="snow"
               style={{ height: 'calc(100vh - 320px)', marginBottom: '50px' }}
-              modules={quillModulesWithTable}
-              formats={quillFormatsWithTable}
+              modules={quillModules}
+              formats={quillFormats}
             />
           </div>
           
