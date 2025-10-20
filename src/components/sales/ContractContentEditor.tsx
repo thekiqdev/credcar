@@ -19,14 +19,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { ArrowLeft, Save, FileText, PenTool } from "lucide-react";
-import ReactQuill, { Quill } from 'react-quill';
+import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
-import QuillBetterTable from 'quill-better-table';
-import 'quill-better-table/dist/quill-better-table.css';
-
-// Registrar módulo de tabelas
-Quill.register('modules/better-table', QuillBetterTable);
-
 import { contractTemplateService } from "../../lib/supabase";
 import SignatureCanvas from "@/components/ui/signature-canvas";
 import { mergePlaceholders, MergeData } from "@/lib/merge-fields";
@@ -578,19 +572,6 @@ const ContractContentEditor: React.FC<ContractContentEditorProps> = ({
               theme="snow"
               style={{ height: 'calc(100vh - 320px)', marginBottom: '50px' }}
               modules={{
-                'better-table': {
-                  operationMenu: {
-                    items: {
-                      unmergeCells: {
-                        text: 'Desfazer mesclagem'
-                      }
-                    },
-                    color: {
-                      colors: ['#fff', '#f0f0f0', '#e0e0e0', '#d0d0d0'],
-                      text: 'Cor de fundo'
-                    }
-                  }
-                },
                 toolbar: {
                   container: [
                     [{ 'size': ['small', false, 'large', 'huge'] }],
@@ -606,9 +587,6 @@ const ContractContentEditor: React.FC<ContractContentEditorProps> = ({
                 },
                 clipboard: {
                   matchVisual: false,
-                },
-                keyboard: {
-                  bindings: QuillBetterTable.keyboardBindings
                 }
               }}
               formats={[
@@ -618,8 +596,7 @@ const ContractContentEditor: React.FC<ContractContentEditorProps> = ({
                 'list', 'bullet',
                 'align',
                 'blockquote', 'code-block',
-                'link', 'image',
-                'table', 'table-cell-line'
+                'link', 'image'
               ]}
             />
           </div>
