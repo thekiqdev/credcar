@@ -57,6 +57,7 @@
     "multer": "^2.0.2",
     "node-fetch": "^3.3.2",
     "quill": "^2.0.3",
+    "quill-better-table": "^1.2.10",
     "react": "^18.2.0",
     "react-day-picker": "^8.10.1",
     "react-dom": "^18.2.0",
