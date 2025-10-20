@@ -2931,7 +2931,7 @@ const ContractDetails: React.FC<{
                         Inserir Tabela 3x3
                       </Button>
                       <p className="text-xs text-blue-600 mt-2">
-                        Clique para inserir uma tabela. Use o menu de contexto (clique direito) para editar.
+                        Clique para inserir uma tabela HTML. Para editar: clique dentro da célula e digite normalmente. Para adicionar/remover linhas ou colunas, edite o HTML diretamente no código fonte.
                       </p>
                     </div>
 

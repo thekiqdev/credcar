@@ -1,6 +1,40 @@
 import Quill from 'quill';
 
-// Modules configuration - simplified without better-table for now
+// Extend Quill to allow table elements in clipboard
+const Inline = Quill.import('blots/inline');
+const Block = Quill.import('blots/block');
+const BlockEmbed = Quill.import('blots/block/embed');
+
+// Allow table, tr, td, th tags
+class TableBlot extends BlockEmbed {
+  static blotName = 'table';
+  static tagName = 'TABLE';
+}
+
+class TableRowBlot extends Block {
+  static blotName = 'table-row';
+  static tagName = 'TR';
+}
+
+class TableCellBlot extends Block {
+  static blotName = 'table-cell';
+  static tagName = 'TD';
+}
+
+class TableHeaderBlot extends Block {
+  static blotName = 'table-header';
+  static tagName = 'TH';
+}
+
+// Register table blots
+Quill.register({
+  'formats/table': TableBlot,
+  'formats/table-row': TableRowBlot,
+  'formats/table-cell': TableCellBlot,
+  'formats/table-header': TableHeaderBlot,
+}, true);
+
+// Modules configuration - simplified without better-table
 export const quillModulesWithTable = {
   toolbar: {
     container: [
@@ -17,6 +51,21 @@ export const quillModulesWithTable = {
   },
   clipboard: {
     matchVisual: false,
+    matchers: [
+      // Allow table elements to be pasted
+      ['TABLE', (node: any, delta: any) => {
+        return delta;
+      }],
+      ['TR', (node: any, delta: any) => {
+        return delta;
+      }],
+      ['TD', (node: any, delta: any) => {
+        return delta;
+      }],
+      ['TH', (node: any, delta: any) => {
+        return delta;
+      }]
+    ]
   }
 };
 
@@ -28,18 +77,19 @@ export const quillFormatsWithTable = [
   'list', 'bullet',
   'align',
   'blockquote', 'code-block',
-  'link', 'image'
+  'link', 'image',
+  'table', 'table-row', 'table-cell', 'table-header'
 ];
 
 // Helper function to insert a simple HTML table
 export const insertTable = (quill: any, rows: number = 3, columns: number = 3) => {
-  // Generate simple HTML table
-  let tableHTML = '<table border="1" style="border-collapse: collapse; width: 100%; margin: 10px 0;">\n';
+  // Generate simple HTML table with better styling
+  let tableHTML = '<table border="1" style="border-collapse: collapse; width: 100%; margin: 10px 0; border: 1px solid #ddd;">\n';
   
   for (let i = 0; i < rows; i++) {
     tableHTML += '  <tr>\n';
     for (let j = 0; j < columns; j++) {
-      tableHTML += '    <td style="border: 1px solid #ddd; padding: 8px; min-width: 50px; min-height: 30px;">&nbsp;</td>\n';
+      tableHTML += `    <td style="border: 1px solid #ddd; padding: 8px; min-width: 80px; min-height: 30px;">${i === 0 && j === 0 ? 'Edite aqui' : '&nbsp;'}</td>\n`;
     }
     tableHTML += '  </tr>\n';
   }
@@ -50,7 +100,7 @@ export const insertTable = (quill: any, rows: number = 3, columns: number = 3) =
   const range = quill.getSelection();
   if (range) {
     quill.clipboard.dangerouslyPasteHTML(range.index, tableHTML);
-    quill.setSelection(range.index + tableHTML.length);
+    quill.setSelection(range.index + 1);
   } else {
     const length = quill.getLength();
     quill.clipboard.dangerouslyPasteHTML(length, tableHTML);
