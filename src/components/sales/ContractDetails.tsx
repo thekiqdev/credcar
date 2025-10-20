@@ -52,6 +52,9 @@ import {
   Edit,
   PenTool,
   ExternalLink,
+  Save,
+  Loader2,
+  X,
 } from "lucide-react";
 import CKEditorComponent from "@/components/ui/ckeditor";
 import {
@@ -2893,13 +2896,62 @@ const ContractDetails: React.FC<{
                       </p>
                     </div>
 
+                    {/* Botão de Salvar no Topo */}
+                    <div className="flex justify-between items-center bg-gray-50 border border-gray-200 rounded-lg p-4">
+                      <div className="flex items-center gap-2">
+                        <Save className="w-4 h-4 text-green-600" />
+                        <span className="text-sm font-medium text-gray-700">
+                          Edição de Conteúdo do Contrato
+                        </span>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={handleSaveContent}
+                          disabled={isProcessing}
+                          className="bg-green-600 hover:bg-green-700 text-white"
+                          size="sm"
+                        >
+                          {isProcessing ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Salvando...
+                            </>
+                          ) : (
+                            <>
+                              <Save className="mr-2 h-4 w-4" />
+                              Salvar Conteúdo
+                            </>
+                          )}
+                        </Button>
+                        <Button
+                          onClick={() => {
+                            // Preserve content when canceling
+                            const currentContent = editorRef.current
+                              ? editorRef.current.getContent()
+                              : editedContent;
+                            console.log(
+                              "Canceling edit, preserving content length:",
+                              currentContent.length,
+                            );
+                            setEditedContent(currentContent);
+                            setIsEditingContent(false);
+                          }}
+                          variant="outline"
+                          size="sm"
+                        >
+                          <X className="mr-2 h-4 w-4" />
+                          Cancelar
+                        </Button>
+                      </div>
+                    </div>
+
                     {/* Editor Container with Merge Fields Panel */}
                     <div className="flex gap-4">
                       <div className={showMergeFields ? "flex-1" : "w-full"}>
                     <CKEditorComponent
                       content={editedContent}
                       onChange={setEditedContent}
-                      height="calc(100vh - 400px)"
+                      height={500}
                       placeholder="Digite o conteúdo do contrato..."
                       showMergeFields={showMergeFields}
                       onInsertSignature={(signatoryName) => {
