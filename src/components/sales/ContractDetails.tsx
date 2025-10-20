@@ -147,11 +147,21 @@ const ContractDetails: React.FC<{
 
   // Check if edit mode should be enabled after contract is loaded
   useEffect(() => {
+    console.log("🔍 ContractDetails useEffect - Edit mode check:", {
+      contract: !!contract,
+      canEditOrDelete,
+      contractId,
+      contractStatus: contract?.status
+    });
+    
     if (contract && canEditOrDelete) {
       // Check if edit mode is requested via URL parameter
       const urlParams = new URLSearchParams(window.location.search);
       const editParam = urlParams.get("edit");
+      console.log("🔍 URL edit parameter:", editParam);
+      
       if (editParam === "true") {
+        console.log("✅ Activating edit mode from URL parameter");
         setIsEditMode(true);
         handleEditContent();
       }
@@ -866,10 +876,13 @@ const ContractDetails: React.FC<{
   };
 
   const handleEditContent = () => {
+    console.log("🔍 handleEditContent called");
     const currentContent = contract?.contract_content || "";
+    console.log("🔍 Current content length:", currentContent.length);
     setEditedContent(currentContent);
     setIsEditingContent(true);
     setIsEditMode(true);
+    console.log("✅ Edit mode activated - isEditingContent:", true);
   };
 
   // Função para inserir campos de mesclagem
@@ -2900,10 +2913,12 @@ const ContractDetails: React.FC<{
                       apiKey="46lebzjws4vt4ywtma8d15683tj61n80shufdxg1spuuwpbm"
                       onInit={(evt, editor) => {
                         editorRef.current = editor;
-                        console.log("TinyMCE editor initialized");
+                        console.log("✅ TinyMCE editor initialized successfully");
+                        console.log("🔍 Editor element:", editor.getElement());
                         // Set content after initialization to prevent direction issues
                         setTimeout(() => {
                           if (editedContent && editor) {
+                            console.log("🔍 Setting editor content:", editedContent.substring(0, 100) + "...");
                             editor.setContent(editedContent);
                           }
                         }, 200);
