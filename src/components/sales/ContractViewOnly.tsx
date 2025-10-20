@@ -558,18 +558,32 @@ const ContractViewOnly: React.FC = () => {
       {/* CSS para garantir consistência com TinyMCE e responsividade */}
       <style>{`
         .contract-content table {
-          border-collapse: collapse;
-          width: 100%;
+          border-collapse: collapse !important;
+          width: 100% !important;
+          min-width: 100% !important;
+          max-width: 100% !important;
+          table-layout: fixed !important;
           font-size: clamp(10px, 2vw, 14px);
+          margin: 1em 0 !important;
         }
         .contract-content table td, 
         .contract-content table th {
-          border: 1px solid #ddd;
-          padding: clamp(4px, 1vw, 8px);
-          word-wrap: break-word;
+          border: 1px solid #ddd !important;
+          padding: clamp(6px, 1.5vw, 12px) !important;
+          word-wrap: break-word !important;
+          min-width: 100px !important;
+          width: auto !important;
+          box-sizing: border-box !important;
         }
         .contract-content table th {
-          background-color: #f2f2f2;
+          background-color: #f2f2f2 !important;
+          font-weight: bold !important;
+        }
+        .contract-content table tr:nth-child(even) {
+          background-color: #f9f9f9 !important;
+        }
+        .contract-content table tr:hover {
+          background-color: #f5f5f5 !important;
         }
         .contract-content p {
           margin: 0 0 1em 0;
@@ -600,11 +614,14 @@ const ContractViewOnly: React.FC = () => {
             line-height: 1.5 !important;
           }
           .contract-content table {
-            font-size: 12px;
+            font-size: 12px !important;
+            width: 100% !important;
+            table-layout: fixed !important;
           }
           .contract-content table td, 
           .contract-content table th {
-            padding: 6px 4px;
+            padding: 6px 4px !important;
+            border: 1px solid #ddd !important;
           }
         }
         @media print {
@@ -613,11 +630,14 @@ const ContractViewOnly: React.FC = () => {
             line-height: 1.4 !important;
           }
           .contract-content table {
-            font-size: 10px;
+            font-size: 10px !important;
+            width: 100% !important;
+            table-layout: fixed !important;
           }
           .contract-content table td, 
           .contract-content table th {
-            padding: 4px 2px;
+            padding: 4px 2px !important;
+            border: 1px solid #ddd !important;
           }
           .contract-content h1, 
           .contract-content h2, 
