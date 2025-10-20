@@ -82,7 +82,7 @@ const ContractContentEditor: React.FC<ContractContentEditorProps> = ({
   onBack,
 }) => {
   const editorRef = useRef<any>(null);
-  const [content, setContent] = useState<string>(getDefaultContent());
+  const [content, setContent] = useState<string>("");
   const [templates, setTemplates] = useState<any[]>([]);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>("");
   const [isLoadingTemplates, setIsLoadingTemplates] = useState(true);
@@ -283,6 +283,13 @@ const ContractContentEditor: React.FC<ContractContentEditorProps> = ({
     setCurrentSignatureId(null);
     setIsSignatureModalOpen(false);
   };
+
+  // Initialize default content
+  useEffect(() => {
+    if (!content) {
+      setContent(getDefaultContent());
+    }
+  }, []);
 
   // Setup global function for signature modal
   useEffect(() => {
