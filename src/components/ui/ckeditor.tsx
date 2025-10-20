@@ -32,7 +32,7 @@ const CKEditorComponent: React.FC<CKEditorProps> = ({
     
     // Configurar tabelas para largura completa por padrão
     editor.model.schema.extend('table', {
-      allowAttributes: ['width', 'style']
+      allowAttributes: ['width', 'style', 'class']
     });
     
     // Interceptar criação de tabelas para aplicar largura completa
@@ -41,13 +41,60 @@ const CKEditorComponent: React.FC<CKEditorProps> = ({
       const tables = Array.from(root.getChildren()).filter(child => child.is('table'));
       
       tables.forEach(table => {
-        if (!table.hasAttribute('width')) {
-          editor.model.change(writer => {
-            writer.setAttribute('width', '100%', table);
-            writer.setAttribute('style', 'width: 100%;', table);
+        editor.model.change(writer => {
+          // Sempre aplicar largura completa
+          writer.setAttribute('width', '100%', table);
+          writer.setAttribute('style', 'width: 100% !important; table-layout: fixed;', table);
+          writer.setAttribute('class', 'full-width-table', table);
+          
+          // Aplicar largura para todas as células também
+          const cells = Array.from(table.getChildren()).flatMap(row => 
+            Array.from(row.getChildren()).filter(cell => cell.is('tableCell'))
+          );
+          
+          cells.forEach(cell => {
+            writer.setAttribute('style', 'width: auto; min-width: 100px;', cell);
           });
-        }
+        });
       });
+    });
+    
+    // Interceptar inserção de tabelas para aplicar largura completa imediatamente
+    editor.model.schema.addAttributeCheck((context: any, attributeName: string) => {
+      if (context.endsWith('table') && attributeName === 'width') {
+        return true;
+      }
+    });
+    
+    // Converter atributos de largura para CSS
+    editor.conversion.for('downcast').attributeToAttribute({
+      model: 'width',
+      view: {
+        name: 'table',
+        styles: {
+          width: '100% !important',
+          'table-layout': 'fixed'
+        }
+      }
+    });
+    
+    // Interceptar inserção de tabelas para aplicar largura completa imediatamente
+    editor.model.document.on('change', (evt: any) => {
+      if (evt.source.is('operations')) {
+        const changes = evt.source.getChanges();
+        changes.forEach((change: any) => {
+          if (change.type === 'insert' && change.position && change.position.parent) {
+            const element = change.position.parent;
+            if (element.is('table')) {
+              editor.model.change(writer => {
+                writer.setAttribute('width', '100%', element);
+                writer.setAttribute('style', 'width: 100% !important; table-layout: fixed;', element);
+                writer.setAttribute('class', 'full-width-table', element);
+              });
+            }
+          }
+        });
+      }
     });
     
     // Adicionar botões customizados para assinatura e campos de mesclagem
@@ -273,21 +320,27 @@ const CKEditorComponent: React.FC<CKEditorProps> = ({
           margin: 0 0 1em 0;
         }
         
-        .ckeditor-container .ck-editor__editable table {
-          border-collapse: collapse;
+        .ckeditor-container .ck-editor__editable table,
+        .ckeditor-container .ck-editor__editable .full-width-table {
+          border-collapse: collapse !important;
           width: 100% !important;
-          margin: 1em 0;
-          min-width: 100%;
-          table-layout: auto;
+          margin: 1em 0 !important;
+          min-width: 100% !important;
+          table-layout: fixed !important;
+          max-width: 100% !important;
         }
         
         .ckeditor-container .ck-editor__editable table td,
-        .ckeditor-container .ck-editor__editable table th {
-          border: 1px solid #ddd;
-          padding: 8px 12px;
-          text-align: left;
-          min-width: 100px;
-          word-wrap: break-word;
+        .ckeditor-container .ck-editor__editable table th,
+        .ckeditor-container .ck-editor__editable .full-width-table td,
+        .ckeditor-container .ck-editor__editable .full-width-table th {
+          border: 1px solid #ddd !important;
+          padding: 8px 12px !important;
+          text-align: left !important;
+          min-width: 100px !important;
+          width: auto !important;
+          word-wrap: break-word !important;
+          box-sizing: border-box !important;
         }
         
         .ckeditor-container .ck-editor__editable table th {
@@ -301,6 +354,25 @@ const CKEditorComponent: React.FC<CKEditorProps> = ({
         
         .ckeditor-container .ck-editor__editable table tr:hover {
           background-color: #f5f5f5;
+        }
+        
+        /* Forçar largura completa para todas as tabelas */
+        .ckeditor-container .ck-editor__editable table {
+          width: 100% !important;
+          min-width: 100% !important;
+          max-width: 100% !important;
+          table-layout: fixed !important;
+        }
+        
+        .ckeditor-container .ck-editor__editable table td,
+        .ckeditor-container .ck-editor__editable table th {
+          width: auto !important;
+          min-width: 100px !important;
+        }
+        
+        /* Estilo específico para tabelas vazias ou com pouco conteúdo */
+        .ckeditor-container .ck-editor__editable table:not([style*="width"]) {
+          width: 100% !important;
         }
         
         .ckeditor-container .ck-editor__editable h1,
