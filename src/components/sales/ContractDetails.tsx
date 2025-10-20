@@ -56,7 +56,7 @@ import {
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import '../../styles/quill-tables.css';
-import { quillModulesWithTable, quillFormatsWithTable, insertTable } from '@/lib/quill-config';
+import { insertTable } from '../../lib/quill-table-helper';
 import {
   supabase,
   authService,
@@ -2914,8 +2914,8 @@ const ContractDetails: React.FC<{
                       </p>
                     </div>
 
-                    {/* Botão Inserir Tabela */}
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                    {/* Table Insert Section */}
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                       <h4 className="text-sm font-medium text-blue-800 mb-3">
                         Inserir Tabela
                       </h4>
@@ -2932,7 +2932,7 @@ const ContractDetails: React.FC<{
                         Inserir Tabela 3x3
                       </Button>
                       <p className="text-xs text-blue-600 mt-2">
-                        Clique para inserir uma tabela HTML. Para editar: clique dentro da célula e digite normalmente. Para adicionar/remover linhas ou colunas, edite o HTML diretamente no código fonte.
+                        Clique para inserir uma tabela HTML. Para editar: clique dentro da célula e digite normalmente.
                       </p>
                     </div>
 
@@ -2948,8 +2948,33 @@ const ContractDetails: React.FC<{
                           }}
                           theme="snow"
                           style={{ height: '500px', marginBottom: '50px' }}
-                          modules={quillModulesWithTable}
-                          formats={quillFormatsWithTable}
+                          modules={{
+                            toolbar: {
+                              container: [
+                                [{ 'size': ['small', false, 'large', 'huge'] }],
+                                [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
+                                ['bold', 'italic', 'underline', 'strike'],
+                                [{ 'color': [] }, { 'background': [] }],
+                                [{ 'align': [] }],
+                                [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                                ['blockquote', 'code-block'],
+                                ['link', 'image'],
+                                ['clean']
+                              ]
+                            },
+                            clipboard: {
+                              matchVisual: false,
+                            }
+                          }}
+                          formats={[
+                            'header', 'size',
+                            'bold', 'italic', 'underline', 'strike',
+                            'color', 'background',
+                            'list', 'bullet',
+                            'align',
+                            'blockquote', 'code-block',
+                            'link', 'image'
+                          ]}
                         />
                       </div>
                       

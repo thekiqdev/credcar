@@ -15,7 +15,7 @@ import { ArrowLeft, Save, Upload, FileText, Users, Lock } from "lucide-react";
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import '../../styles/quill-tables.css';
-import { quillModulesWithTable, quillFormatsWithTable, insertTable } from '../../lib/quill-config';
+import { insertTable } from '../../lib/quill-table-helper';
 import mammoth from "mammoth";
 import MergeFieldsHelper from "./MergeFieldsHelper";
 
@@ -307,7 +307,7 @@ const ContractTemplateEditor: React.FC<ContractTemplateEditorProps> = ({
 
       {/* Editor */}
       <div className="h-[calc(100vh-200px)] p-6">
-        {/* Botão Inserir Tabela */}
+        {/* Table Insert Section */}
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
           <h4 className="text-sm font-medium text-blue-800 mb-3">
             Inserir Tabela
@@ -325,7 +325,7 @@ const ContractTemplateEditor: React.FC<ContractTemplateEditorProps> = ({
             Inserir Tabela 3x3
           </Button>
           <p className="text-xs text-blue-600 mt-2">
-            Clique para inserir uma tabela HTML. Para editar: clique dentro da célula e digite normalmente. Para adicionar/remover linhas ou colunas, edite o HTML diretamente no código fonte.
+            Clique para inserir uma tabela HTML. Para editar: clique dentro da célula e digite normalmente.
           </p>
         </div>
 
@@ -335,9 +335,34 @@ const ContractTemplateEditor: React.FC<ContractTemplateEditorProps> = ({
               ref={editorRef}
               value={template.content}
               theme="snow"
-              style={{ height: 'calc(100vh - 440px)', marginBottom: '50px' }}
-              modules={quillModulesWithTable}
-              formats={quillFormatsWithTable}
+              style={{ height: 'calc(100vh - 360px)', marginBottom: '50px' }}
+              modules={{
+                toolbar: {
+                  container: [
+                    [{ 'size': ['small', false, 'large', 'huge'] }],
+                    [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
+                    ['bold', 'italic', 'underline', 'strike'],
+                    [{ 'color': [] }, { 'background': [] }],
+                    [{ 'align': [] }],
+                    [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                    ['blockquote', 'code-block'],
+                    ['link', 'image'],
+                    ['clean']
+                  ]
+                },
+                clipboard: {
+                  matchVisual: false,
+                }
+              }}
+              formats={[
+                'header', 'size',
+                'bold', 'italic', 'underline', 'strike',
+                'color', 'background',
+                'list', 'bullet',
+                'align',
+                'blockquote', 'code-block',
+                'link', 'image'
+              ]}
             />
           </div>
           

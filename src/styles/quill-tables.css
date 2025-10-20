@@ -1,92 +1,53 @@
-/* Estilos para garantir renderização de tabelas no Quill */
+/* Estilos para tabelas no React Quill */
 
-/* Container para HTML bruto (tabelas) */
-.ql-editor .ql-raw-html {
-  display: block;
-  margin: 10px 0;
-}
-
-/* Garantir que tabelas sejam renderizadas */
+/* Tabelas no editor */
 .ql-editor table {
   border-collapse: collapse;
   width: 100%;
-  margin: 10px 0;
-  border: 1px solid #333;
-  display: table !important;
-}
-
-.ql-editor table tr {
-  display: table-row !important;
+  margin: 1em 0;
 }
 
 .ql-editor table td,
 .ql-editor table th {
-  border: 1px solid #333;
-  padding: 8px;
-  min-width: 80px;
-  min-height: 30px;
-  display: table-cell !important;
-  vertical-align: top;
+  border: 1px solid #ddd;
+  padding: 8px 12px;
+  min-width: 50px;
 }
 
 .ql-editor table th {
-  background-color: #f5f5f5;
+  background-color: #f2f2f2;
   font-weight: bold;
+  text-align: left;
 }
 
-/* Permitir edição dentro das células */
-.ql-editor table td,
-.ql-editor table th {
-  cursor: text;
+.ql-editor table tr:nth-child(even) {
+  background-color: #f9f9f9;
 }
 
-/* Estilos para visualização (não no editor) */
-.ql-container table {
+.ql-editor table tr:hover {
+  background-color: #f5f5f5;
+}
+
+/* Tabelas no preview/visualização */
+.contract-content table {
   border-collapse: collapse;
   width: 100%;
-  margin: 10px 0;
-  border: 1px solid #333;
+  margin: 1em 0;
 }
 
-.ql-container table tr {
-  border: 1px solid #333;
+.contract-content table td,
+.contract-content table th {
+  border: 1px solid #ddd;
+  padding: 8px 12px;
 }
 
-.ql-container table td,
-.ql-container table th {
-  border: 1px solid #333;
-  padding: 8px;
-  min-width: 80px;
-  min-height: 30px;
-}
-
-.ql-container table th {
-  background-color: #f5f5f5;
+.contract-content table th {
+  background-color: #f2f2f2;
   font-weight: bold;
+  text-align: left;
 }
 
-/* Estilos para impressão */
-@media print {
-  table {
-    border-collapse: collapse;
-    width: 100%;
-    margin: 10px 0;
-    border: 1px solid #000;
-  }
-
-  table tr {
-    border: 1px solid #000;
-  }
-
-  table td,
-  table th {
-    border: 1px solid #000;
-    padding: 8px;
-  }
-
-  table th {
-    background-color: #f5f5f5;
-    font-weight: bold;
-  }
+.contract-content table tr:nth-child(even) {
+  background-color: #f9f9f9;
 }
 
