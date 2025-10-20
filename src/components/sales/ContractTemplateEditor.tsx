@@ -12,10 +12,7 @@ import {
 } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ArrowLeft, Save, Upload, FileText, Users, Lock } from "lucide-react";
-import ReactQuill from 'react-quill';
-import 'react-quill/dist/quill.snow.css';
-import '../../styles/quill-tables.css';
-import { quillModules, quillFormats, insertTable } from '../../lib/quill-config';
+import CKEditorComponent from "@/components/ui/ckeditor";
 import mammoth from "mammoth";
 import MergeFieldsHelper from "./MergeFieldsHelper";
 
@@ -76,8 +73,7 @@ const ContractTemplateEditor: React.FC<ContractTemplateEditorProps> = ({
     }
 
     if (editorRef.current) {
-      const quill = editorRef.current.getEditor();
-      const editorContent = quill.root.innerHTML;
+      const editorContent = editorRef.current.getContent();
       if (!editorContent.trim()) {
         setAlert({
           type: "error",
@@ -91,14 +87,7 @@ const ContractTemplateEditor: React.FC<ContractTemplateEditorProps> = ({
 
   const handleInsertField = (placeholder: string) => {
     if (editorRef.current) {
-      const quill = editorRef.current.getEditor();
-      const range = quill.getSelection();
-      if (range) {
-        quill.insertText(range.index, placeholder);
-        quill.setSelection(range.index + placeholder.length);
-      } else {
-        quill.insertText(quill.getLength(), placeholder);
-      }
+      editorRef.current.insertContent(placeholder);
     }
   };
 
@@ -124,8 +113,7 @@ const ContractTemplateEditor: React.FC<ContractTemplateEditorProps> = ({
       if (result.value) {
         // Insert the converted HTML into the editor
         if (editorRef.current) {
-          const quill = editorRef.current.getEditor();
-          quill.clipboard.dangerouslyPasteHTML(result.value);
+          editorRef.current.setContent(result.value);
         }
         setAlert({
           type: "success",
@@ -307,37 +295,32 @@ const ContractTemplateEditor: React.FC<ContractTemplateEditorProps> = ({
 
       {/* Editor */}
       <div className="h-[calc(100vh-200px)] p-6">
-        {/* Table Insert Section */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-          <h4 className="text-sm font-medium text-blue-800 mb-3">
-            Inserir Tabela
-          </h4>
-          <Button
-            variant="outline"
-            onClick={() => {
-              if (editorRef.current) {
-                insertTable(editorRef.current.getEditor(), 3, 3);
-              }
-            }}
-            className="bg-blue-600 text-white hover:bg-blue-700"
-          >
-            <FileText className="mr-2 h-4 w-4" />
-            Inserir Tabela 3x3
-          </Button>
-          <p className="text-xs text-blue-600 mt-2">
-            Clique para inserir uma tabela HTML. Para editar: clique dentro da célula e digite normalmente.
-          </p>
-        </div>
-
         <div className="flex gap-4 h-full">
           <div className={showMergeFields ? "flex-1" : "w-full"}>
-            <ReactQuill
-              ref={editorRef}
-              value={template.content}
-              theme="snow"
-              style={{ height: 'calc(100vh - 360px)', marginBottom: '50px' }}
-              modules={quillModules}
-              formats={quillFormats}
+            <CKEditorComponent
+              content={template.content}
+              onChange={(content) => {
+                // Atualizar o conteúdo do template
+                setTemplate(prev => ({ ...prev, content }));
+              }}
+              height="calc(100vh - 300px)"
+              placeholder="Digite o conteúdo do modelo de contrato..."
+              showMergeFields={showMergeFields}
+              onInsertSignature={(signatoryName) => {
+                // Inserir campo de assinatura
+                const signatureBlock = `
+                  <div class="signature-field" style="border: 2px dashed #ccc; padding: 20px; margin: 10px 0; text-align: center; background-color: #f9f9f9;">
+                    <p><strong>Assinatura: ${signatoryName}</strong></p>
+                    <p>Data: _______________</p>
+                  </div>
+                `;
+                setTemplate(prev => ({ ...prev, content: prev.content + signatureBlock }));
+              }}
+              onInsertMergeField={(fieldName) => {
+                // Inserir campo de mesclagem
+                const mergeField = `<span class="merge-field" style="background-color: #e3f2fd; padding: 2px 6px; border-radius: 3px; border: 1px solid #2196f3; color: #1976d2; font-weight: bold;">[${fieldName.toUpperCase()}]</span>`;
+                setTemplate(prev => ({ ...prev, content: prev.content + mergeField }));
+              }}
             />
           </div>
           

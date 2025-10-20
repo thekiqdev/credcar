@@ -53,10 +53,7 @@ import {
   PenTool,
   ExternalLink,
 } from "lucide-react";
-import ReactQuill from 'react-quill';
-import 'react-quill/dist/quill.snow.css';
-import '../../styles/quill-tables.css';
-import { quillModules, quillFormats, insertTable } from '../../lib/quill-config';
+import CKEditorComponent from "@/components/ui/ckeditor";
 import {
   supabase,
   authService,
@@ -255,16 +252,7 @@ const ContractDetails: React.FC<{
     const signatureShortcode = `[SIGNATURE id="${signatureId}" name="${signerName}" cpf="${cleanCPF}"]`;
 
     // Insert the shortcode into the editor
-    if (editorRef.current) {
-      const quill = editorRef.current.getEditor();
-      const range = quill.getSelection();
-      if (range) {
-        quill.insertText(range.index, signatureShortcode);
-        quill.setSelection(range.index + signatureShortcode.length);
-      } else {
-        quill.insertText(quill.getLength(), signatureShortcode);
-      }
-    }
+    editorRef.current.insertContent(signatureShortcode);
 
     // Reset form and close modal
     setSignatureBlockData({ signatoryName: "" });
@@ -784,7 +772,7 @@ const ContractDetails: React.FC<{
       console.log('💾 Starting to save contract content...');
 
       const content = editorRef.current
-        ? editorRef.current.getEditor().root.innerHTML
+        ? editorRef.current.getContent()
         : editedContent;
 
       console.log("Saving contract content:", {
@@ -833,7 +821,7 @@ const ContractDetails: React.FC<{
 
       // Preserve the editor content on error
       const currentContent = editorRef.current
-        ? editorRef.current.getEditor().root.innerHTML
+        ? editorRef.current.getContent()
         : editedContent;
       setEditedContent(currentContent);
 
@@ -887,14 +875,7 @@ const ContractDetails: React.FC<{
   // Função para inserir campos de mesclagem
   const handleInsertField = (placeholder: string) => {
     if (editorRef.current) {
-      const quill = editorRef.current.getEditor();
-      const range = quill.getSelection();
-      if (range) {
-        quill.insertText(range.index, placeholder);
-        quill.setSelection(range.index + placeholder.length);
-      } else {
-        quill.insertText(quill.getLength(), placeholder);
-      }
+      editorRef.current.insertContent(placeholder);
     }
   };
 
@@ -902,8 +883,7 @@ const ContractDetails: React.FC<{
   const handleApplyMerge = () => {
     if (!contract || !editorRef.current) return;
     
-    const quill = editorRef.current.getEditor();
-    const currentContent = quill.root.innerHTML;
+    const currentContent = editorRef.current.getContent();
     
     // Preparar dados do contrato existente para mesclagem
     const mergeData: MergeData = {
@@ -956,7 +936,7 @@ const ContractDetails: React.FC<{
     
     // Aplicar mesclagem
     const mergedContent = mergePlaceholders(currentContent, mergeData);
-    quill.clipboard.dangerouslyPasteHTML(mergedContent);
+    editorRef.current.setContent(mergedContent);
     setEditedContent(mergedContent);
   };
 
@@ -976,8 +956,7 @@ const ContractDetails: React.FC<{
       }
 
       // Get current content from editor
-      const quill = editorRef.current.getEditor();
-      const currentContent = quill.root.innerHTML;
+      const currentContent = editorRef.current.getContent();
 
       // Insert template content at cursor position or append if no cursor
       const templateContent = template.content;
@@ -987,7 +966,7 @@ const ContractDetails: React.FC<{
       const newContent = currentContent + separator + templateContent;
 
       // Set the new content in the editor
-      quill.clipboard.dangerouslyPasteHTML(newContent);
+      editorRef.current.setContent(newContent);
       setEditedContent(newContent);
 
       // Reset template selection
@@ -2846,28 +2825,6 @@ const ContractDetails: React.FC<{
                         )}
                     </div>
 
-                    {/* Table Insert Section */}
-                    <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                      <h4 className="text-sm font-medium text-green-800 mb-3">
-                        Inserir Tabela
-                      </h4>
-                      <Button
-                        onClick={() => {
-                          if (editorRef.current) {
-                            insertTable(editorRef.current.getEditor(), 3, 3);
-                          }
-                        }}
-                        variant="outline"
-                        className="bg-green-600 text-white hover:bg-green-700"
-                      >
-                        <FileText className="mr-2 h-4 w-4" />
-                        Inserir Tabela 3x3
-                      </Button>
-                      <p className="text-xs text-green-600 mt-2">
-                        Clique para inserir uma tabela HTML. Para editar: clique dentro da célula e digite normalmente.
-                      </p>
-                    </div>
-
                     {/* Signature Block Section */}
                     <div className="bg-red-50 border border-red-200 rounded-lg p-4">
                       <h4 className="text-sm font-medium text-red-800 mb-3">
@@ -2939,18 +2896,28 @@ const ContractDetails: React.FC<{
                     {/* Editor Container with Merge Fields Panel */}
                     <div className="flex gap-4">
                       <div className={showMergeFields ? "flex-1" : "w-full"}>
-                        <ReactQuill
-                          ref={editorRef}
-                          value={editedContent}
-                          onChange={(content) => {
-                            setEditedContent(content);
-                            console.log("Editor content updated, length:", content.length);
-                          }}
-                          theme="snow"
-                          style={{ height: '500px', marginBottom: '50px' }}
-                          modules={quillModules}
-                          formats={quillFormats}
-                        />
+                    <CKEditorComponent
+                      content={editedContent}
+                      onChange={setEditedContent}
+                      height={500}
+                      placeholder="Digite o conteúdo do contrato..."
+                      showMergeFields={showMergeFields}
+                      onInsertSignature={(signatoryName) => {
+                        // Inserir campo de assinatura
+                        const signatureBlock = `
+                          <div class="signature-field" style="border: 2px dashed #ccc; padding: 20px; margin: 10px 0; text-align: center; background-color: #f9f9f9;">
+                            <p><strong>Assinatura: ${signatoryName}</strong></p>
+                            <p>Data: _______________</p>
+                          </div>
+                        `;
+                        setEditedContent(editedContent + signatureBlock);
+                      }}
+                      onInsertMergeField={(fieldName) => {
+                        // Inserir campo de mesclagem
+                        const mergeField = `<span class="merge-field" style="background-color: #e3f2fd; padding: 2px 6px; border-radius: 3px; border: 1px solid #2196f3; color: #1976d2; font-weight: bold;">[${fieldName.toUpperCase()}]</span>`;
+                        setEditedContent(editedContent + mergeField);
+                      }}
+                    />
                       </div>
                       
                       {/* Painel Lateral de Campos de Mesclagem */}
@@ -2973,7 +2940,7 @@ const ContractDetails: React.FC<{
                         onClick={() => {
                           // Preserve content when canceling
                           const currentContent = editorRef.current
-                            ? editorRef.current.getEditor().root.innerHTML
+                            ? editorRef.current.getContent()
                             : editedContent;
                           console.log(
                             "Canceling edit, preserving content length:",

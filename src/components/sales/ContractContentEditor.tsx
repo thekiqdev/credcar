@@ -19,10 +19,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { ArrowLeft, Save, FileText, PenTool } from "lucide-react";
-import ReactQuill from 'react-quill';
-import 'react-quill/dist/quill.snow.css';
-import '../../styles/quill-tables.css';
-import { quillModules, quillFormats, insertTable } from '../../lib/quill-config';
+import CKEditorComponent from "@/components/ui/ckeditor";
 import { contractTemplateService } from "../../lib/supabase";
 import SignatureCanvas from "@/components/ui/signature-canvas";
 import { mergePlaceholders, MergeData } from "@/lib/merge-fields";
@@ -553,18 +550,6 @@ const ContractContentEditor: React.FC<ContractContentEditorProps> = ({
               <FileText className="w-4 h-4" />
               <span>Campos de Mesclagem</span>
             </Button>
-            <Button
-              variant="outline"
-              onClick={() => {
-                if (editorRef.current) {
-                  insertTable(editorRef.current.getEditor(), 3, 3);
-                }
-              }}
-              className="flex items-center space-x-2 bg-green-600 text-white hover:bg-green-700"
-            >
-              <FileText className="w-4 h-4" />
-              <span>Inserir Tabela</span>
-            </Button>
           <Button
             onClick={handleSubmit}
             className="bg-red-600 hover:bg-red-700 text-white flex items-center space-x-2"
@@ -580,14 +565,28 @@ const ContractContentEditor: React.FC<ContractContentEditorProps> = ({
       <div className="h-[calc(100vh-140px)] p-6">
         <div className="flex gap-4 h-full">
           <div className={showMergeFields ? "flex-1" : "w-full"}>
-            <ReactQuill
-              ref={editorRef}
-              value={getDefaultContent()}
-              theme="snow"
-              style={{ height: 'calc(100vh - 320px)', marginBottom: '50px' }}
-              modules={quillModules}
-              formats={quillFormats}
-            />
+          <CKEditorComponent
+            content={content}
+            onChange={setContent}
+            height="calc(100vh - 260px)"
+            placeholder="Digite o conteúdo do contrato..."
+            showMergeFields={showMergeFields}
+            onInsertSignature={(signatoryName) => {
+              // Inserir campo de assinatura
+              const signatureBlock = `
+                <div class="signature-field" style="border: 2px dashed #ccc; padding: 20px; margin: 10px 0; text-align: center; background-color: #f9f9f9;">
+                  <p><strong>Assinatura: ${signatoryName}</strong></p>
+                  <p>Data: _______________</p>
+                </div>
+              `;
+              setContent(content + signatureBlock);
+            }}
+            onInsertMergeField={(fieldName) => {
+              // Inserir campo de mesclagem
+              const mergeField = `<span class="merge-field" style="background-color: #e3f2fd; padding: 2px 6px; border-radius: 3px; border: 1px solid #2196f3; color: #1976d2; font-weight: bold;">[${fieldName.toUpperCase()}]</span>`;
+              setContent(content + mergeField);
+            }}
+          />
           </div>
           
           {/* Painel Lateral de Campos de Mesclagem */}
