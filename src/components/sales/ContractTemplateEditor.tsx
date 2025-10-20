@@ -52,6 +52,7 @@ const ContractTemplateEditor: React.FC<ContractTemplateEditorProps> = ({
     description: template.description || "",
     visibility: template.visibility,
   });
+  const [content, setContent] = useState(template.content);
   const [alert, setAlert] = useState<{
     type: "success" | "error";
     message: string;
@@ -72,17 +73,15 @@ const ContractTemplateEditor: React.FC<ContractTemplateEditorProps> = ({
       return;
     }
 
-    if (editorRef.current) {
-      const editorContent = editorRef.current.getContent();
-      if (!editorContent.trim()) {
-        setAlert({
-          type: "error",
-          message: "Conteúdo do modelo é obrigatório",
-        });
-        return;
-      }
-      onSave(editorContent, metadata);
+    if (!content.trim()) {
+      setAlert({
+        type: "error",
+        message: "Conteúdo do modelo é obrigatório",
+      });
+      return;
     }
+    
+    onSave(content, metadata);
   };
 
   const handleInsertField = (placeholder: string) => {
@@ -298,11 +297,8 @@ const ContractTemplateEditor: React.FC<ContractTemplateEditorProps> = ({
         <div className="flex gap-4 h-full">
           <div className={showMergeFields ? "flex-1" : "w-full"}>
             <CKEditorComponent
-              content={template.content}
-              onChange={(content) => {
-                // Atualizar o conteúdo do template
-                setTemplate(prev => ({ ...prev, content }));
-              }}
+              content={content}
+              onChange={setContent}
               height="calc(100vh - 300px)"
               placeholder="Digite o conteúdo do modelo de contrato..."
               showMergeFields={showMergeFields}
@@ -314,12 +310,12 @@ const ContractTemplateEditor: React.FC<ContractTemplateEditorProps> = ({
                     <p>Data: _______________</p>
                   </div>
                 `;
-                setTemplate(prev => ({ ...prev, content: prev.content + signatureBlock }));
+                setContent(content + signatureBlock);
               }}
               onInsertMergeField={(fieldName) => {
                 // Inserir campo de mesclagem
                 const mergeField = `<span class="merge-field" style="background-color: #e3f2fd; padding: 2px 6px; border-radius: 3px; border: 1px solid #2196f3; color: #1976d2; font-weight: bold;">[${fieldName.toUpperCase()}]</span>`;
-                setTemplate(prev => ({ ...prev, content: prev.content + mergeField }));
+                setContent(content + mergeField);
               }}
             />
           </div>
