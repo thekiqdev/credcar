@@ -299,7 +299,7 @@ const ContractTemplateEditor: React.FC<ContractTemplateEditorProps> = ({
             <CKEditorComponent
               content={content}
               onChange={setContent}
-              height="calc(100vh - 400px)"
+              height="calc(100vh - 300px)"
               placeholder="Digite o conteúdo do modelo de contrato..."
               showMergeFields={showMergeFields}
               onInsertSignature={(signatoryName) => {
