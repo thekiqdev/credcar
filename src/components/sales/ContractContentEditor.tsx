@@ -22,7 +22,7 @@ import { ArrowLeft, Save, FileText, PenTool } from "lucide-react";
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import '../../styles/quill-tables.css';
-import TableHandler from '../../lib/quill-table-module';
+import { quillModulesWithTable, quillFormatsWithTable } from '../../lib/quill-config';
 import { contractTemplateService } from "../../lib/supabase";
 import SignatureCanvas from "@/components/ui/signature-canvas";
 import { mergePlaceholders, MergeData } from "@/lib/merge-fields";
@@ -573,35 +573,8 @@ const ContractContentEditor: React.FC<ContractContentEditorProps> = ({
               value={getDefaultContent()}
               theme="snow"
               style={{ height: 'calc(100vh - 320px)', marginBottom: '50px' }}
-              modules={{
-                toolbar: {
-                  container: [
-                    [{ 'size': ['small', false, 'large', 'huge'] }],
-                    [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
-                    ['bold', 'italic', 'underline', 'strike'],
-                    [{ 'color': [] }, { 'background': [] }],
-                    [{ 'align': [] }],
-                    [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-                    ['blockquote', 'code-block'],
-                    ['link', 'image'],
-                    ['table'],
-                    ['clean']
-                  ]
-                },
-                clipboard: {
-                  matchVisual: false,
-                },
-                tableHandler: true
-              }}
-              formats={[
-                'header', 'size',
-                'bold', 'italic', 'underline', 'strike',
-                'color', 'background',
-                'list', 'bullet',
-                'align',
-                'blockquote', 'code-block',
-                'link', 'image'
-              ]}
+              modules={quillModulesWithTable}
+              formats={quillFormatsWithTable}
             />
           </div>
           

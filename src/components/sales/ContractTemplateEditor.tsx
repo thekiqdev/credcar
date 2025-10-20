@@ -15,7 +15,7 @@ import { ArrowLeft, Save, Upload, FileText, Users, Lock } from "lucide-react";
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import '../../styles/quill-tables.css';
-import TableHandler from '../../lib/quill-table-module';
+import { quillModulesWithTable, quillFormatsWithTable } from '../../lib/quill-config';
 import mammoth from "mammoth";
 import MergeFieldsHelper from "./MergeFieldsHelper";
 
@@ -314,35 +314,8 @@ const ContractTemplateEditor: React.FC<ContractTemplateEditorProps> = ({
               value={template.content}
               theme="snow"
               style={{ height: 'calc(100vh - 360px)', marginBottom: '50px' }}
-              modules={{
-                toolbar: {
-                  container: [
-                    [{ 'size': ['small', false, 'large', 'huge'] }],
-                    [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
-                    ['bold', 'italic', 'underline', 'strike'],
-                    [{ 'color': [] }, { 'background': [] }],
-                    [{ 'align': [] }],
-                    [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-                    ['blockquote', 'code-block'],
-                    ['link', 'image'],
-                    ['table'],
-                    ['clean']
-                  ]
-                },
-                clipboard: {
-                  matchVisual: false,
-                },
-                tableHandler: true
-              }}
-              formats={[
-                'header', 'size',
-                'bold', 'italic', 'underline', 'strike',
-                'color', 'background',
-                'list', 'bullet',
-                'align',
-                'blockquote', 'code-block',
-                'link', 'image'
-              ]}
+              modules={quillModulesWithTable}
+              formats={quillFormatsWithTable}
             />
           </div>
           
