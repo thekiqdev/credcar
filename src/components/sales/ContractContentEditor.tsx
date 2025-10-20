@@ -553,6 +553,18 @@ const ContractContentEditor: React.FC<ContractContentEditorProps> = ({
               <FileText className="w-4 h-4" />
               <span>Campos de Mesclagem</span>
             </Button>
+            <Button
+              variant="outline"
+              onClick={() => {
+                if (editorRef.current) {
+                  insertTable(editorRef.current.getEditor(), 3, 3);
+                }
+              }}
+              className="flex items-center space-x-2 bg-green-600 text-white hover:bg-green-700"
+            >
+              <FileText className="w-4 h-4" />
+              <span>Inserir Tabela</span>
+            </Button>
           <Button
             onClick={handleSubmit}
             className="bg-red-600 hover:bg-red-700 text-white flex items-center space-x-2"

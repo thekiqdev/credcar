@@ -2846,6 +2846,28 @@ const ContractDetails: React.FC<{
                         )}
                     </div>
 
+                    {/* Table Insert Section */}
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                      <h4 className="text-sm font-medium text-green-800 mb-3">
+                        Inserir Tabela
+                      </h4>
+                      <Button
+                        onClick={() => {
+                          if (editorRef.current) {
+                            insertTable(editorRef.current.getEditor(), 3, 3);
+                          }
+                        }}
+                        variant="outline"
+                        className="bg-green-600 text-white hover:bg-green-700"
+                      >
+                        <FileText className="mr-2 h-4 w-4" />
+                        Inserir Tabela 3x3
+                      </Button>
+                      <p className="text-xs text-green-600 mt-2">
+                        Clique para inserir uma tabela HTML. Para editar: clique dentro da célula e digite normalmente.
+                      </p>
+                    </div>
+
                     {/* Signature Block Section */}
                     <div className="bg-red-50 border border-red-200 rounded-lg p-4">
                       <h4 className="text-sm font-medium text-red-800 mb-3">
@@ -2911,28 +2933,6 @@ const ContractDetails: React.FC<{
                       </div>
                       <p className="text-xs text-green-600 mt-2">
                         Use os campos de mesclagem para inserir dados do cliente e contrato automaticamente.
-                      </p>
-                    </div>
-
-                    {/* Table Insert Section */}
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                      <h4 className="text-sm font-medium text-blue-800 mb-3">
-                        Inserir Tabela
-                      </h4>
-                      <Button
-                        variant="outline"
-                        onClick={() => {
-                          if (editorRef.current) {
-                            insertTable(editorRef.current.getEditor(), 3, 3);
-                          }
-                        }}
-                        className="bg-blue-600 text-white hover:bg-blue-700"
-                      >
-                        <FileText className="mr-2 h-4 w-4" />
-                        Inserir Tabela 3x3
-                      </Button>
-                      <p className="text-xs text-blue-600 mt-2">
-                        Clique para inserir uma tabela HTML. Para editar: clique dentro da célula e digite normalmente.
                       </p>
                     </div>
 
