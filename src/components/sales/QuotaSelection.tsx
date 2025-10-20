@@ -152,19 +152,38 @@ const QuotaSelection: React.FC<QuotaSelectionProps> = ({
   };
 
   const handleQuotaClick = async (quota: Quota) => {
-    if (quota.status !== "Disponível") return;
+    // Só permite clicar em cotas disponíveis ou reservadas (para desmarcar)
+    if (quota.status !== "Disponível" && quota.status !== "Reservada") return;
 
     setReserving(true);
     try {
-      // For now, just select the quota without database reservation
-      // This will be handled in the contract creation process
+      // Se a cota já está selecionada (Reservada), desmarcar
+      if (selectedQuota?.id === quota.id && quota.status === "Reservada") {
+        const updatedQuota = {
+          ...quota,
+          status: "Disponível" as const,
+        };
+
+        setSelectedQuota(null);
+        setQuotas(quotas.map((q) => (q.id === quota.id ? updatedQuota : q)));
+        return;
+      }
+
+      // Se clicou em uma cota diferente, limpar seleção anterior e selecionar nova
+      const resetQuotas = quotas.map((q) => ({
+        ...q,
+        status: q.status === "Reservada" ? "Disponível" as const : q.status,
+      }));
+
+      // Selecionar apenas a cota clicada
       const updatedQuota = {
         ...quota,
         status: "Reservada" as const,
       };
 
+      // Atualizar estado: limpar seleção anterior e selecionar nova cota
       setSelectedQuota(updatedQuota);
-      setQuotas(quotas.map((q) => (q.id === quota.id ? updatedQuota : q)));
+      setQuotas(resetQuotas.map((q) => (q.id === quota.id ? updatedQuota : q)));
     } catch (error) {
       console.error("Error selecting quota:", error);
       const errorMessage =
@@ -186,7 +205,7 @@ const QuotaSelection: React.FC<QuotaSelectionProps> = ({
       case "Disponível":
         return "bg-gray-300 hover:bg-gray-400 cursor-pointer";
       case "Reservada":
-        return "bg-yellow-400 cursor-not-allowed";
+        return "bg-yellow-400 cursor-pointer hover:bg-yellow-500";
       case "Ocupada":
         return "bg-green-500 cursor-not-allowed";
       case "Cancelada/Atraso":
@@ -328,11 +347,11 @@ const QuotaSelection: React.FC<QuotaSelectionProps> = ({
               <CardContent className="space-y-2">
                 <div className="flex items-center">
                   <div className="w-4 h-4 bg-gray-300 rounded mr-2"></div>
-                  <span className="text-sm">Disponível</span>
+                  <span className="text-sm">Disponível (clique para selecionar)</span>
                 </div>
                 <div className="flex items-center">
-                  <div className="w-4 h-4 bg-yellow-400 rounded mr-2"></div>
-                  <span className="text-sm">Reservada</span>
+                  <div className="w-4 h-4 bg-yellow-400 border-2 border-yellow-600 rounded mr-2"></div>
+                  <span className="text-sm">Selecionada (clique para desmarcar)</span>
                 </div>
                 <div className="flex items-center">
                   <div className="w-4 h-4 bg-green-500 rounded mr-2"></div>
@@ -341,6 +360,10 @@ const QuotaSelection: React.FC<QuotaSelectionProps> = ({
                 <div className="flex items-center">
                   <div className="w-4 h-4 bg-red-500 rounded mr-2"></div>
                   <span className="text-sm">Cancelada/Atraso</span>
+                </div>
+                <div className="flex items-center mt-2 pt-2 border-t">
+                  <div className="w-4 h-4 bg-red-500 ring-4 ring-red-500 ring-opacity-75 rounded mr-2"></div>
+                  <span className="text-sm font-medium">Selecionada</span>
                 </div>
               </CardContent>
             </Card>
@@ -360,7 +383,7 @@ const QuotaSelection: React.FC<QuotaSelectionProps> = ({
                   )}
                 </CardTitle>
                 <CardDescription>
-                  Clique em uma cota disponível (cinza) para reservá-la
+                  Clique em uma cota disponível (cinza) para selecioná-la. Clique novamente para desmarcar.
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -379,11 +402,14 @@ const QuotaSelection: React.FC<QuotaSelectionProps> = ({
                         key={quota.id}
                         className={`
                           aspect-square rounded-lg flex items-center justify-center text-xs font-medium
-                          transition-all duration-200 border-2 border-transparent
+                          transition-all duration-200 border-2
                           ${getQuotaColor(quota)}
                           ${getQuotaTextColor(quota)}
-                          ${quota.status === "Disponível" ? "hover:scale-105" : ""}
-                          ${selectedQuota?.id === quota.id ? "ring-2 ring-red-500 scale-105" : ""}
+                          ${quota.status === "Disponível" ? "hover:scale-105 border-transparent" : ""}
+                          ${quota.status === "Reservada" ? "hover:scale-105 border-yellow-600 shadow-lg" : ""}
+                          ${quota.status === "Ocupada" ? "border-transparent" : ""}
+                          ${quota.status === "Cancelada/Atraso" ? "border-transparent" : ""}
+                          ${selectedQuota?.id === quota.id ? "ring-4 ring-red-500 ring-opacity-75 scale-110 shadow-xl" : ""}
                         `}
                         onClick={() => handleQuotaClick(quota)}
                         title={`Cota ${quota.quota_number} - ${quota.status}`}
@@ -399,12 +425,12 @@ const QuotaSelection: React.FC<QuotaSelectionProps> = ({
                     <div className="flex items-center mb-2">
                       <Clock className="w-4 h-4 text-yellow-600 mr-2" />
                       <span className="font-medium text-yellow-800">
-                        Cota #{selectedQuota.quota_number} Reservada
+                        Cota #{selectedQuota.quota_number} Selecionada
                       </span>
                     </div>
                     <p className="text-sm text-yellow-700">
-                      Esta cota foi reservada temporariamente para você.
-                      Continue o processo para finalizar a reserva.
+                      Esta cota foi selecionada para o contrato.
+                      Clique novamente na cota para desmarcar ou continue o processo.
                     </p>
                   </div>
                 )}
