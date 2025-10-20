@@ -12,7 +12,8 @@ import {
 } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ArrowLeft, Save, Upload, FileText, Users, Lock } from "lucide-react";
-import { Editor } from "@tinymce/tinymce-react";
+import ReactQuill from 'react-quill';
+import 'react-quill/dist/quill.snow.css';
 import mammoth from "mammoth";
 import MergeFieldsHelper from "./MergeFieldsHelper";
 
@@ -73,7 +74,8 @@ const ContractTemplateEditor: React.FC<ContractTemplateEditorProps> = ({
     }
 
     if (editorRef.current) {
-      const editorContent = editorRef.current.getContent();
+      const quill = editorRef.current.getEditor();
+      const editorContent = quill.root.innerHTML;
       if (!editorContent.trim()) {
         setAlert({
           type: "error",
@@ -87,7 +89,14 @@ const ContractTemplateEditor: React.FC<ContractTemplateEditorProps> = ({
 
   const handleInsertField = (placeholder: string) => {
     if (editorRef.current) {
-      editorRef.current.insertContent(placeholder);
+      const quill = editorRef.current.getEditor();
+      const range = quill.getSelection();
+      if (range) {
+        quill.insertText(range.index, placeholder);
+        quill.setSelection(range.index + placeholder.length);
+      } else {
+        quill.insertText(quill.getLength(), placeholder);
+      }
     }
   };
 
@@ -113,7 +122,8 @@ const ContractTemplateEditor: React.FC<ContractTemplateEditorProps> = ({
       if (result.value) {
         // Insert the converted HTML into the editor
         if (editorRef.current) {
-          editorRef.current.setContent(result.value);
+          const quill = editorRef.current.getEditor();
+          quill.clipboard.dangerouslyPasteHTML(result.value);
         }
         setAlert({
           type: "success",
@@ -297,154 +307,39 @@ const ContractTemplateEditor: React.FC<ContractTemplateEditorProps> = ({
       <div className="h-[calc(100vh-200px)] p-6">
         <div className="flex gap-4 h-full">
           <div className={showMergeFields ? "flex-1" : "w-full"}>
-            <Editor
-            apiKey="46lebzjws4vt4ywtma8d15683tj61n80shufdxg1spuuwpbm"
-            onInit={(evt, editor) => (editorRef.current = editor)}
-            initialValue={template.content}
-            init={{
-              height: "calc(100vh - 300px)",
-              menubar: true,
-              promotion: false,
-              plugins: [
-                "advlist",
-                "autolink",
-                "lists",
-                "link",
-                "image",
-                "charmap",
-                "preview",
-                "anchor",
-                "searchreplace",
-                "visualblocks",
-                "code",
-                "fullscreen",
-                "insertdatetime",
-                "media",
-                "table",
-                "help",
-                "wordcount",
-                "emoticons",
-                "template",
-                "codesample",
-              ],
-              toolbar:
-                "undo redo | blocks | bold italic underline strikethrough | " +
-                "alignleft aligncenter alignright alignjustify | " +
-                "bullist numlist outdent indent | removeformat | help | " +
-                "table tabledelete | tableprops tablerowprops tablecellprops | " +
-                "tableinsertrowbefore tableinsertrowafter tabledeleterow | " +
-                "tableinsertcolbefore tableinsertcolafter tabledeletecol | " +
-                "link image media | signature | variables | code preview fullscreen",
-              content_style:
-                "body { font-family: -apple-system, BlinkMacSystemFont, San Francisco, Segoe UI, Roboto, Helvetica Neue, sans-serif; font-size: 14px; line-height: 1.4; } .tox-promotion { display: none !important; } .variable-placeholder { background-color: #e3f2fd; padding: 2px 6px; border-radius: 3px; border: 1px solid #2196f3; color: #1976d2; font-weight: bold; }",
-              language: "pt_BR",
-              branding: false,
-              resize: false,
-              statusbar: true,
-              elementpath: false,
-              setup: (editor) => {
-                // Function to insert signature
-                const insertSignature = () => {
-                  const signerName = prompt("Nome do signatário:");
-                  if (!signerName) return;
-
-                  const signerCPF = prompt("CPF do signatário:");
-                  if (!signerCPF) return;
-
-                  const signatureId = "signature_" + Date.now();
-                  const signatureHtml = `
-                        <div class="signature-field" data-signature-id="${signatureId}" style="border: 2px dashed #ccc; padding: 20px; margin: 20px 0; background-color: #f9f9f9; text-align: center;">
-                          <div style="margin-bottom: 10px;">
-                            <strong>Campo de Assinatura</strong>
-                          </div>
-                          <div style="margin-bottom: 15px;">
-                            <div style="border-bottom: 1px solid #000; width: 300px; height: 40px; margin: 0 auto; display: inline-block;"></div>
-                          </div>
-                          <div style="font-size: 12px; color: #666;">
-                            <div><strong>Nome:</strong> ${signerName}</div>
-                            <div><strong>CPF:</strong> ${signerCPF}</div>
-                          </div>
-                        </div>
-                      `;
-
-                  editor.insertContent(signatureHtml);
-                };
-
-                // Function to insert variables
-                const insertVariable = () => {
-                  const variables = [
-                    { label: "Nome do Cliente", value: "{{CLIENTE_NOME}}" },
-                    { label: "Email do Cliente", value: "{{CLIENTE_EMAIL}}" },
-                    {
-                      label: "Telefone do Cliente",
-                      value: "{{CLIENTE_TELEFONE}}",
-                    },
-                    {
-                      label: "CPF/CNPJ do Cliente",
-                      value: "{{CLIENTE_CPF_CNPJ}}",
-                    },
-                    {
-                      label: "Endereço do Cliente",
-                      value: "{{CLIENTE_ENDERECO}}",
-                    },
-                    { label: "Nome do Grupo", value: "{{GRUPO_NOME}}" },
-                    {
-                      label: "Descrição do Grupo",
-                      value: "{{GRUPO_DESCRICAO}}",
-                    },
-                    { label: "Número da Cota", value: "{{COTA_NUMERO}}" },
-                    {
-                      label: "Nome da Tabela de Comissão",
-                      value: "{{TABELA_NOME}}",
-                    },
-                    {
-                      label: "Percentual de Comissão",
-                      value: "{{TABELA_PERCENTUAL}}",
-                    },
-                    {
-                      label: "Detalhes de Pagamento",
-                      value: "{{TABELA_DETALHES}}",
-                    },
-                    { label: "Data Atual", value: "{{DATA_ATUAL}}" },
-                    { label: "Valor do Crédito", value: "{{CREDITO_VALOR}}" },
-                    {
-                      label: "Prazo de Pagamento",
-                      value: "{{PRAZO_PAGAMENTO}}",
-                    },
-                  ];
-
-                  const variableList = variables
-                    .map((v, i) => `${i + 1}. ${v.label} - ${v.value}`)
-                    .join("\n");
-                  const selectedVariable = prompt(
-                    `Selecione uma variável (digite o número):\n\n${variableList}`,
-                  );
-
-                  if (selectedVariable) {
-                    const index = parseInt(selectedVariable) - 1;
-                    if (index >= 0 && index < variables.length) {
-                      const variable = variables[index];
-                      const variableHtml = `<span class="variable-placeholder">${variable.value}</span>`;
-                      editor.insertContent(variableHtml);
-                    }
-                  }
-                };
-
-                // Add custom buttons
-                editor.ui.registry.addButton("signature", {
-                  text: "Assinatura",
-                  tooltip: "Inserir campo de assinatura",
-                  onAction: insertSignature,
-                });
-
-                editor.ui.registry.addButton("variables", {
-                  text: "Variáveis",
-                  tooltip: "Inserir variável do contrato",
-                  onAction: insertVariable,
-                });
-              },
-            }}
-          />
+            <ReactQuill
+              ref={editorRef}
+              value={template.content}
+              theme="snow"
+              style={{ height: 'calc(100vh - 360px)', marginBottom: '50px' }}
+              modules={{
+                toolbar: {
+                  container: [
+                    [{ 'size': ['small', false, 'large', 'huge'] }],
+                    [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
+                    ['bold', 'italic', 'underline', 'strike'],
+                    [{ 'color': [] }, { 'background': [] }],
+                    [{ 'align': [] }],
+                    [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                    ['blockquote', 'code-block'],
+                    ['link', 'image'],
+                    ['clean']
+                  ]
+                },
+                clipboard: {
+                  matchVisual: false,
+                }
+              }}
+              formats={[
+                'header', 'size',
+                'bold', 'italic', 'underline', 'strike',
+                'color', 'background',
+                'list', 'bullet',
+                'align',
+                'blockquote', 'code-block',
+                'link', 'image'
+              ]}
+            />
           </div>
           
           {/* Painel Lateral de Campos de Mesclagem */}
