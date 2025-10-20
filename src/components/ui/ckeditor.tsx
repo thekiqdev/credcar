@@ -59,6 +59,24 @@ const CKEditorComponent: React.FC<CKEditorProps> = ({
       });
     });
     
+    // Listener adicional para interceptar inserção de tabelas
+    editor.model.document.on('change', () => {
+      setTimeout(() => {
+        const root = editor.model.document.getRoot();
+        const tables = Array.from(root.getChildren()).filter(child => child.is('table'));
+        
+        tables.forEach(table => {
+          if (!table.hasAttribute('width')) {
+            editor.model.change(writer => {
+              writer.setAttribute('width', '100%', table);
+              writer.setAttribute('style', 'width: 100% !important; table-layout: fixed;', table);
+              writer.setAttribute('class', 'full-width-table', table);
+            });
+          }
+        });
+      }, 0);
+    });
+    
     // Interceptar inserção de tabelas para aplicar largura completa imediatamente
     editor.model.schema.addAttributeCheck((context: any, attributeName: string) => {
       if (context.endsWith('table') && attributeName === 'width') {
@@ -75,25 +93,6 @@ const CKEditorComponent: React.FC<CKEditorProps> = ({
           width: '100% !important',
           'table-layout': 'fixed'
         }
-      }
-    });
-    
-    // Interceptar inserção de tabelas para aplicar largura completa imediatamente
-    editor.model.document.on('change', (evt: any) => {
-      if (evt.source.is('operations')) {
-        const changes = evt.source.getChanges();
-        changes.forEach((change: any) => {
-          if (change.type === 'insert' && change.position && change.position.parent) {
-            const element = change.position.parent;
-            if (element.is('table')) {
-              editor.model.change(writer => {
-                writer.setAttribute('width', '100%', element);
-                writer.setAttribute('style', 'width: 100% !important; table-layout: fixed;', element);
-                writer.setAttribute('class', 'full-width-table', element);
-              });
-            }
-          }
-        });
       }
     });
     
