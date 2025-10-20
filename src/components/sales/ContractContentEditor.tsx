@@ -150,13 +150,10 @@ const ContractContentEditor: React.FC<ContractContentEditorProps> = ({
   `.trim();
 
   const handleSubmit = async () => {
-    if (editorRef.current) {
-      const content = editorRef.current.getContent();
-      if (content.trim()) {
-        onContentSubmit(content);
-      } else {
-        alert("Por favor, insira o conteúdo do contrato.");
-      }
+    if (content.trim()) {
+      onContentSubmit(content);
+    } else {
+      alert("Por favor, insira o conteúdo do contrato.");
     }
   };
 
@@ -197,9 +194,7 @@ const ContractContentEditor: React.FC<ContractContentEditorProps> = ({
     `;
 
     // Insert into editor
-    if (editorRef.current) {
-      editorRef.current.insertContent(signatureBlockHtml);
-    }
+    setContent(content + signatureBlockHtml);
 
     // Store signature block info
     setSignatureBlocks(
@@ -255,17 +250,14 @@ const ContractContentEditor: React.FC<ContractContentEditorProps> = ({
     `;
 
     // Replace the pending signature block with the signed one
-    if (editorRef.current) {
-      const content = editorRef.current.getContent();
-      const updatedContent = content.replace(
-        new RegExp(
-          `<div class="signature-field-pending"[^>]*data-signature-id="${currentSignatureId}"[^>]*>[\\s\\S]*?</div>`,
-          "g",
-        ),
-        signedBlockHtml,
-      );
-      editorRef.current.setContent(updatedContent);
-    }
+    const updatedContent = content.replace(
+      new RegExp(
+        `<div class="signature-field-pending"[^>]*data-signature-id="${currentSignatureId}"[^>]*>[\\s\\S]*?</div>`,
+        "g",
+      ),
+      signedBlockHtml,
+    );
+    setContent(updatedContent);
 
     // Update signature blocks state
     setSignatureBlocks(
@@ -322,9 +314,7 @@ const ContractContentEditor: React.FC<ContractContentEditorProps> = ({
 
   // Função para inserir campos de mesclagem
   const handleInsertField = (placeholder: string) => {
-    if (editorRef.current) {
-      editorRef.current.insertContent(placeholder);
-    }
+    setContent(content + placeholder);
   };
 
   // Handle template selection
@@ -334,9 +324,9 @@ const ContractContentEditor: React.FC<ContractContentEditorProps> = ({
       templateId === "blank" ||
       templateId === "no-templates"
     ) {
-      if (templateId === "blank" && editorRef.current) {
+      if (templateId === "blank") {
         // Reset to default content for blank template
-        editorRef.current.setContent(getDefaultContent());
+        setContent(getDefaultContent());
       }
       return;
     }
@@ -348,7 +338,7 @@ const ContractContentEditor: React.FC<ContractContentEditorProps> = ({
       );
       console.log("Loaded template:", template);
 
-      if (template && editorRef.current) {
+      if (template) {
         // **NOVO SISTEMA DE MESCLAGEM DE CAMPOS**
         // Preparar dados para mesclagem
         const mergeData: MergeData = {
@@ -432,7 +422,7 @@ const ContractContentEditor: React.FC<ContractContentEditorProps> = ({
         );
 
         console.log("Setting template content in editor");
-        editorRef.current.setContent(content);
+        setContent(content);
       }
     } catch (error) {
       console.error("Error loading template:", error);
