@@ -1,13 +1,6 @@
 import Quill from 'quill';
-import QuillBetterTable from 'quill-better-table';
-import 'quill-better-table/dist/quill-better-table.css';
 
-// Register the table module
-Quill.register({
-  'modules/better-table': QuillBetterTable
-}, true);
-
-// Modules configuration with table support
+// Modules configuration - simplified without better-table for now
 export const quillModulesWithTable = {
   toolbar: {
     container: [
@@ -22,48 +15,12 @@ export const quillModulesWithTable = {
       ['clean']
     ]
   },
-  'better-table': {
-    operationMenu: {
-      items: {
-        unmergeCells: {
-          text: 'Desfazer mesclagem'
-        },
-        insertColumnRight: {
-          text: 'Inserir coluna à direita'
-        },
-        insertColumnLeft: {
-          text: 'Inserir coluna à esquerda'
-        },
-        insertRowUp: {
-          text: 'Inserir linha acima'
-        },
-        insertRowDown: {
-          text: 'Inserir linha abaixo'
-        },
-        mergeCells: {
-          text: 'Mesclar células'
-        },
-        deleteColumn: {
-          text: 'Excluir coluna'
-        },
-        deleteRow: {
-          text: 'Excluir linha'
-        },
-        deleteTable: {
-          text: 'Excluir tabela'
-        }
-      }
-    }
-  },
   clipboard: {
     matchVisual: false,
-  },
-  keyboard: {
-    bindings: QuillBetterTable.keyboardBindings
   }
 };
 
-// Formats supported
+// Formats supported - including basic HTML table support
 export const quillFormatsWithTable = [
   'header', 'size',
   'bold', 'italic', 'underline', 'strike',
@@ -71,15 +28,32 @@ export const quillFormatsWithTable = [
   'list', 'bullet',
   'align',
   'blockquote', 'code-block',
-  'link', 'image',
-  'table', 'table-cell-line'
+  'link', 'image'
 ];
 
-// Helper function to insert a table
+// Helper function to insert a simple HTML table
 export const insertTable = (quill: any, rows: number = 3, columns: number = 3) => {
-  const tableModule = quill.getModule('better-table');
-  if (tableModule) {
-    tableModule.insertTable(rows, columns);
+  // Generate simple HTML table
+  let tableHTML = '<table border="1" style="border-collapse: collapse; width: 100%; margin: 10px 0;">\n';
+  
+  for (let i = 0; i < rows; i++) {
+    tableHTML += '  <tr>\n';
+    for (let j = 0; j < columns; j++) {
+      tableHTML += '    <td style="border: 1px solid #ddd; padding: 8px; min-width: 50px; min-height: 30px;">&nbsp;</td>\n';
+    }
+    tableHTML += '  </tr>\n';
+  }
+  
+  tableHTML += '</table>\n<p><br></p>';
+  
+  // Insert at cursor position
+  const range = quill.getSelection();
+  if (range) {
+    quill.clipboard.dangerouslyPasteHTML(range.index, tableHTML);
+    quill.setSelection(range.index + tableHTML.length);
+  } else {
+    const length = quill.getLength();
+    quill.clipboard.dangerouslyPasteHTML(length, tableHTML);
   }
 };
 
