@@ -983,7 +983,28 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
         return;
       }
 
-      setGroups(groupsData || []);
+      console.log("✅ Groups loaded:", groupsData);
+      
+      // Debug: Check is_private values from database
+      groupsData?.forEach((group: any, index: number) => {
+        console.log(`🔍 Group ${index + 1} - ${group.name}:`, {
+          id: group.id,
+          name: group.name,
+          is_private_raw: group.is_private,
+          is_private_type: typeof group.is_private,
+          is_private_value: group.is_private === true ? 'TRUE' : group.is_private === false ? 'FALSE' : 'OTHER'
+        });
+      });
+
+      // Normalize is_private values to boolean
+      const normalizedGroups = groupsData?.map((group: any) => ({
+        ...group,
+        is_private: group.is_private === true || group.is_private === "true" || group.is_private === 1
+      })) || [];
+
+      console.log("🔄 Normalized groups:", normalizedGroups);
+
+      setGroups(normalizedGroups);
       setQuotas(quotasData || []);
     } catch (error) {
       console.error("Error loading groups and quotas:", error);
@@ -5779,21 +5800,26 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                   placeholder="10"
                                 />
                               </div>
-                              <div className="flex items-center space-x-2">
-                                <input
-                                  type="checkbox"
-                                  id="group-is-private"
-                                  checked={newGroup.isPrivate}
-                                  onChange={(e) =>
+                              <div>
+                                <Label htmlFor="group-is-private">Grupo Privado</Label>
+                                <Select
+                                  value={newGroup.isPrivate ? "true" : "false"}
+                                  onValueChange={(value) => {
+                                    console.log("🔄 New group changing isPrivate from", newGroup.isPrivate, "to", value);
                                     setNewGroup({
                                       ...newGroup,
-                                      isPrivate: e.target.checked,
-                                    })
-                                  }
-                                />
-                                <Label htmlFor="group-is-private">
-                                  Grupo Privado (somente admin pode selecionar)
-                                </Label>
+                                      isPrivate: value === "true",
+                                    });
+                                  }}
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Selecione o tipo de grupo" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="false">Público (todos podem selecionar)</SelectItem>
+                                    <SelectItem value="true">Privado (somente admin pode selecionar)</SelectItem>
+                                  </SelectContent>
+                                </Select>
                               </div>
                             </div>
                             <DialogFooter>
@@ -5819,6 +5845,14 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                       return;
                                     }
 
+                                    console.log("💾 Creating new group with data:", {
+                                      name: newGroup.name,
+                                      description: newGroup.description,
+                                      total_quotas: newGroup.totalQuotas,
+                                      is_private: newGroup.isPrivate,
+                                      is_private_type: typeof newGroup.isPrivate
+                                    });
+
                                     // Create group
                                     const { data: group, error: groupError } =
                                       await supabase
@@ -5827,7 +5861,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                           name: newGroup.name,
                                           description: newGroup.description,
                                           total_quotas: newGroup.totalQuotas,
-                                          is_private: newGroup.isPrivate,
+                                          is_private: Boolean(newGroup.isPrivate),
                                         })
                                         .select()
                                         .single();
@@ -5957,6 +5991,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                             variant="outline"
                                             size="sm"
                                             onClick={() => {
+                                              console.log("🔧 Opening edit modal for group:", group);
+                                              console.log("🔧 Group is_private value:", group.is_private);
+                                              console.log("🔧 Group is_private type:", typeof group.is_private);
                                               setEditingGroup(group);
                                               setIsEditGroupDialogOpen(true);
                                             }}
@@ -9531,21 +9568,26 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     placeholder="Descrição do grupo"
                   />
                 </div>
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    id="edit-group-is-private"
-                    checked={editingGroup.is_private || false}
-                    onChange={(e) =>
+                <div>
+                  <Label htmlFor="edit-group-is-private">Grupo Privado</Label>
+                  <Select
+                    value={editingGroup.is_private === true || editingGroup.is_private === "true" ? "true" : "false"}
+                    onValueChange={(value) => {
+                      console.log("🔄 Changing is_private from", editingGroup.is_private, "to", value);
                       setEditingGroup({
                         ...editingGroup,
-                        is_private: e.target.checked,
-                      })
-                    }
-                  />
-                  <Label htmlFor="edit-group-is-private">
-                    Grupo Privado (somente admin pode selecionar)
-                  </Label>
+                        is_private: value === "true",
+                      });
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o tipo de grupo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="false">Público (todos podem selecionar)</SelectItem>
+                      <SelectItem value="true">Privado (somente admin pode selecionar)</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
             )}
@@ -9567,17 +9609,26 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       return;
                     }
 
+                    console.log("💾 Saving group with data:", {
+                      id: editingGroup.id,
+                      name: editingGroup.name,
+                      description: editingGroup.description,
+                      is_private: editingGroup.is_private,
+                      is_private_type: typeof editingGroup.is_private
+                    });
+
                     const { error } = await supabase
                       .from("groups")
                       .update({
                         name: editingGroup.name,
                         description: editingGroup.description,
-                        is_private: editingGroup.is_private,
+                        is_private: Boolean(editingGroup.is_private),
                       })
                       .eq("id", editingGroup.id);
 
                     if (error) throw error;
 
+                    console.log("✅ Group updated successfully");
                     await loadGroups();
                     setIsEditGroupDialogOpen(false);
                     setEditingGroup(null);
