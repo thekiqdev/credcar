@@ -114,7 +114,19 @@ const QuotaSelection: React.FC<QuotaSelectionProps> = ({
         .order("name");
 
       if (error) throw error;
-      setGroups(data || []);
+      
+      console.log("🔍 QuotaSelection - Raw groups from DB:", data);
+      
+      // Normalize is_private values to boolean (same fix as AdminDashboard)
+      const normalizedGroups = data?.map((group: any) => ({
+        ...group,
+        is_private: group.is_private === true || group.is_private === "true" || group.is_private === 1
+      })) || [];
+      
+      console.log("🔄 QuotaSelection - Normalized groups:", normalizedGroups);
+      console.log("🔐 QuotaSelection - Is Admin:", isAdmin);
+      
+      setGroups(normalizedGroups);
     } catch (error) {
       console.error("Error fetching groups:", error);
     } finally {
@@ -340,7 +352,15 @@ const QuotaSelection: React.FC<QuotaSelectionProps> = ({
                   <SelectContent>
                     {groups.map((group) => {
                       const isDisabled = group.is_private && !isAdmin;
-                      console.log(`📦 Group: ${group.name}, is_private: ${group.is_private}, isAdmin: ${isAdmin}, disabled: ${isDisabled}`);
+                      console.log(`📦 Group: ${group.name}`, {
+                        id: group.id,
+                        name: group.name,
+                        is_private_raw: group.is_private,
+                        is_private_type: typeof group.is_private,
+                        isAdmin: isAdmin,
+                        disabled: isDisabled,
+                        willShowBadge: group.is_private
+                      });
                       return (
                         <SelectItem 
                           key={group.id} 
