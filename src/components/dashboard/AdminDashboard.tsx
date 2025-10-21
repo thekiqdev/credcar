@@ -1055,20 +1055,20 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
           address_state: editingClient.address_state,
           address_zip: editingClient.address_zip,
           // Novos campos de identificação
-          rg: editingClient.rg,
-          birth_date: editingClient.birth_date,
-          nationality: editingClient.nationality,
-          marital_status: editingClient.marital_status,
-          spouse_name: editingClient.spouse_name,
-          spouse_phone: editingClient.spouse_phone,
+          rg: editingClient.rg || null,
+          birth_date: editingClient.birth_date || null,
+          nationality: editingClient.nationality || null,
+          marital_status: editingClient.marital_status || null,
+          spouse_name: editingClient.spouse_name || null,
+          spouse_phone: editingClient.spouse_phone || null,
           // Novos campos profissionais
-          company: editingClient.company,
-          salary: editingClient.salary,
-          position: editingClient.position,
+          company: editingClient.company || null,
+          salary: editingClient.salary || null,
+          position: editingClient.position || null,
           // Novos campos de referências pessoais
-          reference_name: editingClient.reference_name,
-          reference_address: editingClient.reference_address,
-          reference_phone: editingClient.reference_phone,
+          reference_name: editingClient.reference_name || null,
+          reference_address: editingClient.reference_address || null,
+          reference_phone: editingClient.reference_phone || null,
         })
         .eq("id", editingClient.id);
 

@@ -1864,20 +1864,20 @@ const ContractDetails: React.FC<{
                               address_state: contract.client.address_state,
                               address_zip: contract.client.address_zip,
                               // Novos campos de identificação
-                              rg: contract.client.rg,
-                              birth_date: contract.client.birth_date,
-                              nationality: contract.client.nationality,
-                              marital_status: contract.client.marital_status,
-                              spouse_name: contract.client.spouse_name,
-                              spouse_phone: contract.client.spouse_phone,
+                              rg: contract.client.rg || null,
+                              birth_date: contract.client.birth_date || null,
+                              nationality: contract.client.nationality || null,
+                              marital_status: contract.client.marital_status || null,
+                              spouse_name: contract.client.spouse_name || null,
+                              spouse_phone: contract.client.spouse_phone || null,
                               // Novos campos profissionais
-                              company: contract.client.company,
-                              salary: contract.client.salary,
-                              position: contract.client.position,
+                              company: contract.client.company || null,
+                              salary: contract.client.salary || null,
+                              position: contract.client.position || null,
                               // Novos campos de referências pessoais
-                              reference_name: contract.client.reference_name,
-                              reference_address: contract.client.reference_address,
-                              reference_phone: contract.client.reference_phone,
+                              reference_name: contract.client.reference_name || null,
+                              reference_address: contract.client.reference_address || null,
+                              reference_phone: contract.client.reference_phone || null,
                             })
                             .eq("id", contract.client.id);
 

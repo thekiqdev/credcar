@@ -228,20 +228,20 @@ const ContractCreationFlow: React.FC<ContractCreationFlowProps> = ({
             address_state: addressComponents.state,
             address_zip: addressComponents.zip,
             // Novos campos de identificação
-            rg: clientData.rg,
-            birth_date: clientData.birth_date,
-            nationality: clientData.nationality,
-            marital_status: clientData.marital_status,
-            spouse_name: clientData.spouse_name,
-            spouse_phone: clientData.spouse_phone,
+            rg: clientData.rg || null,
+            birth_date: clientData.birth_date || null,
+            nationality: clientData.nationality || null,
+            marital_status: clientData.marital_status || null,
+            spouse_name: clientData.spouse_name || null,
+            spouse_phone: clientData.spouse_phone || null,
             // Novos campos profissionais
-            company: clientData.company,
+            company: clientData.company || null,
             salary: clientData.salary ? parseFloat(clientData.salary.replace(/[^\d,]/g, '').replace(',', '.')) : null,
-            position: clientData.position,
+            position: clientData.position || null,
             // Novos campos de referências pessoais
-            reference_name: clientData.reference_name,
-            reference_address: clientData.reference_address,
-            reference_phone: clientData.reference_phone,
+            reference_name: clientData.reference_name || null,
+            reference_address: clientData.reference_address || null,
+            reference_phone: clientData.reference_phone || null,
           })
           .eq("id", existingClient.id);
 
@@ -267,20 +267,20 @@ const ContractCreationFlow: React.FC<ContractCreationFlowProps> = ({
               address_state: addressComponents.state,
               address_zip: addressComponents.zip,
               // Novos campos de identificação
-              rg: clientData.rg,
-              birth_date: clientData.birth_date,
-              nationality: clientData.nationality,
-              marital_status: clientData.marital_status,
-              spouse_name: clientData.spouse_name,
-              spouse_phone: clientData.spouse_phone,
+              rg: clientData.rg || null,
+              birth_date: clientData.birth_date || null,
+              nationality: clientData.nationality || null,
+              marital_status: clientData.marital_status || null,
+              spouse_name: clientData.spouse_name || null,
+              spouse_phone: clientData.spouse_phone || null,
               // Novos campos profissionais
-              company: clientData.company,
+              company: clientData.company || null,
               salary: clientData.salary ? parseFloat(clientData.salary.replace(/[^\d,]/g, '').replace(',', '.')) : null,
-              position: clientData.position,
+              position: clientData.position || null,
               // Novos campos de referências pessoais
-              reference_name: clientData.reference_name,
-              reference_address: clientData.reference_address,
-              reference_phone: clientData.reference_phone,
+              reference_name: clientData.reference_name || null,
+              reference_address: clientData.reference_address || null,
+              reference_phone: clientData.reference_phone || null,
             },
           ])
           .select("id")
