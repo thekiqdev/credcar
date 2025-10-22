@@ -1852,16 +1852,12 @@ app.get('/api/test/create-invoices/:contractId', async (req, res) => {
     const dayStr = String(dueDate.getDate()).padStart(2, '0');
     const dueDateStr = `${yearStr}-${monthStr}-${dayStr}`;
 
-    // Usar o novo serviço de cálculo de datas para calcular next_invoice_date
-    const { invoiceDateCalculatorService } = await import('./src/lib/invoice-date-calculator.service.ts');
-    const dateCalculation = await invoiceDateCalculatorService.calculateInvoiceDates(
-      today, 
-      1, // primeira fatura
-      80, // assumindo 80 parcelas
-      contractId
-    );
-    
-    const nextInvoiceDate = dateCalculation.nextInvoiceDate;
+    // Calcular next_invoice_date usando regra simplificada
+    // Para primeira fatura: próxima fatura será no dia 13 do próximo mês (15 dias antes do vencimento)
+    const nextInvoiceDate = new Date(today);
+    nextInvoiceDate.setMonth(nextInvoiceDate.getMonth() + 1);
+    nextInvoiceDate.setDate(13); // Dia 13 (15 dias antes do dia 20)
+    const nextInvoiceDateStr = nextInvoiceDate.toISOString().split('T')[0];
 
     const newInvoice = {
       contract_id: contractId,
@@ -1870,7 +1866,7 @@ app.get('/api/test/create-invoices/:contractId', async (req, res) => {
       due_date: dueDateStr,
       status: 'Pendente',
       notes: 'Parcela 1 - primeira',
-      next_invoice_date: nextInvoiceDate
+      next_invoice_date: nextInvoiceDateStr,
     };
 
     // Inserir fatura no banco
@@ -2878,26 +2874,31 @@ app.get('/api/cron/test-generate-invoices', async (req, res) => {
           installmentValue = creditRange.valor_parcelas_restantes;
         }
 
-        // Usar o novo serviço de cálculo de datas
-        const { invoiceDateCalculatorService } = await import('./src/lib/invoice-date-calculator.service.ts');
+        // Calcular datas usando regra simplificada
         const today = new Date();
-        const dateCalculation = await invoiceDateCalculatorService.calculateInvoiceDates(
-          today, 
-          nextInstallmentNumber, 
-          creditRange.numero_total_parcelas,
-          invoice.contract_id
-        );
+        
+        // Para faturas subsequentes: dia 20 do mês correspondente
+        const dueDate = new Date(today);
+        dueDate.setMonth(dueDate.getMonth() + (nextInstallmentNumber - 1));
+        dueDate.setDate(20); // Dia fixo 20
+        const dueDateStr = dueDate.toISOString().split('T')[0];
+        
+        // Próxima fatura será 15 dias antes do próximo vencimento (dia 13)
+        const nextDueDate = new Date(dueDate);
+        nextDueDate.setMonth(nextDueDate.getMonth() + 1);
+        nextDueDate.setDate(13); // Dia 13 (15 dias antes do dia 20)
+        const nextInvoiceDateStr = nextDueDate.toISOString().split('T')[0];
 
-        console.log(`📅 Parcela ${nextInstallmentNumber}: Vencimento ${dateCalculation.dueDate}, Geração ${dateCalculation.generationDate}`);
+        console.log(`📅 Parcela ${nextInstallmentNumber}: Vencimento ${dueDateStr}`);
 
         const newInvoice = {
           contract_id: invoice.contract_id,
           installment_number: nextInstallmentNumber,
           amount: installmentValue,
-          due_date: dateCalculation.dueDate,
+          due_date: dueDateStr,
           status: 'Pendente',
           notes: `Parcela ${nextInstallmentNumber} - automática`,
-          next_invoice_date: dateCalculation.nextInvoiceDate
+          next_invoice_date: nextInvoiceDateStr
         };
 
         // Inserir nova fatura no banco
@@ -2947,7 +2948,7 @@ app.get('/api/cron/test-generate-invoices', async (req, res) => {
           installmentNumber: nextInstallmentNumber,
           status: 'success',
           message: `Parcela ${nextInstallmentNumber} criada com sucesso`,
-          nextInvoiceDate: nextInvoiceDate
+          nextInvoiceDate: nextInvoiceDateStr
         });
         result.created++;
 
