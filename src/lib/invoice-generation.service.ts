@@ -178,32 +178,16 @@ class InvoiceGenerationService {
       const defaultDueDays = paymentConfig.defaultDueDays || 30;
 
       for (const installment of sortedInstallments) {
-        // Calcular data de vencimento
-        let dueDate: string;
-        
-        if (installment.vencimento) {
-          // Usar data calculada (evitar problemas de timezone)
-          const date = installment.vencimento;
-          const year = date.getFullYear();
-          const month = String(date.getMonth() + 1).padStart(2, '0');
-          const day = String(date.getDate()).padStart(2, '0');
-          dueDate = `${year}-${month}-${day}`;
-          console.log(`📅 Parcela ${installment.numero_parcela} (${installment.tipo}): Data específica ${dueDate}`);
-        } else {
-          // Fallback: usar padrão do sistema
-          const today = new Date();
-          const year = today.getFullYear();
-          const month = today.getMonth();
-          const day = today.getDate();
-          
-          const baseDate = new Date(year, month, day + defaultDueDays);
-          const yearStr = baseDate.getFullYear();
-          const monthStr = String(baseDate.getMonth() + 1).padStart(2, '0');
-          const dayStr = String(baseDate.getDate()).padStart(2, '0');
-          dueDate = `${yearStr}-${monthStr}-${dayStr}`;
-          
-          console.log(`📅 Parcela ${installment.numero_parcela} (${installment.tipo}): Data padrão ${dueDate} (${defaultDueDays} dias)`);
-        }
+        // Usar o novo serviço de cálculo de datas
+        const { invoiceDateCalculatorService } = await import('./invoice-date-calculator.service');
+        const today = new Date();
+        const dateCalculation = await invoiceDateCalculatorService.calculateInvoiceDates(
+          today, 
+          installment.numero_parcela, 
+          totalInstallments
+        );
+
+        console.log(`📅 Parcela ${installment.numero_parcela} (${installment.tipo}): Vencimento ${dateCalculation.dueDate}, Geração ${dateCalculation.generationDate}`);
 
         // Calcular next_invoice_date apenas para a última parcela essencial
         let nextInvoiceDate: string | null = null;
@@ -211,28 +195,16 @@ class InvoiceGenerationService {
         const isLastEssential = installment.numero_parcela === sortedInstallments[sortedInstallments.length - 1].numero_parcela;
         
         if (isLastEssential && installment.numero_parcela < totalInstallments) {
-          // Calcular vencimento da próxima parcela (1 mês após a última essencial)
-          const lastDueDate = new Date(dueDate);
-          const nextDueDate = new Date(lastDueDate);
-          nextDueDate.setMonth(nextDueDate.getMonth() + 1);
-          
-          // Calcular quando criar a próxima parcela (daysAdvance dias antes do vencimento)
-          const nextDate = new Date(nextDueDate);
-          nextDate.setDate(nextDate.getDate() - daysAdvance);
-          
-          const yearStr = nextDate.getFullYear();
-          const monthStr = String(nextDate.getMonth() + 1).padStart(2, '0');
-          const dayStr = String(nextDate.getDate()).padStart(2, '0');
-          nextInvoiceDate = `${yearStr}-${monthStr}-${dayStr}`;
-          
-          console.log(`📅 next_invoice_date da última essencial (parcela ${installment.numero_parcela}): ${nextInvoiceDate} (${daysAdvance} dias antes da próxima)`);
+          // Usar o nextInvoiceDate calculado pelo serviço
+          nextInvoiceDate = dateCalculation.nextInvoiceDate;
+          console.log(`📅 next_invoice_date da última essencial (parcela ${installment.numero_parcela}): ${nextInvoiceDate}`);
         }
 
         const invoice: InvoiceData = {
           contract_id: contractId,
           installment_number: installment.numero_parcela,
           amount: installment.valor_parcela,
-          due_date: dueDate,
+          due_date: dateCalculation.dueDate,
           status: 'Pendente',
           notes: `Parcela ${installment.numero_parcela} - ${installment.tipo}`,
           next_invoice_date: nextInvoiceDate
