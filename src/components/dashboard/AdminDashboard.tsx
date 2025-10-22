@@ -282,6 +282,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   ]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [allInvoices, setAllInvoices] = useState<Invoice[]>([]); // Todas as faturas para contadores globais
+  const [invoicesPage, setInvoicesPage] = useState(1);
+  const [invoicesPerPage] = useState(20);
   // Commission Plans State
   const [commissionPlans, setCommissionPlans] = useState([]);
   const [creditRanges, setCreditRanges] = useState([]);
@@ -4929,6 +4931,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                   
                                   // Carregar faturas do contrato selecionado
                                   loadInvoicesForContract(contract.id);
+                                  setInvoicesPage(1); // Reset pagination when selecting new contract
                                 }}
                               >
                                 <div className="flex items-center justify-between">
@@ -5159,12 +5162,17 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                   </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                  {invoices
-                                    .filter(
-                                      (inv) =>
-                                        inv.contract_id === parseInt(selectedContractForInvoices.id),
-                                    )
-                                    .map((invoice) => (
+                                  {(() => {
+                                    const contractInvoices = invoices.filter(
+                                      (inv) => inv.contract_id === parseInt(selectedContractForInvoices.id)
+                                    );
+                                    
+                                    // Calcular paginação
+                                    const startIndex = (invoicesPage - 1) * invoicesPerPage;
+                                    const endIndex = startIndex + invoicesPerPage;
+                                    const paginatedInvoices = contractInvoices.slice(startIndex, endIndex);
+                                    
+                                    return paginatedInvoices.map((invoice) => (
                                       <TableRow key={invoice.id}>
                                         <TableCell className="font-medium">
                                           {invoice.id}
@@ -5218,9 +5226,73 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                           </div>
                                         </TableCell>
                                       </TableRow>
-                                    ))}
+                                    ));
+                                  })()}
                                 </TableBody>
                               </Table>
+                              
+                              {/* Controles de Paginação */}
+                              {(() => {
+                                const contractInvoices = invoices.filter(
+                                  (inv) => inv.contract_id === parseInt(selectedContractForInvoices.id)
+                                );
+                                const totalPages = Math.ceil(contractInvoices.length / invoicesPerPage);
+                                
+                                if (totalPages > 1) {
+                                  return (
+                                    <div className="flex items-center justify-between px-4 py-3 border-t">
+                                      <div className="text-sm text-muted-foreground">
+                                        Mostrando {((invoicesPage - 1) * invoicesPerPage) + 1} a {Math.min(invoicesPage * invoicesPerPage, contractInvoices.length)} de {contractInvoices.length} faturas
+                                      </div>
+                                      <div className="flex items-center space-x-2">
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() => setInvoicesPage(prev => Math.max(1, prev - 1))}
+                                          disabled={invoicesPage === 1}
+                                        >
+                                          Anterior
+                                        </Button>
+                                        <div className="flex items-center space-x-1">
+                                          {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                                            let pageNum;
+                                            if (totalPages <= 5) {
+                                              pageNum = i + 1;
+                                            } else if (invoicesPage <= 3) {
+                                              pageNum = i + 1;
+                                            } else if (invoicesPage >= totalPages - 2) {
+                                              pageNum = totalPages - 4 + i;
+                                            } else {
+                                              pageNum = invoicesPage - 2 + i;
+                                            }
+                                            
+                                            return (
+                                              <Button
+                                                key={pageNum}
+                                                variant={invoicesPage === pageNum ? "default" : "outline"}
+                                                size="sm"
+                                                onClick={() => setInvoicesPage(pageNum)}
+                                                className="w-8 h-8 p-0"
+                                              >
+                                                {pageNum}
+                                              </Button>
+                                            );
+                                          })}
+                                        </div>
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() => setInvoicesPage(prev => Math.min(totalPages, prev + 1))}
+                                          disabled={invoicesPage === totalPages}
+                                        >
+                                          Próximo
+                                        </Button>
+                                      </div>
+                                    </div>
+                                  );
+                                }
+                                return null;
+                              })()}
                             )}
                           </div>
                         )}
