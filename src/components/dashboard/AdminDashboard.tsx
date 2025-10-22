@@ -6445,8 +6445,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
                           <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
                             <h5 className="font-medium text-blue-900 mb-2">📅 Exemplo Prático:</h5>
+                            <p className="text-sm text-blue-800 mb-2">
+                              <strong>Primeira fatura:</strong> Vencimento em 2 dias (regra fixa)
+                            </p>
                             <p className="text-sm text-blue-800">
-                              Com as configurações acima: <strong>Fatura gerada no dia {paymentSettings.invoiceGenerationFixedDay - paymentSettings.invoiceGenerationDaysAdvance} com vencimento para o dia {paymentSettings.invoiceGenerationFixedDay}</strong>
+                              <strong>Demais faturas:</strong> Geradas no dia {paymentSettings.invoiceGenerationFixedDay - paymentSettings.invoiceGenerationDaysAdvance} com vencimento para o dia {paymentSettings.invoiceGenerationFixedDay}
                             </p>
                             <p className="text-xs text-blue-700 mt-1">
                               (Dia {paymentSettings.invoiceGenerationFixedDay} - {paymentSettings.invoiceGenerationDaysAdvance} dias = Dia {paymentSettings.invoiceGenerationFixedDay - paymentSettings.invoiceGenerationDaysAdvance})

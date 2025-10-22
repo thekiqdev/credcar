@@ -359,65 +359,25 @@ class InvoiceGenerationService {
         return null;
       }
 
-      // 3. Calcular data de vencimento da próxima parcela
-      const { systemConfigService } = await import('./system-config.service');
-      const paymentConfig = await systemConfigService.getPaymentConfig();
-      const daysAdvance = paymentConfig.invoiceGenerationDaysAdvance || 15;
-      
-      // BUSCAR a data de vencimento da primeira parcela
-      const { data: firstInvoice, error: firstInvoiceError } = await supabase
-        .from('invoices')
-        .select('due_date')
-        .eq('contract_id', contractId)
-        .eq('installment_number', 1)
-        .single();
+      // 3. Usar o novo serviço de cálculo de datas
+      const { invoiceDateCalculatorService } = await import('./invoice-date-calculator.service');
+      const today = new Date();
+      const dateCalculation = await invoiceDateCalculatorService.calculateInvoiceDates(
+        today, 
+        nextInstallmentNumber, 
+        validation.installments.length
+      );
 
-      if (firstInvoiceError || !firstInvoice) {
-        console.error(`❌ Primeira fatura não encontrada para contrato ${contractId}`);
-        throw new Error('Primeira fatura não encontrada');
-      }
-
-      // Calcular vencimento baseado na primeira parcela + meses
-      const firstDueDate = new Date(firstInvoice.due_date);
-      const dueDate = new Date(firstDueDate);
-      dueDate.setMonth(dueDate.getMonth() + (nextInstallmentNumber - 1));
-      
-      const yearStr = dueDate.getFullYear();
-      const monthStr = String(dueDate.getMonth() + 1).padStart(2, '0');
-      const dayStr = String(dueDate.getDate()).padStart(2, '0');
-      const dueDateStr = `${yearStr}-${monthStr}-${dayStr}`;
-      
-      console.log(`📅 Parcela ${nextInstallmentNumber}: Vencimento calculado ${dueDateStr} (baseado na 1ª parcela: ${firstInvoice.due_date})`);
-
-      // 4. Calcular next_invoice_date da parcela seguinte
-      let nextInvoiceDate: string | null = null;
-      
-      if (nextInstallmentNumber < validation.installments.length) {
-        // Calcular vencimento da próxima parcela (1 mês após esta)
-        const currentDueDate = new Date(dueDateStr);
-        const nextDueDate = new Date(currentDueDate);
-        nextDueDate.setMonth(nextDueDate.getMonth() + 1);
-        
-        // Calcular quando criar a próxima parcela (daysAdvance dias antes do vencimento)
-        const nextDate = new Date(nextDueDate);
-        nextDate.setDate(nextDate.getDate() - daysAdvance);
-        
-        const nextYearStr = nextDate.getFullYear();
-        const nextMonthStr = String(nextDate.getMonth() + 1).padStart(2, '0');
-        const nextDayStr = String(nextDate.getDate()).padStart(2, '0');
-        nextInvoiceDate = `${nextYearStr}-${nextMonthStr}-${nextDayStr}`;
-        
-        console.log(`📅 next_invoice_date: ${nextInvoiceDate} (${daysAdvance} dias antes da parcela ${nextInstallmentNumber + 1})`);
-      }
+      console.log(`📅 Parcela ${nextInstallmentNumber}: Vencimento ${dateCalculation.dueDate}, Geração ${dateCalculation.generationDate}`);
 
       const invoice: InvoiceData = {
         contract_id: contractId,
         installment_number: nextInstallmentNumber,
         amount: nextInstallment.valor_parcela,
-        due_date: dueDateStr,
+        due_date: dateCalculation.dueDate,
         status: 'Pendente',
         notes: `Parcela ${nextInstallmentNumber} - automática`,
-        next_invoice_date: nextInvoiceDate
+        next_invoice_date: dateCalculation.nextInvoiceDate
       };
 
       console.log(`✅ Próxima fatura gerada: Parcela ${nextInstallmentNumber} - R$ ${invoice.amount.toLocaleString('pt-BR')} - vence ${invoice.due_date} - próxima criação ${invoice.next_invoice_date || 'N/A'}`);

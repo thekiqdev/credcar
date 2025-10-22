@@ -37,17 +37,41 @@ class InvoiceDateCalculatorService {
       const fixedDay = paymentConfig.invoiceGenerationFixedDay || 20;
       const daysAdvance = paymentConfig.invoiceGenerationDaysAdvance || 15;
 
-      // Calculate due date based on fixed day rule
-      const dueDate = this.calculateDueDate(baseDate, installmentNumber, fixedDay);
-      
-      // Calculate generation date (daysAdvance days before due date)
-      const generationDate = this.calculateGenerationDate(dueDate, daysAdvance);
+      let dueDate: Date;
+      let generationDate: Date;
+
+      if (installmentNumber === 1) {
+        // FIRST INVOICE: Fixed rule - due in 2 days
+        dueDate = new Date(baseDate);
+        dueDate.setDate(dueDate.getDate() + 2);
+        
+        // Generation date is the same as base date (created immediately)
+        generationDate = new Date(baseDate);
+        
+        console.log(`📅 Primeira fatura: Vencimento em 2 dias (${this.formatDateToString(dueDate)})`);
+      } else {
+        // SUBSEQUENT INVOICES: Configurable rule
+        // Calculate due date based on fixed day rule
+        dueDate = this.calculateDueDate(baseDate, installmentNumber, fixedDay);
+        
+        // Calculate generation date (daysAdvance days before due date)
+        generationDate = this.calculateGenerationDate(dueDate, daysAdvance);
+        
+        console.log(`📅 Fatura ${installmentNumber}: Vencimento dia ${fixedDay} (${this.formatDateToString(dueDate)}), Geração ${daysAdvance} dias antes (${this.formatDateToString(generationDate)})`);
+      }
       
       // Calculate next invoice date (for subsequent installments)
       let nextInvoiceDate: string | null = null;
       if (installmentNumber < totalInstallments) {
-        const nextDueDate = this.calculateDueDate(baseDate, installmentNumber + 1, fixedDay);
-        nextInvoiceDate = this.calculateGenerationDate(nextDueDate, daysAdvance);
+        if (installmentNumber === 1) {
+          // Next invoice (2nd) follows configurable rule
+          const nextDueDate = this.calculateDueDate(baseDate, 2, fixedDay);
+          nextInvoiceDate = this.calculateGenerationDate(nextDueDate, daysAdvance);
+        } else {
+          // Subsequent invoices follow configurable rule
+          const nextDueDate = this.calculateDueDate(baseDate, installmentNumber + 1, fixedDay);
+          nextInvoiceDate = this.calculateGenerationDate(nextDueDate, daysAdvance);
+        }
       }
 
       return {
@@ -96,31 +120,34 @@ class InvoiceDateCalculatorService {
       const examples: InvoiceDateExample[] = [];
       const today = new Date();
 
-      // Example 1: First installment
+      // Example 1: First installment (fixed rule - 2 days)
       const firstInstallment = await this.calculateInvoiceDates(today, 1, 3);
+      const firstDueDate = new Date(today);
+      firstDueDate.setDate(firstDueDate.getDate() + 2);
+      
       examples.push({
         description: 'Primeira Parcela',
         generationDate: firstInstallment.generationDate,
         dueDate: firstInstallment.dueDate,
-        calculation: `Vencimento: dia ${fixedDay} do mês atual. Geração: ${daysAdvance} dias antes.`
+        calculation: `Regra fixa: Vencimento em 2 dias a partir de hoje.`
       });
 
-      // Example 2: Second installment
+      // Example 2: Second installment (configurable rule)
       const secondInstallment = await this.calculateInvoiceDates(today, 2, 3);
       examples.push({
         description: 'Segunda Parcela',
         generationDate: secondInstallment.generationDate,
         dueDate: secondInstallment.dueDate,
-        calculation: `Vencimento: dia ${fixedDay} do próximo mês. Geração: ${daysAdvance} dias antes.`
+        calculation: `Regra configurável: Vencimento dia ${fixedDay} do próximo mês. Geração ${daysAdvance} dias antes.`
       });
 
-      // Example 3: Third installment
+      // Example 3: Third installment (configurable rule)
       const thirdInstallment = await this.calculateInvoiceDates(today, 3, 3);
       examples.push({
         description: 'Terceira Parcela',
         generationDate: thirdInstallment.generationDate,
         dueDate: thirdInstallment.dueDate,
-        calculation: `Vencimento: dia ${fixedDay} do mês seguinte. Geração: ${daysAdvance} dias antes.`
+        calculation: `Regra configurável: Vencimento dia ${fixedDay} do mês seguinte. Geração ${daysAdvance} dias antes.`
       });
 
       return examples;
