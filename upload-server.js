@@ -1854,7 +1854,6 @@ app.get('/api/test/create-invoices/:contractId', async (req, res) => {
 
     // Usar o novo serviço de cálculo de datas para calcular next_invoice_date
     const { invoiceDateCalculatorService } = await import('./src/lib/invoice-date-calculator.service.ts');
-    const today = new Date();
     const dateCalculation = await invoiceDateCalculatorService.calculateInvoiceDates(
       today, 
       1, // primeira fatura
