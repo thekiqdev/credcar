@@ -236,33 +236,18 @@ class InvoiceGenerationService {
       // Calcular data de vencimento da primeira parcela
       let dueDate: string;
       
-      if (firstInstallment.vencimento) {
-        // Primeira parcela: usar data calculada (evitar problemas de timezone)
-        const date = firstInstallment.vencimento;
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
-        dueDate = `${year}-${month}-${day}`;
-        console.log(`📅 1ª parcela: Data específica ${dueDate}`);
-      } else {
-        // Fallback: usar padrão do sistema
-        const { systemConfigService } = await import('./system-config.service');
-        const paymentConfig = await systemConfigService.getPaymentConfig();
-        const defaultDueDays = paymentConfig.defaultDueDays || 30;
-        
-        const today = new Date();
-        const year = today.getFullYear();
-        const month = today.getMonth();
-        const day = today.getDate();
-        
-        const baseDate = new Date(year, month, day + defaultDueDays);
-        const yearStr = baseDate.getFullYear();
-        const monthStr = String(baseDate.getMonth() + 1).padStart(2, '0');
-        const dayStr = String(baseDate.getDate()).padStart(2, '0');
-        dueDate = `${yearStr}-${monthStr}-${dayStr}`;
-        
-        console.log(`📅 1ª parcela: Data padrão ${dueDate} (${defaultDueDays} dias)`);
-      }
+      // Usar o novo serviço de cálculo de datas para primeira fatura também
+      const { invoiceDateCalculatorService } = await import('./invoice-date-calculator.service');
+      const today = new Date();
+      const dateCalculation = await invoiceDateCalculatorService.calculateInvoiceDates(
+        today, 
+        1, // primeira fatura
+        totalInstallments,
+        contractId
+      );
+      
+      const dueDate = dateCalculation.dueDate;
+      console.log(`📅 1ª parcela: Data calculada ${dueDate} (nova regra: 2 dias)`);
 
       // Calcular next_invoice_date (quando criar a 2ª parcela)
       let nextInvoiceDate: string | null = null;

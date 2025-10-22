@@ -1852,16 +1852,17 @@ app.get('/api/test/create-invoices/:contractId', async (req, res) => {
     const dayStr = String(dueDate.getDate()).padStart(2, '0');
     const dueDateStr = `${yearStr}-${monthStr}-${dayStr}`;
 
-    // Calcular next_invoice_date para segunda parcela
-    const nextDueDate = new Date(dueDate);
-    nextDueDate.setMonth(nextDueDate.getMonth() + 1);
-    const nextDate = new Date(nextDueDate);
-    nextDate.setDate(nextDate.getDate() - 15); // 15 dias antes
+    // Usar o novo serviço de cálculo de datas para calcular next_invoice_date
+    const { invoiceDateCalculatorService } = await import('./src/lib/invoice-date-calculator.service.ts');
+    const today = new Date();
+    const dateCalculation = await invoiceDateCalculatorService.calculateInvoiceDates(
+      today, 
+      1, // primeira fatura
+      80, // assumindo 80 parcelas
+      contractId
+    );
     
-    const nextYearStr = nextDate.getFullYear();
-    const nextMonthStr = String(nextDate.getMonth() + 1).padStart(2, '0');
-    const nextDayStr = String(nextDate.getDate()).padStart(2, '0');
-    const nextInvoiceDate = `${nextYearStr}-${nextMonthStr}-${nextDayStr}`;
+    const nextInvoiceDate = dateCalculation.nextInvoiceDate;
 
     const newInvoice = {
       contract_id: contractId,
