@@ -144,8 +144,8 @@ const PublicRegistration = () => {
       // Gerar código PDV automaticamente
       const pdvCode = await pdvGeneratorService.generateUniquePDVCode(async (code) => {
         // Verificar se o código já existe no banco
-        const { data } = await representativeService.getAll();
-        return data.some(rep => rep.point_of_sale === code);
+        const representatives = await representativeService.getAll();
+        return representatives.some(rep => rep.point_of_sale === code);
       });
 
       console.log("Generated PDV code:", pdvCode);
