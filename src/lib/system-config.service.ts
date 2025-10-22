@@ -33,7 +33,7 @@ export interface PaymentConfig {
   defaultDueDays: number;
   maxInstallments: number;
   autoGenerateBoletos: boolean;
-  invoiceGenerationDaysAdvance: number; // Padrão: 15 dias
+  invoiceGenerationDaysAdvance: number; // Padrão: 7 dias
   invoiceGenerationFixedDay: number; // Padrão: 20 (dia do mês)
 }
 
@@ -274,7 +274,7 @@ class SystemConfigService {
         defaultDueDays: parseInt(configs.find(c => c.key === 'payment.default.due.days')?.value || '30'),
         maxInstallments: parseInt(configs.find(c => c.key === 'payment.max.installments')?.value || '12'),
         autoGenerateBoletos: configs.find(c => c.key === 'payment.auto.generate.boletos')?.value === 'true',
-        invoiceGenerationDaysAdvance: parseInt(configs.find(c => c.key === 'payment.invoice.generation.days.advance')?.value || '15'),
+        invoiceGenerationDaysAdvance: parseInt(configs.find(c => c.key === 'payment.invoice.generation.days.advance')?.value || '7'),
         invoiceGenerationFixedDay: parseInt(configs.find(c => c.key === 'payment.invoice.generation.fixed.day')?.value || '20'),
       };
     } catch (error) {
@@ -287,7 +287,7 @@ class SystemConfigService {
         defaultDueDays: 30,
         maxInstallments: 12,
         autoGenerateBoletos: true,
-        invoiceGenerationDaysAdvance: 15,
+        invoiceGenerationDaysAdvance: 7,
         invoiceGenerationFixedDay: 20,
       };
     }
