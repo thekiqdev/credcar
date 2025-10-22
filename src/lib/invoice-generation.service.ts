@@ -268,25 +268,18 @@ class InvoiceGenerationService {
       let nextInvoiceDate: string | null = null;
       
       if (totalInstallments > 1) {
-        // Calcular vencimento da 2ª parcela (1 mês após a 1ª)
-        const firstDueDate = new Date(dueDate);
-        const secondDueDate = new Date(firstDueDate);
-        secondDueDate.setMonth(secondDueDate.getMonth() + 1);
+        // Usar o novo serviço de cálculo de datas para calcular next_invoice_date
+        const { invoiceDateCalculatorService } = await import('./invoice-date-calculator.service');
+        const today = new Date();
+        const dateCalculation = await invoiceDateCalculatorService.calculateInvoiceDates(
+          today, 
+          1, // primeira fatura
+          totalInstallments,
+          contractId
+        );
         
-        // Calcular quando criar a 2ª parcela (15 dias antes do vencimento)
-        const { systemConfigService } = await import('./system-config.service');
-        const paymentConfig = await systemConfigService.getPaymentConfig();
-        const daysAdvance = paymentConfig.invoiceGenerationDaysAdvance || 15;
-        
-        const nextDate = new Date(secondDueDate);
-        nextDate.setDate(nextDate.getDate() - daysAdvance);
-        
-        const yearStr = nextDate.getFullYear();
-        const monthStr = String(nextDate.getMonth() + 1).padStart(2, '0');
-        const dayStr = String(nextDate.getDate()).padStart(2, '0');
-        nextInvoiceDate = `${yearStr}-${monthStr}-${dayStr}`;
-        
-        console.log(`📅 next_invoice_date calculado: ${nextInvoiceDate} (${daysAdvance} dias antes do vencimento da 2ª parcela)`);
+        nextInvoiceDate = dateCalculation.nextInvoiceDate;
+        console.log(`📅 next_invoice_date calculado: ${nextInvoiceDate} (usando nova regra configurável)`);
       }
 
       const invoice: InvoiceData = {

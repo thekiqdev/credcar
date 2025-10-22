@@ -6675,7 +6675,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           <h4 className="font-medium text-blue-800 mb-2">ℹ️ Sobre a Geração Automática</h4>
                           <div className="text-sm text-blue-700 space-y-1">
                             <p>• O cronjob executa diariamente às 08:00</p>
-                            <p>• Cria faturas 15 dias antes do vencimento</p>
+                            <p>• Cria faturas conforme configuração das Regras de Geração de Faturas</p>
+                            <p>• Primeira fatura: vencimento em 2 dias (regra fixa)</p>
+                            <p>• Demais faturas: dia {paymentSettings.invoiceGenerationFixedDay} - {paymentSettings.invoiceGenerationDaysAdvance} dias de antecedência</p>
                             <p>• Integra automaticamente com ASAAS</p>
                             <p>• Logs são salvos na tabela cron_execution_logs</p>
                           </div>
