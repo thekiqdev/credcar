@@ -785,71 +785,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     }
   };
 
-  // FUNÇÃO TEMPORÁRIA - Gerar PDV para todos os representantes existentes
-  const generatePDVForAllRepresentatives = async () => {
-    try {
-      console.log("🔄 Iniciando geração de PDV para todos os representantes...");
-      
-      // Buscar todos os representantes
-      const allRepresentatives = await representativeService.getAll();
-      console.log(`📊 Encontrados ${allRepresentatives.length} representantes`);
-      
-      // Filtrar representantes que não têm PDV
-      const representativesWithoutPDV = allRepresentatives.filter(rep => !rep.point_of_sale);
-      console.log(`⚠️ ${representativesWithoutPDV.length} representantes sem PDV`);
-      
-      if (representativesWithoutPDV.length === 0) {
-        alert("✅ Todos os representantes já possuem código PDV!");
-        return;
-      }
-      
-      let successCount = 0;
-      let errorCount = 0;
-      
-      // Gerar PDV para cada representante
-      for (const rep of representativesWithoutPDV) {
-        try {
-          // Gerar código PDV único
-          const pdvCode = await pdvGeneratorService.generateUniquePDVCode(async (code) => {
-            const allReps = await representativeService.getAll();
-            return allReps.some(r => r.point_of_sale === code);
-          });
-          
-          // Atualizar representante no banco
-          const { error } = await supabase
-            .from("profiles")
-            .update({ point_of_sale: pdvCode })
-            .eq("id", rep.id);
-          
-          if (error) {
-            console.error(`❌ Erro ao atualizar ${rep.name}:`, error);
-            errorCount++;
-          } else {
-            console.log(`✅ ${rep.name} → PDV: ${pdvCode}`);
-            successCount++;
-          }
-          
-          // Pequena pausa para evitar sobrecarga
-          await new Promise(resolve => setTimeout(resolve, 100));
-          
-        } catch (error) {
-          console.error(`❌ Erro ao processar ${rep.name}:`, error);
-          errorCount++;
-        }
-      }
-      
-      // Recarregar lista de representantes
-      await loadRepresentatives();
-      
-      // Mostrar resultado
-      alert(`🎉 Geração de PDV concluída!\n\n✅ Sucessos: ${successCount}\n❌ Erros: ${errorCount}`);
-      
-    } catch (error) {
-      console.error("❌ Erro na geração de PDV:", error);
-      alert("❌ Erro ao gerar PDV para representantes. Verifique o console.");
-    }
-  };
-
   const loadDocuments = async () => {
     try {
       // Load from both documents table (legacy) and representative_documents table (new)
@@ -3482,17 +3417,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
             <span>Novo Representante</span>
           </Button>
           <Button
-            className="h-auto py-4 flex flex-col items-center justify-center gap-2 bg-orange-600 hover:bg-orange-700 text-white"
-            onClick={() => {
-              if (confirm("⚠️ ATENÇÃO: Esta função irá gerar códigos PDV para TODOS os representantes que ainda não possuem.\n\nDeseja continuar?")) {
-                generatePDVForAllRepresentatives();
-              }
-            }}
-          >
-            <PlusCircle className="h-6 w-6" />
-            <span>Gerar PDV (Temporário)</span>
-          </Button>
-          <Button
+            className="h-auto py-4 flex flex-col items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white"
             onClick={() => {
               setShowContractFlow(true);
               setActiveSection("contract-creation");
@@ -4315,7 +4240,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                   </Badge>
                                 </TableCell>
                                 <TableCell>
-                                  {rep.commission_code || "-"}
+                                  {rep.point_of_sale || "-"}
                                 </TableCell>
                                 <TableCell className="text-right">
                                   <div className="flex justify-end gap-1">
