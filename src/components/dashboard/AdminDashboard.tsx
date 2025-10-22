@@ -18,6 +18,7 @@ import { asaasService } from "../../lib/asaas.service";
 import { commissionService } from "../../lib/commission.service";
 import WithdrawalManagement from "../admin/WithdrawalManagement";
 import { withdrawalService } from "../../lib/withdrawal.service";
+import { pdvGeneratorService } from "../../lib/pdv-generator.service";
 import { formatDateBR, isDateOverdue } from "../../lib/date-utils";
 import WebhookTester from "./WebhookTester";
 
@@ -2140,7 +2141,22 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
         return;
       }
 
-      const newRep = await representativeService.create(newRepresentative);
+      // Gerar código PDV automaticamente
+      const pdvCode = await pdvGeneratorService.generateUniquePDVCode(async (code) => {
+        // Verificar se o código já existe no banco
+        const representatives = await representativeService.getAll();
+        return representatives.some(rep => rep.point_of_sale === code);
+      });
+
+      console.log("Generated PDV code:", pdvCode);
+
+      // Criar representante com PDV gerado automaticamente
+      const representativeData = {
+        ...newRepresentative,
+        ponto_venda: pdvCode,
+      };
+
+      const newRep = await representativeService.create(representativeData);
       console.log("Representative created successfully:", newRep);
 
       // Refresh the representatives list
@@ -2158,7 +2174,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
         status: "Ativo",
         commission_table: "A",
       });
-      alert("Representante criado com sucesso!");
+      alert(`Representante criado com sucesso! Código PDV: ${pdvCode}`);
     } catch (error) {
       console.error("Error creating representative:", error);
       const errorMessage =
@@ -3997,20 +4013,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                 })
                               }
                               placeholder="Nome da empresa"
-                            />
-                          </div>
-                          <div>
-                            <Label htmlFor="ponto_venda">Ponto de Venda</Label>
-                            <Input
-                              id="ponto_venda"
-                              value={newRepresentative.ponto_venda}
-                              onChange={(e) =>
-                                setNewRepresentative({
-                                  ...newRepresentative,
-                                  ponto_venda: e.target.value,
-                                })
-                              }
-                              placeholder="Local de vendas"
                             />
                           </div>
                         </div>

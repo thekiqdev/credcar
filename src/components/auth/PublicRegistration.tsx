@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { representativeService, authService } from "../../lib/supabase";
+import { pdvGeneratorService } from "../../lib/pdv-generator.service";
 import {
   Card,
   CardContent,
@@ -22,7 +23,6 @@ const PublicRegistration = () => {
     phone: "",
     cnpj: "",
     razao_social: "",
-    ponto_venda: "",
     password: "",
     confirmPassword: "",
   });
@@ -90,10 +90,6 @@ const PublicRegistration = () => {
       newErrors["razao_social"] = "Razão social é obrigatória";
     }
 
-    if (!formData.ponto_venda.trim()) {
-      newErrors["ponto_venda"] = "Ponto de venda é obrigatório";
-    }
-
     if (!formData.password.trim()) {
       newErrors["password"] = "Senha é obrigatória";
     } else if (formData.password.length < 6) {
@@ -143,8 +139,16 @@ const PublicRegistration = () => {
         phone: formData.phone,
         cnpj: formData.cnpj,
         razao_social: formData.razao_social,
-        ponto_venda: formData.ponto_venda,
       });
+
+      // Gerar código PDV automaticamente
+      const pdvCode = await pdvGeneratorService.generateUniquePDVCode(async (code) => {
+        // Verificar se o código já existe no banco
+        const { data } = await representativeService.getAll();
+        return data.some(rep => rep.point_of_sale === code);
+      });
+
+      console.log("Generated PDV code:", pdvCode);
 
       // Create public registration in database
       const newUser = await representativeService.createPublicRegistration({
@@ -153,7 +157,7 @@ const PublicRegistration = () => {
         phone: formData.phone,
         cnpj: formData.cnpj,
         razao_social: formData.razao_social,
-        ponto_venda: formData.ponto_venda,
+        ponto_venda: pdvCode,
         password: formData.password,
       });
 
@@ -319,25 +323,6 @@ const PublicRegistration = () => {
                   {errors["razao_social"] && (
                     <p className="text-sm text-red-500">
                       {errors["razao_social"]}
-                    </p>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="ponto_venda">Ponto de Venda *</Label>
-                  <Input
-                    id="ponto_venda"
-                    type="text"
-                    value={formData.ponto_venda}
-                    onChange={(e) =>
-                      handleInputChange("ponto_venda", e.target.value)
-                    }
-                    placeholder="Localização do ponto de venda"
-                    className={errors["ponto_venda"] ? "border-red-500" : ""}
-                  />
-                  {errors["ponto_venda"] && (
-                    <p className="text-sm text-red-500">
-                      {errors["ponto_venda"]}
                     </p>
                   )}
                 </div>
