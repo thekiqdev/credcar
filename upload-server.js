@@ -2813,6 +2813,9 @@ app.get('/api/cron/test-generate-invoices', async (req, res) => {
     for (const invoice of invoicesToProcess) {
       result.processed++;
       
+      // Declarar variáveis fora do try para evitar problemas de escopo
+      let nextInvoiceDateStr = null;
+      
       try {
         console.log(`🔄 [CRON TEST] Processando contrato ${invoice.contract_id}, parcela ${invoice.installment_number}`);
         
