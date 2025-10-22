@@ -242,70 +242,74 @@ const PublicRegistration = () => {
                   <AlertDescription>{errors["email"]}</AlertDescription>
                 </Alert>
               )}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Nome Completo *</Label>
-                  <Input
-                    id="name"
-                    type="text"
-                    value={formData.name}
-                    onChange={(e) => handleInputChange("name", e.target.value)}
-                    placeholder="Seu nome completo"
-                    className={errors["name"] ? "border-red-500" : ""}
-                  />
-                  {errors["name"] && (
-                    <p className="text-sm text-red-500">{errors["name"]}</p>
-                  )}
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="name">Nome Completo *</Label>
+                    <Input
+                      id="name"
+                      type="text"
+                      value={formData.name}
+                      onChange={(e) => handleInputChange("name", e.target.value)}
+                      placeholder="Seu nome completo"
+                      className={errors["name"] ? "border-red-500" : ""}
+                    />
+                    {errors["name"] && (
+                      <p className="text-sm text-red-500">{errors["name"]}</p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Email *</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      value={formData.email}
+                      onChange={(e) => handleInputChange("email", e.target.value)}
+                      placeholder="seu.email@exemplo.com"
+                      className={errors["email"] ? "border-red-500" : ""}
+                    />
+                    {errors["email"] && (
+                      <p className="text-sm text-red-500">{errors["email"]}</p>
+                    )}
+                  </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email *</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => handleInputChange("email", e.target.value)}
-                    placeholder="seu.email@exemplo.com"
-                    className={errors["email"] ? "border-red-500" : ""}
-                  />
-                  {errors["email"] && (
-                    <p className="text-sm text-red-500">{errors["email"]}</p>
-                  )}
-                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="phone">Telefone *</Label>
+                    <Input
+                      id="phone"
+                      type="text"
+                      value={formData.phone}
+                      onChange={(e) => handleInputChange("phone", e.target.value)}
+                      placeholder="(11) 99999-9999"
+                      maxLength={15}
+                      className={errors["phone"] ? "border-red-500" : ""}
+                    />
+                    {errors["phone"] && (
+                      <p className="text-sm text-red-500">{errors["phone"]}</p>
+                    )}
+                  </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Telefone *</Label>
-                  <Input
-                    id="phone"
-                    type="text"
-                    value={formData.phone}
-                    onChange={(e) => handleInputChange("phone", e.target.value)}
-                    placeholder="(11) 99999-9999"
-                    maxLength={15}
-                    className={errors["phone"] ? "border-red-500" : ""}
-                  />
-                  {errors["phone"] && (
-                    <p className="text-sm text-red-500">{errors["phone"]}</p>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="cnpj">CPF/CNPJ *</Label>
-                  <Input
-                    id="cnpj"
-                    type="text"
-                    value={formData.cnpj}
-                    onChange={(e) => handleInputChange("cnpj", e.target.value)}
-                    placeholder="000.000.000-00 ou 00.000.000/0000-00"
-                    maxLength={18}
-                    className={errors["cnpj"] ? "border-red-500" : ""}
-                  />
-                  <p className="text-xs text-gray-500">
-                    Digite seu CPF (11 dígitos) ou CNPJ (14 dígitos)
-                  </p>
-                  {errors["cnpj"] && (
-                    <p className="text-sm text-red-500">{errors["cnpj"]}</p>
-                  )}
+                  <div className="space-y-2">
+                    <Label htmlFor="cnpj">CPF/CNPJ *</Label>
+                    <Input
+                      id="cnpj"
+                      type="text"
+                      value={formData.cnpj}
+                      onChange={(e) => handleInputChange("cnpj", e.target.value)}
+                      placeholder="000.000.000-00 ou 00.000.000/0000-00"
+                      maxLength={18}
+                      className={errors["cnpj"] ? "border-red-500" : ""}
+                    />
+                    <p className="text-xs text-gray-500">
+                      Digite seu CPF (11 dígitos) ou CNPJ (14 dígitos)
+                    </p>
+                    {errors["cnpj"] && (
+                      <p className="text-sm text-red-500">{errors["cnpj"]}</p>
+                    )}
+                  </div>
                 </div>
 
                 <div className="space-y-2">
