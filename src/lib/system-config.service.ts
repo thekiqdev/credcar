@@ -34,6 +34,7 @@ export interface PaymentConfig {
   maxInstallments: number;
   autoGenerateBoletos: boolean;
   invoiceGenerationDaysAdvance: number; // Padrão: 15 dias
+  invoiceGenerationFixedDay: number; // Padrão: 20 (dia do mês)
 }
 
 export interface NotificationConfig {
@@ -274,6 +275,7 @@ class SystemConfigService {
         maxInstallments: parseInt(configs.find(c => c.key === 'payment.max.installments')?.value || '12'),
         autoGenerateBoletos: configs.find(c => c.key === 'payment.auto.generate.boletos')?.value === 'true',
         invoiceGenerationDaysAdvance: parseInt(configs.find(c => c.key === 'payment.invoice.generation.days.advance')?.value || '15'),
+        invoiceGenerationFixedDay: parseInt(configs.find(c => c.key === 'payment.invoice.generation.fixed.day')?.value || '20'),
       };
     } catch (error) {
       console.error('Error getting Payment config:', error);
@@ -286,6 +288,7 @@ class SystemConfigService {
         maxInstallments: 12,
         autoGenerateBoletos: true,
         invoiceGenerationDaysAdvance: 15,
+        invoiceGenerationFixedDay: 20,
       };
     }
   }
@@ -320,6 +323,9 @@ class SystemConfigService {
       }
       if (config.invoiceGenerationDaysAdvance !== undefined) {
         promises.push(this.setConfig('payment.invoice.generation.days.advance', config.invoiceGenerationDaysAdvance.toString(), 'Dias de antecedência para geração automática de faturas', 'payment'));
+      }
+      if (config.invoiceGenerationFixedDay !== undefined) {
+        promises.push(this.setConfig('payment.invoice.generation.fixed.day', config.invoiceGenerationFixedDay.toString(), 'Dia fixo do mês para vencimento de faturas (1-31)', 'payment'));
       }
 
       const results = await Promise.all(promises);

@@ -457,6 +457,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     defaultDueDays: 30,
     maxInstallments: 12,
     
+    // Invoice Generation Rules
+    invoiceGenerationFixedDay: 20,
+    invoiceGenerationDaysAdvance: 15,
+    
     // Notification Settings
     sendPaymentNotifications: true,
     sendOverdueNotifications: true,
@@ -1152,6 +1156,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
         autoGenerateBoletos: paymentConfig.autoGenerateBoletos !== undefined ? paymentConfig.autoGenerateBoletos : true,
         defaultDueDays: paymentConfig.defaultDueDays || 30,
         maxInstallments: paymentConfig.maxInstallments || 12,
+        invoiceGenerationFixedDay: paymentConfig.invoiceGenerationFixedDay || 20,
+        invoiceGenerationDaysAdvance: paymentConfig.invoiceGenerationDaysAdvance || 15,
         sendPaymentNotifications: notificationConfig.sendPaymentConfirmed !== undefined ? notificationConfig.sendPaymentConfirmed : true,
         sendOverdueNotifications: notificationConfig.sendOverdue !== undefined ? notificationConfig.sendOverdue : true,
         notificationDaysBeforeDue: notificationConfig.daysBeforeDue || 7,
@@ -1172,6 +1178,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
         autoGenerateBoletos: true,
         defaultDueDays: 30,
         maxInstallments: 12,
+        invoiceGenerationFixedDay: 20,
+        invoiceGenerationDaysAdvance: 15,
         sendPaymentNotifications: true,
         sendOverdueNotifications: true,
         notificationDaysBeforeDue: 7,
@@ -1206,6 +1214,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
         defaultDueDays: paymentSettings.defaultDueDays,
         maxInstallments: paymentSettings.maxInstallments,
         autoGenerateBoletos: paymentSettings.autoGenerateBoletos,
+        invoiceGenerationFixedDay: paymentSettings.invoiceGenerationFixedDay,
+        invoiceGenerationDaysAdvance: paymentSettings.invoiceGenerationDaysAdvance,
       };
 
       const notificationConfig = {
@@ -6375,6 +6385,71 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                             />
                             <p className="text-sm text-muted-foreground mt-1">
                               Máximo de parcelas permitidas
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="space-y-4 border-t pt-4">
+                          <h4 className="text-lg font-semibold">Regras de Geração de Faturas</h4>
+                          <p className="text-sm text-muted-foreground">
+                            Configure quando gerar e quando vencer as faturas automaticamente
+                          </p>
+                          
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                              <Label htmlFor="invoice-generation-fixed-day">
+                                Dia Fixo de Vencimento
+                              </Label>
+                              <Input
+                                id="invoice-generation-fixed-day"
+                                type="number"
+                                min="1"
+                                max="31"
+                                value={paymentSettings.invoiceGenerationFixedDay}
+                                onChange={(e) =>
+                                  setPaymentSettings({
+                                    ...paymentSettings,
+                                    invoiceGenerationFixedDay: parseInt(e.target.value) || 20,
+                                  })
+                                }
+                                placeholder="20"
+                              />
+                              <p className="text-sm text-muted-foreground mt-1">
+                                Dia do mês para vencimento das faturas (1-31)
+                              </p>
+                            </div>
+
+                            <div>
+                              <Label htmlFor="invoice-generation-days-advance">
+                                Dias de Antecedência
+                              </Label>
+                              <Input
+                                id="invoice-generation-days-advance"
+                                type="number"
+                                min="1"
+                                max="30"
+                                value={paymentSettings.invoiceGenerationDaysAdvance}
+                                onChange={(e) =>
+                                  setPaymentSettings({
+                                    ...paymentSettings,
+                                    invoiceGenerationDaysAdvance: parseInt(e.target.value) || 15,
+                                  })
+                                }
+                                placeholder="15"
+                              />
+                              <p className="text-sm text-muted-foreground mt-1">
+                                Dias antes do vencimento para gerar fatura (1-30)
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                            <h5 className="font-medium text-blue-900 mb-2">📅 Exemplo Prático:</h5>
+                            <p className="text-sm text-blue-800">
+                              Com as configurações acima: <strong>Fatura gerada no dia 5 com vencimento para o dia 20</strong>
+                            </p>
+                            <p className="text-xs text-blue-700 mt-1">
+                              (Dia 20 - {paymentSettings.invoiceGenerationDaysAdvance} dias = Dia {20 - paymentSettings.invoiceGenerationDaysAdvance})
                             </p>
                           </div>
                         </div>
