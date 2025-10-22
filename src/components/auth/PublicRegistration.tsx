@@ -327,42 +327,44 @@ const PublicRegistration = () => {
                   )}
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="password">Senha *</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    value={formData.password}
-                    onChange={(e) =>
-                      handleInputChange("password", e.target.value)
-                    }
-                    placeholder="Mínimo 6 caracteres"
-                    className={errors["password"] ? "border-red-500" : ""}
-                  />
-                  {errors["password"] && (
-                    <p className="text-sm text-red-500">{errors["password"]}</p>
-                  )}
-                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="password">Senha *</Label>
+                    <Input
+                      id="password"
+                      type="password"
+                      value={formData.password}
+                      onChange={(e) =>
+                        handleInputChange("password", e.target.value)
+                      }
+                      placeholder="Mínimo 6 caracteres"
+                      className={errors["password"] ? "border-red-500" : ""}
+                    />
+                    {errors["password"] && (
+                      <p className="text-sm text-red-500">{errors["password"]}</p>
+                    )}
+                  </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="confirmPassword">Confirmar Senha *</Label>
-                  <Input
-                    id="confirmPassword"
-                    type="password"
-                    value={formData.confirmPassword}
-                    onChange={(e) =>
-                      handleInputChange("confirmPassword", e.target.value)
-                    }
-                    placeholder="Confirme sua senha"
-                    className={
-                      errors["confirmPassword"] ? "border-red-500" : ""
-                    }
-                  />
-                  {errors["confirmPassword"] && (
-                    <p className="text-sm text-red-500">
-                      {errors["confirmPassword"]}
-                    </p>
-                  )}
+                  <div className="space-y-2">
+                    <Label htmlFor="confirmPassword">Confirmar Senha *</Label>
+                    <Input
+                      id="confirmPassword"
+                      type="password"
+                      value={formData.confirmPassword}
+                      onChange={(e) =>
+                        handleInputChange("confirmPassword", e.target.value)
+                      }
+                      placeholder="Confirme sua senha"
+                      className={
+                        errors["confirmPassword"] ? "border-red-500" : ""
+                      }
+                    />
+                    {errors["confirmPassword"] && (
+                      <p className="text-sm text-red-500">
+                        {errors["confirmPassword"]}
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
 
