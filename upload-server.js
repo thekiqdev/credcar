@@ -2884,7 +2884,8 @@ app.get('/api/cron/test-generate-invoices', async (req, res) => {
         const dateCalculation = await invoiceDateCalculatorService.calculateInvoiceDates(
           today, 
           nextInstallmentNumber, 
-          creditRange.numero_total_parcelas
+          creditRange.numero_total_parcelas,
+          invoice.contract_id
         );
 
         console.log(`📅 Parcela ${nextInstallmentNumber}: Vencimento ${dateCalculation.dueDate}, Geração ${dateCalculation.generationDate}`);

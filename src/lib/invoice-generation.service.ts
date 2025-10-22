@@ -184,7 +184,8 @@ class InvoiceGenerationService {
         const dateCalculation = await invoiceDateCalculatorService.calculateInvoiceDates(
           today, 
           installment.numero_parcela, 
-          totalInstallments
+          totalInstallments,
+          contractId
         );
 
         console.log(`📅 Parcela ${installment.numero_parcela} (${installment.tipo}): Vencimento ${dateCalculation.dueDate}, Geração ${dateCalculation.generationDate}`);
@@ -337,7 +338,8 @@ class InvoiceGenerationService {
       const dateCalculation = await invoiceDateCalculatorService.calculateInvoiceDates(
         today, 
         nextInstallmentNumber, 
-        validation.installments.length
+        validation.installments.length,
+        contractId
       );
 
       console.log(`📅 Parcela ${nextInstallmentNumber}: Vencimento ${dateCalculation.dueDate}, Geração ${dateCalculation.generationDate}`);

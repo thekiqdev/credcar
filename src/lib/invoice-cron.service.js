@@ -213,7 +213,8 @@ class InvoiceCronService {
       const dateCalculation = await invoiceDateCalculatorService.calculateInvoiceDates(
         today, 
         nextInstallmentNumber, 
-        totalInstallments
+        totalInstallments,
+        contractId
       );
 
       console.log(`📅 Parcela ${nextInstallmentNumber}: Vencimento ${dateCalculation.dueDate}, Geração ${dateCalculation.generationDate}`);

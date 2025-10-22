@@ -24,12 +24,14 @@ class InvoiceDateCalculatorService {
    * @param baseDate - Base date for calculation (usually today)
    * @param installmentNumber - Installment number (1, 2, 3, etc.)
    * @param totalInstallments - Total number of installments
+   * @param contractId - Contract ID (optional, for subsequent installments)
    * @returns InvoiceDateCalculation object
    */
   async calculateInvoiceDates(
     baseDate: Date = new Date(),
     installmentNumber: number = 1,
-    totalInstallments: number = 1
+    totalInstallments: number = 1,
+    contractId?: number
   ): Promise<InvoiceDateCalculation> {
     try {
       // Get payment configuration
@@ -51,8 +53,32 @@ class InvoiceDateCalculatorService {
         console.log(`📅 Primeira fatura: Vencimento em 2 dias (${this.formatDateToString(dueDate)})`);
       } else {
         // SUBSEQUENT INVOICES: Configurable rule
+        // For subsequent installments, we need to calculate based on the first invoice date
+        let calculationBaseDate = baseDate;
+        
+        if (contractId && installmentNumber > 1) {
+          // Try to get the first invoice date for this contract
+          try {
+            const { supabase } = await import('./supabase');
+            const { data: firstInvoice, error } = await supabase
+              .from('invoices')
+              .select('due_date')
+              .eq('contract_id', contractId)
+              .eq('installment_number', 1)
+              .single();
+            
+            if (!error && firstInvoice) {
+              // Use the first invoice date as base for calculation
+              calculationBaseDate = new Date(firstInvoice.due_date);
+              console.log(`📅 Usando data da primeira fatura como base: ${this.formatDateToString(calculationBaseDate)}`);
+            }
+          } catch (error) {
+            console.warn('Could not fetch first invoice date, using baseDate:', error);
+          }
+        }
+        
         // Calculate due date based on fixed day rule
-        dueDate = this.calculateDueDate(baseDate, installmentNumber, fixedDay);
+        dueDate = this.calculateDueDate(calculationBaseDate, installmentNumber, fixedDay);
         
         // Calculate generation date (daysAdvance days before due date)
         generationDate = this.calculateGenerationDate(dueDate, daysAdvance);
@@ -63,15 +89,31 @@ class InvoiceDateCalculatorService {
       // Calculate next invoice date (for subsequent installments)
       let nextInvoiceDate: string | null = null;
       if (installmentNumber < totalInstallments) {
-        if (installmentNumber === 1) {
-          // Next invoice (2nd) follows configurable rule
-          const nextDueDate = this.calculateDueDate(baseDate, 2, fixedDay);
-          nextInvoiceDate = this.calculateGenerationDate(nextDueDate, daysAdvance);
-        } else {
-          // Subsequent invoices follow configurable rule
-          const nextDueDate = this.calculateDueDate(baseDate, installmentNumber + 1, fixedDay);
-          nextInvoiceDate = this.calculateGenerationDate(nextDueDate, daysAdvance);
+        // Use the same calculation base date for next invoice
+        let nextCalculationBaseDate = baseDate;
+        
+        if (contractId && installmentNumber >= 1) {
+          // Try to get the first invoice date for this contract
+          try {
+            const { supabase } = await import('./supabase');
+            const { data: firstInvoice, error } = await supabase
+              .from('invoices')
+              .select('due_date')
+              .eq('contract_id', contractId)
+              .eq('installment_number', 1)
+              .single();
+            
+            if (!error && firstInvoice) {
+              nextCalculationBaseDate = new Date(firstInvoice.due_date);
+            }
+          } catch (error) {
+            console.warn('Could not fetch first invoice date for next calculation, using baseDate:', error);
+          }
         }
+        
+        // Calculate next invoice date
+        const nextDueDate = this.calculateDueDate(nextCalculationBaseDate, installmentNumber + 1, fixedDay);
+        nextInvoiceDate = this.calculateGenerationDate(nextDueDate, daysAdvance);
       }
 
       return {
