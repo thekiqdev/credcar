@@ -70,7 +70,7 @@ const ContractCreationFlow: React.FC<ContractCreationFlowProps> = ({
   const [selectedPlan, setSelectedPlan] = useState<CommissionPlan | null>(null);
   const [selectedCreditRange, setSelectedCreditRange] =
     useState<CreditRange | null>(null);
-  const [selectedQuota, setSelectedQuota] = useState<Quota | null>(null);
+  const [selectedQuotas, setSelectedQuotas] = useState<Quota[]>([]);
   const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
   const [clientData, setClientData] = useState<ClientData | null>(null);
   const [contractContent, setContractContent] = useState<string>("");
@@ -90,8 +90,8 @@ const ContractCreationFlow: React.FC<ContractCreationFlowProps> = ({
     setCurrentStep("quota-selection");
   };
 
-  const handleQuotaSelect = (quota: Quota, group: Group) => {
-    setSelectedQuota(quota);
+  const handleQuotaSelect = (quotas: Quota[], group: Group) => {
+    setSelectedQuotas(quotas);
     setSelectedGroup(group);
     setCurrentStep("client-registration");
   };
@@ -296,63 +296,78 @@ const ContractCreationFlow: React.FC<ContractCreationFlowProps> = ({
       // Usar o ID do plano selecionado diretamente
       const planId = selectedPlan!.id;
 
-      // Create contract using the correct schema from the migration
-      const { data: contract, error: contractError } = await supabase
-        .from("contracts")
-        .insert([
-          {
-            contract_code: contractNumber, // Using 'contract_code' as per schema
+      // Create contracts for each selected quota
+      const contracts = [];
+      for (let i = 0; i < selectedQuotas.length; i++) {
+        const quota = selectedQuotas[i];
+        const contractNumberForQuota = selectedQuotas.length > 1 
+          ? `${contractNumber}-${i + 1}` 
+          : contractNumber;
+
+        // Create contract using the correct schema from the migration
+        const { data: contract, error: contractError } = await supabase
+          .from("contracts")
+          .insert([
+            {
+              contract_code: contractNumberForQuota, // Using 'contract_code' as per schema
+              representative_id: contractRepresentativeId,
+              client_id: clientId, // Already a number
+              commission_table_id: planId, // Usar o ID do plano selecionado
+              id_faixa_de_credito: selectedCreditRange!.id, // Salvar ID da faixa de crédito
+              quota_id: quota.id.toString(), // Add quota_id to link the contract to the quota
+              credit_amount: selectedCreditRange!.valor_credito.toString(),
+              total_value: selectedCreditRange!.valor_credito.toString(),
+              remaining_value: (
+                selectedCreditRange!.valor_credito * 0.98
+              ).toString(), // Sample remaining amount (98% of total)
+              total_installments: selectedCreditRange!.numero_total_parcelas,
+              first_payment:
+                selectedCreditRange!.valor_primeira_parcela.toString(),
+              remaining_payments:
+                selectedCreditRange!.valor_parcelas_restantes.toString(),
+              paid_installments: 0,
+              status: "Pendente",
+              contract_content: contentToSave || contractContent, // Save the HTML content
+            },
+          ])
+          .select("id")
+          .single();
+
+        if (contractError) {
+          console.error("Contract creation error:", contractError);
+          throw contractError;
+        }
+
+        contracts.push(contract);
+
+        // Update quota status to 'Ocupada' and link to contract
+        const { error: quotaError } = await supabase
+          .from("quotas")
+          .update({
+            status: "Ocupada",
+            contract_id: contract.id,
             representative_id: contractRepresentativeId,
-            client_id: clientId, // Already a number
-            commission_table_id: planId, // Usar o ID do plano selecionado
-            id_faixa_de_credito: selectedCreditRange!.id, // Salvar ID da faixa de crédito
-            quota_id: selectedQuota!.id.toString(), // Add quota_id to link the contract to the quota
-            credit_amount: selectedCreditRange!.valor_credito.toString(),
-            total_value: selectedCreditRange!.valor_credito.toString(),
-            remaining_value: (
-              selectedCreditRange!.valor_credito * 0.98
-            ).toString(), // Sample remaining amount (98% of total)
-            total_installments: selectedCreditRange!.numero_total_parcelas,
-            first_payment:
-              selectedCreditRange!.valor_primeira_parcela.toString(),
-            remaining_payments:
-              selectedCreditRange!.valor_parcelas_restantes.toString(),
-            paid_installments: 0,
-            status: "Pendente",
-            contract_content: contentToSave || contractContent, // Save the HTML content
-          },
-        ])
-        .select("id")
-        .single();
+            assigned_at: new Date().toISOString(),
+            reserved_at: null,
+            reserved_by: null,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", quota.id);
 
-      if (contractError) {
-        console.error("Contract creation error:", contractError);
-        throw contractError;
-      }
-
-      // Update quota status to 'Ocupada' and link to contract
-      const { error: quotaError } = await supabase
-        .from("quotas")
-        .update({
-          status: "Ocupada",
-          contract_id: contract.id,
-          representative_id: contractRepresentativeId,
-          assigned_at: new Date().toISOString(),
-          reserved_at: null,
-          reserved_by: null,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", selectedQuota!.id);
-
-      if (quotaError) {
-        console.error("Quota update error:", quotaError);
-        throw quotaError;
+        if (quotaError) {
+          console.error("Quota update error:", quotaError);
+          throw quotaError;
+        }
       }
 
       setCurrentStep("completed");
 
       // Show success message
-      alert(`Contrato ${contractNumber} criado com sucesso!`);
+      if (contracts.length === 1) {
+        alert(`Contrato ${contractNumber} criado com sucesso!`);
+      } else {
+        alert(`${contracts.length} contratos criados com sucesso!\n\nCódigos dos contratos:\n${contracts.map((c, i) => `${i + 1}. ${contractNumber}-${i + 1}`).join('\n')}`);
+      }
 
       if (onComplete) {
         onComplete();
@@ -410,10 +425,13 @@ const ContractCreationFlow: React.FC<ContractCreationFlowProps> = ({
             </svg>
           </div>
           <h2 className="text-2xl font-bold text-gray-900 mb-2">
-            Contrato Criado com Sucesso!
+            {selectedQuotas.length === 1 ? 'Contrato Criado com Sucesso!' : `${selectedQuotas.length} Contratos Criados com Sucesso!`}
           </h2>
           <p className="text-gray-600 mb-6">
-            O contrato foi registrado no sistema e está aguardando aprovação.
+            {selectedQuotas.length === 1 
+              ? 'O contrato foi registrado no sistema e está aguardando aprovação.'
+              : `Os ${selectedQuotas.length} contratos foram registrados no sistema e estão aguardando aprovação.`
+            }
           </p>
           <button
             onClick={() => window.location.reload()}
@@ -476,13 +494,13 @@ const ContractCreationFlow: React.FC<ContractCreationFlowProps> = ({
       {currentStep === "client-registration" &&
         selectedPlan &&
         selectedCreditRange &&
-        selectedQuota &&
+        selectedQuotas.length > 0 &&
         selectedGroup && (
           <div className="p-6">
             <ClientRegistration
               selectedPlan={selectedPlan}
               selectedCreditRange={selectedCreditRange}
-              selectedQuota={selectedQuota}
+              selectedQuotas={selectedQuotas}
               selectedGroup={selectedGroup}
               onClientSubmit={handleClientSubmit}
               onBack={handleBackToQuotaSelection}
@@ -493,14 +511,14 @@ const ContractCreationFlow: React.FC<ContractCreationFlowProps> = ({
       {currentStep === "contract-content" &&
         selectedPlan &&
         selectedCreditRange &&
-        selectedQuota &&
+        selectedQuotas.length > 0 &&
         selectedGroup &&
         clientData && (
           <div className="p-6">
             <ContractContentEditor
               selectedPlan={selectedPlan}
               selectedCreditRange={selectedCreditRange}
-              selectedQuota={selectedQuota}
+              selectedQuotas={selectedQuotas}
               selectedGroup={selectedGroup}
               clientData={clientData}
               onContentSubmit={handleContractContentSubmit}

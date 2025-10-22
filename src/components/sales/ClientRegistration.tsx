@@ -82,7 +82,7 @@ interface ClientData {
 interface ClientRegistrationProps {
   selectedPlan: CommissionPlan;
   selectedCreditRange: CreditRange;
-  selectedQuota: Quota;
+  selectedQuotas: Quota[];
   selectedGroup: Group;
   onClientSubmit: (clientData: ClientData) => void;
   onBack: () => void;
@@ -91,7 +91,7 @@ interface ClientRegistrationProps {
 const ClientRegistration: React.FC<ClientRegistrationProps> = ({
   selectedPlan,
   selectedCreditRange,
-  selectedQuota,
+  selectedQuotas,
   selectedGroup,
   onClientSubmit,
   onBack,
@@ -257,7 +257,7 @@ const ClientRegistration: React.FC<ClientRegistrationProps> = ({
                 Cadastro do Cliente
               </h1>
               <p className="text-gray-600">
-                Preencha os dados do cliente para finalizar o contrato
+                Preencha os dados do cliente para finalizar {selectedQuotas.length === 1 ? 'o contrato' : `os ${selectedQuotas.length} contratos`}
               </p>
             </div>
             <div className="flex gap-2">
@@ -271,7 +271,10 @@ const ClientRegistration: React.FC<ClientRegistrationProps> = ({
                 }).format(selectedCreditRange.valor_credito)}
               </Badge>
               <Badge variant="outline" className="bg-blue-100 text-blue-700">
-                {selectedGroup.name} - Cota #{selectedQuota.quota_number}
+                {selectedGroup.name} - {selectedQuotas.length === 1 
+                  ? `Cota #${selectedQuotas[0].quota_number}` 
+                  : `${selectedQuotas.length} Cotas: ${selectedQuotas.map(q => `#${q.quota_number}`).join(', ')}`
+                }
               </Badge>
             </div>
           </div>

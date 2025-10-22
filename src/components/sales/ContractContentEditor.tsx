@@ -65,7 +65,7 @@ interface ClientData {
 interface ContractContentEditorProps {
   selectedPlan: CommissionPlan;
   selectedCreditRange: CreditRange;
-  selectedQuota: Quota;
+  selectedQuotas: Quota[];
   selectedGroup: Group;
   clientData: ClientData;
   onContentSubmit: (content: string, signatureFields?: any[]) => void;
@@ -75,7 +75,7 @@ interface ContractContentEditorProps {
 const ContractContentEditor: React.FC<ContractContentEditorProps> = ({
   selectedPlan,
   selectedCreditRange,
-  selectedQuota,
+  selectedQuotas,
   selectedGroup,
   clientData,
   onContentSubmit,
@@ -115,7 +115,7 @@ const ContractContentEditor: React.FC<ContractContentEditorProps> = ({
 <h2>DADOS DO GRUPO</h2>
 <p><strong>Grupo:</strong> ${selectedGroup.name}</p>
 <p><strong>Descrição:</strong> ${selectedGroup.description}</p>
-<p><strong>Cota:</strong> ${selectedQuota.quota_number}</p>
+<p><strong>Cota{selectedQuotas.length > 1 ? 's' : ''}:</strong> ${selectedQuotas.length === 1 ? selectedQuotas[0].quota_number : selectedQuotas.map(q => q.quota_number).join(', ')}</p>
 
 <h2>PLANO DE COMISSÃO</h2>
 <p><strong>Plano:</strong> ${selectedPlan.nome}</p>
@@ -381,7 +381,7 @@ const ContractContentEditor: React.FC<ContractContentEditorProps> = ({
         // Replace quota variables
         content = content.replace(
           /{{COTA_NUMERO}}/g,
-          selectedQuota.quota_number.toString(),
+          selectedQuotas.length === 1 ? selectedQuotas[0].quota_number.toString() : selectedQuotas.map(q => q.quota_number).join(', '),
         );
 
         // Replace commission plan variables
@@ -523,9 +523,9 @@ const ContractContentEditor: React.FC<ContractContentEditorProps> = ({
                 </span>
               </div>
               <div>
-                <span className="text-sm font-medium text-gray-500">Cota:</span>
+                <span className="text-sm font-medium text-gray-500">Cota{selectedQuotas.length > 1 ? 's' : ''}:</span>
                 <span className="ml-2 text-sm text-gray-900">
-                  {selectedQuota.quota_number}
+                  {selectedQuotas.length === 1 ? selectedQuotas[0].quota_number : selectedQuotas.map(q => q.quota_number).join(', ')}
                 </span>
               </div>
               <div>

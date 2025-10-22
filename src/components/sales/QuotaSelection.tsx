@@ -63,7 +63,7 @@ interface CreditRange {
 interface QuotaSelectionProps {
   selectedPlan: CommissionPlan;
   selectedCreditRange: CreditRange;
-  onQuotaSelect: (quota: Quota, group: Group) => void;
+  onQuotaSelect: (quotas: Quota[], group: Group) => void;
   onBack: () => void;
   isAdminMode?: boolean;
 }
@@ -78,7 +78,7 @@ const QuotaSelection: React.FC<QuotaSelectionProps> = ({
   const [groups, setGroups] = useState<Group[]>([]);
   const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
   const [quotas, setQuotas] = useState<Quota[]>([]);
-  const [selectedQuota, setSelectedQuota] = useState<Quota | null>(null);
+  const [selectedQuotas, setSelectedQuotas] = useState<Quota[]>([]);
   const [loading, setLoading] = useState(true);
   const [reserving, setReserving] = useState(false);
 
@@ -171,7 +171,7 @@ const QuotaSelection: React.FC<QuotaSelectionProps> = ({
   const handleGroupSelect = (groupId: string) => {
     const group = groups.find((g) => g.id === parseInt(groupId));
     setSelectedGroup(group || null);
-    setSelectedQuota(null);
+    setSelectedQuotas([]);
   };
 
   const handleQuotaClick = async (quota: Quota) => {
@@ -180,33 +180,28 @@ const QuotaSelection: React.FC<QuotaSelectionProps> = ({
 
     setReserving(true);
     try {
-      // Se a cota já está selecionada (Reservada), desmarcar
-      if (selectedQuota?.id === quota.id && quota.status === "Reservada") {
+      // Verificar se a cota já está selecionada
+      const isAlreadySelected = selectedQuotas.some(q => q.id === quota.id);
+      
+      if (isAlreadySelected) {
+        // Desmarcar a cota
         const updatedQuota = {
           ...quota,
           status: "Disponível" as const,
         };
-
-        setSelectedQuota(null);
+        
+        setSelectedQuotas(selectedQuotas.filter(q => q.id !== quota.id));
         setQuotas(quotas.map((q) => (q.id === quota.id ? updatedQuota : q)));
-        return;
+      } else {
+        // Selecionar a cota
+        const updatedQuota = {
+          ...quota,
+          status: "Reservada" as const,
+        };
+        
+        setSelectedQuotas([...selectedQuotas, updatedQuota]);
+        setQuotas(quotas.map((q) => (q.id === quota.id ? updatedQuota : q)));
       }
-
-      // Se clicou em uma cota diferente, limpar seleção anterior e selecionar nova
-      const resetQuotas = quotas.map((q) => ({
-        ...q,
-        status: q.status === "Reservada" ? "Disponível" as const : q.status,
-      }));
-
-      // Selecionar apenas a cota clicada
-      const updatedQuota = {
-        ...quota,
-        status: "Reservada" as const,
-      };
-
-      // Atualizar estado: limpar seleção anterior e selecionar nova cota
-      setSelectedQuota(updatedQuota);
-      setQuotas(resetQuotas.map((q) => (q.id === quota.id ? updatedQuota : q)));
     } catch (error) {
       console.error("Error selecting quota:", error);
       const errorMessage =
@@ -218,8 +213,8 @@ const QuotaSelection: React.FC<QuotaSelectionProps> = ({
   };
 
   const handleContinue = () => {
-    if (selectedQuota && selectedGroup) {
-      onQuotaSelect(selectedQuota, selectedGroup);
+    if (selectedQuotas.length > 0 && selectedGroup) {
+      onQuotaSelect(selectedQuotas, selectedGroup);
     }
   };
 
@@ -316,7 +311,7 @@ const QuotaSelection: React.FC<QuotaSelectionProps> = ({
                 Seleção de Grupo e Cota
               </h1>
               <p className="text-gray-600">
-                Escolha um grupo e selecione uma cota disponível
+                Escolha um grupo e selecione uma ou mais cotas disponíveis
               </p>
             </div>
             <div className="flex gap-2">
@@ -424,7 +419,7 @@ const QuotaSelection: React.FC<QuotaSelectionProps> = ({
                 </div>
                 <div className="flex items-center">
                   <div className="w-4 h-4 bg-yellow-400 border-2 border-yellow-600 rounded mr-2"></div>
-                  <span className="text-sm">Selecionada (clique para desmarcar)</span>
+                  <span className="text-sm">Selecionada(s) (clique para desmarcar)</span>
                 </div>
                 <div className="flex items-center">
                   <div className="w-4 h-4 bg-orange-400 rounded mr-2"></div>
@@ -460,7 +455,7 @@ const QuotaSelection: React.FC<QuotaSelectionProps> = ({
                   )}
                 </CardTitle>
                 <CardDescription>
-                  Clique em uma cota disponível (cinza) para selecioná-la. Clique novamente para desmarcar.
+                  Clique em cotas disponíveis (cinza) para selecioná-las. Clique novamente para desmarcar. Múltiplas cotas podem ser selecionadas.
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -486,7 +481,7 @@ const QuotaSelection: React.FC<QuotaSelectionProps> = ({
                           ${quota.status === "Reservada" ? "hover:scale-105 border-yellow-600 shadow-lg" : ""}
                           ${quota.status === "Ocupada" ? "border-transparent" : ""}
                           ${quota.status === "Cancelada/Atraso" ? "border-transparent" : ""}
-                          ${selectedQuota?.id === quota.id ? "ring-4 ring-red-500 ring-opacity-75 scale-110 shadow-xl" : ""}
+                          ${selectedQuotas.some(q => q.id === quota.id) ? "ring-4 ring-red-500 ring-opacity-75 scale-110 shadow-xl" : ""}
                         `}
                         onClick={() => handleQuotaClick(quota)}
                         title={`Cota ${quota.quota_number} - ${quota.status}`}
@@ -497,17 +492,26 @@ const QuotaSelection: React.FC<QuotaSelectionProps> = ({
                   </div>
                 )}
 
-                {selectedQuota && (
+                {selectedQuotas.length > 0 && (
                   <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
                     <div className="flex items-center mb-2">
                       <Clock className="w-4 h-4 text-yellow-600 mr-2" />
                       <span className="font-medium text-yellow-800">
-                        Cota #{selectedQuota.quota_number} Selecionada
+                        {selectedQuotas.length} Cota{selectedQuotas.length > 1 ? 's' : ''} Selecionada{selectedQuotas.length > 1 ? 's' : ''}
                       </span>
                     </div>
+                    <div className="flex flex-wrap gap-2 mb-3">
+                      {selectedQuotas.map((quota) => (
+                        <Badge key={quota.id} variant="outline" className="bg-yellow-100 text-yellow-800 border-yellow-300">
+                          #{quota.quota_number}
+                        </Badge>
+                      ))}
+                    </div>
                     <p className="text-sm text-yellow-700">
-                      Esta cota foi selecionada para o contrato.
-                      Clique novamente na cota para desmarcar ou continue o processo.
+                      {selectedQuotas.length === 1 
+                        ? "Esta cota foi selecionada para o contrato. Clique novamente na cota para desmarcar ou continue o processo."
+                        : `Estas ${selectedQuotas.length} cotas foram selecionadas. Serão criados ${selectedQuotas.length} contratos individuais. Clique novamente em uma cota para desmarcar ou continue o processo.`
+                      }
                     </p>
                   </div>
                 )}
@@ -524,11 +528,11 @@ const QuotaSelection: React.FC<QuotaSelectionProps> = ({
 
           <Button
             onClick={handleContinue}
-            disabled={!selectedQuota || reserving}
+            disabled={selectedQuotas.length === 0 || reserving}
             className="bg-red-600 hover:bg-red-700 px-8"
             size="lg"
           >
-            {reserving ? "Reservando..." : "Continuar"}
+            {reserving ? "Reservando..." : `Continuar ${selectedQuotas.length > 0 ? `(${selectedQuotas.length} cotas)` : ''}`}
             <ArrowRight className="ml-2 h-4 w-4" />
           </Button>
         </div>
