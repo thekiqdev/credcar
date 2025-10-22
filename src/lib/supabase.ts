@@ -1439,8 +1439,54 @@ export const contractService = {
     );
   },
 
-  // Get all contracts for admin view
-  async getAll() {
+  // Get all contracts for admin view with pagination
+  async getAll(page: number = 1, limit: number = 20, search?: string) {
+    try {
+      const from = (page - 1) * limit;
+      const to = from + limit - 1;
+
+      let query = supabase
+        .from("contracts")
+        .select(
+          `
+          *,
+          clients(full_name, name),
+          profiles!inner (full_name, email),
+          planos!inner (nome, comissao)
+        `,
+          { count: 'exact' }
+        )
+        .order("created_at", { ascending: false })
+        .range(from, to);
+
+      // Apply search filter if provided
+      if (search && search.trim()) {
+        const searchTerm = search.toLowerCase();
+        query = query.or(`contract_number.ilike.%${searchTerm}%,contract_code.ilike.%${searchTerm}%,clients.full_name.ilike.%${searchTerm}%,clients.name.ilike.%${searchTerm}%,profiles.full_name.ilike.%${searchTerm}%`);
+      }
+
+      const { data, error, count } = await query;
+
+      if (error) {
+        console.error("Error fetching contracts with pagination:", error);
+        throw error;
+      }
+
+      return {
+        data: data || [],
+        total: count || 0,
+        page,
+        limit,
+        totalPages: Math.ceil((count || 0) / limit)
+      };
+    } catch (error) {
+      console.error("Error in contractService.getAll with pagination:", error);
+      throw error;
+    }
+  },
+
+  // Get all contracts for admin view (legacy method - kept for compatibility)
+  async getAllLegacy() {
     try {
       const { data, error } = await supabase
         .from("contracts")
@@ -1461,7 +1507,7 @@ export const contractService = {
 
       return data || [];
     } catch (error) {
-      console.error("Error in contractService.getAll:", error);
+      console.error("Error in contractService.getAllLegacy:", error);
       throw error;
     }
   },

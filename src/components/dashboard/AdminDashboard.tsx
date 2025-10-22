@@ -40,6 +40,7 @@ import {
   Card,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -580,6 +581,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     useState<any>(null);
   const [newContractStatus, setNewContractStatus] = useState<string>("");
 
+  // Contracts pagination state
+  const [contractsPage, setContractsPage] = useState(1);
+  const [contractsTotal, setContractsTotal] = useState(0);
+  const [contractsTotalPages, setContractsTotalPages] = useState(0);
+  const [contractsPerPage, setContractsPerPage] = useState(20);
+
   // Clients state
   const [allClients, setAllClients] = useState([]);
   const [isLoadingClients, setIsLoadingClients] = useState(true);
@@ -947,16 +954,39 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       .reduce((total, inv) => total + inv.amount, 0);
   };
 
-  const loadAllContracts = async () => {
+  const loadAllContracts = async (page: number = contractsPage, search: string = contractsSearch) => {
     try {
       setIsLoadingContracts(true);
-      const data = await contractService.getAll();
-      setAllContracts(data);
+      const result = await contractService.getAll(page, contractsPerPage, search);
+      setAllContracts(result.data);
+      setContractsTotal(result.total);
+      setContractsTotalPages(result.totalPages);
+      setContractsPage(result.page);
     } catch (error) {
       console.error("Error loading contracts:", error);
     } finally {
       setIsLoadingContracts(false);
     }
+  };
+
+  // Handle contracts page change
+  const handleContractsPageChange = (newPage: number) => {
+    setContractsPage(newPage);
+    loadAllContracts(newPage, contractsSearch);
+  };
+
+  // Handle contracts search
+  const handleContractsSearch = (searchTerm: string) => {
+    setContractsSearch(searchTerm);
+    setContractsPage(1); // Reset to first page when searching
+    loadAllContracts(1, searchTerm);
+  };
+
+  // Handle contracts per page change
+  const handleContractsPerPageChange = (newPerPage: number) => {
+    setContractsPerPage(newPerPage);
+    setContractsPage(1); // Reset to first page when changing per page
+    loadAllContracts(1, contractsSearch);
   };
 
   const loadGroups = async () => {
@@ -4366,37 +4396,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       <div>
                         <CardTitle>Lista de Contratos</CardTitle>
                         <CardDescription>
-                          {
-                            allContracts.filter((contract: any) => {
-                              if (!contractsSearch) return true;
-                              const searchTerm = contractsSearch.toLowerCase();
-                              return (
-                                (contract.contract_number &&
-                                  contract.contract_number
-                                    .toLowerCase()
-                                    .includes(searchTerm)) ||
-                                (contract.contract_code &&
-                                  contract.contract_code
-                                    .toLowerCase()
-                                    .includes(searchTerm)) ||
-                                (contract.clients?.name &&
-                                  contract.clients.name
-                                    .toLowerCase()
-                                    .includes(searchTerm)) ||
-                                (contract.clients?.full_name &&
-                                  contract.clients.full_name
-                                    .toLowerCase()
-                                    .includes(searchTerm)) ||
-                                (contract.profiles?.full_name &&
-                                  contract.profiles.full_name
-                                    .toLowerCase()
-                                    .includes(searchTerm))
-                              );
-                            }).length
-                          }{" "}
-                          de {allContracts.length} contratos
-                          {contractsSearch &&
-                            ` (filtrado por "${contractsSearch}")`}
+                          Página {contractsPage} de {contractsTotalPages} - {contractsTotal} contratos total
+                          {contractsSearch && ` (filtrado por "${contractsSearch}")`}
                         </CardDescription>
                       </div>
                       <div className="flex items-center space-x-2">
@@ -4406,7 +4407,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                             placeholder="Buscar contratos..."
                             value={contractsSearch}
                             onChange={(e) => {
-                              setContractsSearch(e.target.value);
+                              handleContractsSearch(e.target.value);
                               setGlobalSearch(e.target.value);
                             }}
                             className="pl-8 w-64"
@@ -4454,7 +4455,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {allContracts.slice(0, 10).map((contract: any) => (
+                          {allContracts.map((contract: any) => (
                             <TableRow key={contract.id}>
                               <TableCell className="font-medium">
                                 {contract.contract_number ||
@@ -4597,6 +4598,78 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       </Table>
                     )}
                   </CardContent>
+                  
+                  {/* Pagination Controls */}
+                  {contractsTotalPages > 1 && (
+                    <CardFooter className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        <p className="text-sm text-muted-foreground">
+                          Mostrando {((contractsPage - 1) * contractsPerPage) + 1} a {Math.min(contractsPage * contractsPerPage, contractsTotal)} de {contractsTotal} contratos
+                        </p>
+                      </div>
+                      
+                      <div className="flex items-center space-x-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleContractsPageChange(contractsPage - 1)}
+                          disabled={contractsPage <= 1}
+                        >
+                          Anterior
+                        </Button>
+                        
+                        <div className="flex items-center space-x-1">
+                          {Array.from({ length: Math.min(5, contractsTotalPages) }, (_, i) => {
+                            let pageNum;
+                            if (contractsTotalPages <= 5) {
+                              pageNum = i + 1;
+                            } else if (contractsPage <= 3) {
+                              pageNum = i + 1;
+                            } else if (contractsPage >= contractsTotalPages - 2) {
+                              pageNum = contractsTotalPages - 4 + i;
+                            } else {
+                              pageNum = contractsPage - 2 + i;
+                            }
+                            
+                            return (
+                              <Button
+                                key={pageNum}
+                                variant={contractsPage === pageNum ? "default" : "outline"}
+                                size="sm"
+                                onClick={() => handleContractsPageChange(pageNum)}
+                                className="w-8 h-8 p-0"
+                              >
+                                {pageNum}
+                              </Button>
+                            );
+                          })}
+                        </div>
+                        
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleContractsPageChange(contractsPage + 1)}
+                          disabled={contractsPage >= contractsTotalPages}
+                        >
+                          Próximo
+                        </Button>
+                      </div>
+                      
+                      <div className="flex items-center space-x-2">
+                        <p className="text-sm text-muted-foreground">Por página:</p>
+                        <select
+                          value={contractsPerPage}
+                          onChange={(e) => handleContractsPerPageChange(Number(e.target.value))}
+                          className="px-2 py-1 border rounded text-sm"
+                        >
+                          <option value={10}>10</option>
+                          <option value={20}>20</option>
+                          <option value={50}>50</option>
+                          <option value={100}>100</option>
+                        </select>
+                      </div>
+                    </CardFooter>
+                  )}
                 </Card>
               </div>
             )}
