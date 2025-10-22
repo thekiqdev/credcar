@@ -2878,52 +2878,25 @@ app.get('/api/cron/test-generate-invoices', async (req, res) => {
           installmentValue = creditRange.valor_parcelas_restantes;
         }
 
-        // Calcular data de vencimento baseado na primeira parcela
-        const { data: firstInvoice, error: firstError } = await supabase
-          .from('invoices')
-          .select('due_date')
-          .eq('contract_id', invoice.contract_id)
-          .eq('installment_number', 1)
-          .single();
+        // Usar o novo serviço de cálculo de datas
+        const { invoiceDateCalculatorService } = await import('./src/lib/invoice-date-calculator.service.ts');
+        const today = new Date();
+        const dateCalculation = await invoiceDateCalculatorService.calculateInvoiceDates(
+          today, 
+          nextInstallmentNumber, 
+          creditRange.numero_total_parcelas
+        );
 
-        if (firstError || !firstInvoice) {
-          throw new Error(`Primeira fatura não encontrada para contrato ${invoice.contract_id}`);
-        }
-
-        // Calcular vencimento baseado na primeira parcela + meses
-        const firstDueDate = new Date(firstInvoice.due_date);
-        const dueDate = new Date(firstDueDate);
-        dueDate.setMonth(dueDate.getMonth() + (nextInstallmentNumber - 1));
-        
-        const yearStr = dueDate.getFullYear();
-        const monthStr = String(dueDate.getMonth() + 1).padStart(2, '0');
-        const dayStr = String(dueDate.getDate()).padStart(2, '0');
-        const dueDateStr = `${yearStr}-${monthStr}-${dayStr}`;
-
-        // Calcular next_invoice_date da parcela seguinte
-        let nextInvoiceDate = null;
-        
-        if (nextInstallmentNumber < creditRange.numero_total_parcelas) {
-          const nextDueDate = new Date(dueDate);
-          nextDueDate.setMonth(nextDueDate.getMonth() + 1);
-          
-          const nextDate = new Date(nextDueDate);
-          nextDate.setDate(nextDate.getDate() - 15); // 15 dias antes
-          
-          const nextYearStr = nextDate.getFullYear();
-          const nextMonthStr = String(nextDate.getMonth() + 1).padStart(2, '0');
-          const nextDayStr = String(nextDate.getDate()).padStart(2, '0');
-          nextInvoiceDate = `${nextYearStr}-${nextMonthStr}-${nextDayStr}`;
-        }
+        console.log(`📅 Parcela ${nextInstallmentNumber}: Vencimento ${dateCalculation.dueDate}, Geração ${dateCalculation.generationDate}`);
 
         const newInvoice = {
           contract_id: invoice.contract_id,
           installment_number: nextInstallmentNumber,
           amount: installmentValue,
-          due_date: dueDateStr,
+          due_date: dateCalculation.dueDate,
           status: 'Pendente',
           notes: `Parcela ${nextInstallmentNumber} - automática`,
-          next_invoice_date: nextInvoiceDate
+          next_invoice_date: dateCalculation.nextInvoiceDate
         };
 
         // Inserir nova fatura no banco

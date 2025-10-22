@@ -167,8 +167,7 @@ class InvoiceDateCalculatorService {
   private calculateDueDate(baseDate: Date, installmentNumber: number, fixedDay: number): Date {
     const dueDate = new Date(baseDate);
     
-    // For first installment, use current month
-    // For subsequent installments, add months
+    // For subsequent installments, add months from base date
     if (installmentNumber > 1) {
       dueDate.setMonth(dueDate.getMonth() + (installmentNumber - 1));
     }

@@ -207,40 +207,25 @@ class InvoiceCronService {
       const totalInstallments = contract.payment_installments || 80;
       const installmentValue = Math.round(contract.credit_amount / totalInstallments);
 
-      // Calcular data de vencimento (simplificado)
+      // Usar o novo serviço de cálculo de datas
+      const { invoiceDateCalculatorService } = await import('./invoice-date-calculator.service.ts');
       const today = new Date();
-      const dueDate = new Date(today);
-      dueDate.setMonth(dueDate.getMonth() + nextInstallmentNumber);
-      
-      const yearStr = dueDate.getFullYear();
-      const monthStr = String(dueDate.getMonth() + 1).padStart(2, '0');
-      const dayStr = String(dueDate.getDate()).padStart(2, '0');
-      const dueDateStr = `${yearStr}-${monthStr}-${dayStr}`;
+      const dateCalculation = await invoiceDateCalculatorService.calculateInvoiceDates(
+        today, 
+        nextInstallmentNumber, 
+        totalInstallments
+      );
 
-      // Calcular next_invoice_date da parcela seguinte
-      let nextInvoiceDate = null;
-      
-      if (nextInstallmentNumber < totalInstallments) {
-        const nextDueDate = new Date(dueDate);
-        nextDueDate.setMonth(nextDueDate.getMonth() + 1);
-        
-        const nextDate = new Date(nextDueDate);
-        nextDate.setDate(nextDate.getDate() - 15); // 15 dias antes
-        
-        const nextYearStr = nextDate.getFullYear();
-        const nextMonthStr = String(nextDate.getMonth() + 1).padStart(2, '0');
-        const nextDayStr = String(nextDate.getDate()).padStart(2, '0');
-        nextInvoiceDate = `${nextYearStr}-${nextMonthStr}-${nextDayStr}`;
-      }
+      console.log(`📅 Parcela ${nextInstallmentNumber}: Vencimento ${dateCalculation.dueDate}, Geração ${dateCalculation.generationDate}`);
 
       const invoice = {
         contract_id: contractId,
         installment_number: nextInstallmentNumber,
         amount: installmentValue,
-        due_date: dueDateStr,
+        due_date: dateCalculation.dueDate,
         status: 'Pendente',
         notes: `Parcela ${nextInstallmentNumber} - automática`,
-        next_invoice_date: nextInvoiceDate
+        next_invoice_date: dateCalculation.nextInvoiceDate
       };
 
       console.log(`✅ Próxima fatura gerada: Parcela ${nextInstallmentNumber} - R$ ${invoice.amount.toLocaleString('pt-BR')} - vence ${invoice.due_date}`);
