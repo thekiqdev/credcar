@@ -1459,12 +1459,6 @@ export const contractService = {
         .order("created_at", { ascending: false })
         .range(from, to);
 
-      // Apply search filter if provided
-      if (search && search.trim()) {
-        const searchTerm = search.toLowerCase();
-        query = query.or(`contract_number.ilike.%${searchTerm}%,contract_code.ilike.%${searchTerm}%,clients.full_name.ilike.%${searchTerm}%,clients.name.ilike.%${searchTerm}%,profiles.full_name.ilike.%${searchTerm}%`);
-      }
-
       const { data, error, count } = await query;
 
       if (error) {
@@ -1472,12 +1466,28 @@ export const contractService = {
         throw error;
       }
 
+      let filteredData = data || [];
+
+      // Apply search filter if provided (client-side filtering for related fields)
+      if (search && search.trim()) {
+        const searchTerm = search.toLowerCase();
+        filteredData = filteredData.filter((contract: any) => {
+          return (
+            contract.contract_number?.toLowerCase().includes(searchTerm) ||
+            contract.contract_code?.toLowerCase().includes(searchTerm) ||
+            contract.clients?.full_name?.toLowerCase().includes(searchTerm) ||
+            contract.clients?.name?.toLowerCase().includes(searchTerm) ||
+            contract.profiles?.full_name?.toLowerCase().includes(searchTerm)
+          );
+        });
+      }
+
       return {
-        data: data || [],
-        total: count || 0,
+        data: filteredData,
+        total: search && search.trim() ? filteredData.length : (count || 0),
         page,
         limit,
-        totalPages: Math.ceil((count || 0) / limit)
+        totalPages: Math.ceil((search && search.trim() ? filteredData.length : (count || 0)) / limit)
       };
     } catch (error) {
       console.error("Error in contractService.getAll with pagination:", error);
