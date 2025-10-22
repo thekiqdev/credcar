@@ -1442,10 +1442,59 @@ export const contractService = {
   // Get all contracts for admin view with pagination
   async getAll(page: number = 1, limit: number = 20, search?: string) {
     try {
+      // If search is provided, we need to search across all data first
+      if (search && search.trim()) {
+        const searchTerm = search.toLowerCase();
+        
+        // First, get all contracts that match the search criteria
+        const { data: allData, error: searchError } = await supabase
+          .from("contracts")
+          .select(
+            `
+            *,
+            clients(full_name, name),
+            profiles!inner (full_name, email),
+            planos!inner (nome, comissao)
+          `,
+            { count: 'exact' }
+          )
+          .order("created_at", { ascending: false });
+
+        if (searchError) {
+          console.error("Error fetching contracts for search:", searchError);
+          throw searchError;
+        }
+
+        // Filter the results client-side
+        const filteredData = (allData || []).filter((contract: any) => {
+          return (
+            contract.contract_number?.toLowerCase().includes(searchTerm) ||
+            contract.contract_code?.toLowerCase().includes(searchTerm) ||
+            contract.clients?.full_name?.toLowerCase().includes(searchTerm) ||
+            contract.clients?.name?.toLowerCase().includes(searchTerm) ||
+            contract.profiles?.full_name?.toLowerCase().includes(searchTerm)
+          );
+        });
+
+        // Apply pagination to filtered results
+        const from = (page - 1) * limit;
+        const to = from + limit;
+        const paginatedData = filteredData.slice(from, to);
+
+        return {
+          data: paginatedData,
+          total: filteredData.length,
+          page,
+          limit,
+          totalPages: Math.ceil(filteredData.length / limit)
+        };
+      }
+
+      // Normal pagination without search
       const from = (page - 1) * limit;
       const to = from + limit - 1;
 
-      let query = supabase
+      const { data, error, count } = await supabase
         .from("contracts")
         .select(
           `
@@ -1459,35 +1508,17 @@ export const contractService = {
         .order("created_at", { ascending: false })
         .range(from, to);
 
-      const { data, error, count } = await query;
-
       if (error) {
         console.error("Error fetching contracts with pagination:", error);
         throw error;
       }
 
-      let filteredData = data || [];
-
-      // Apply search filter if provided (client-side filtering for related fields)
-      if (search && search.trim()) {
-        const searchTerm = search.toLowerCase();
-        filteredData = filteredData.filter((contract: any) => {
-          return (
-            contract.contract_number?.toLowerCase().includes(searchTerm) ||
-            contract.contract_code?.toLowerCase().includes(searchTerm) ||
-            contract.clients?.full_name?.toLowerCase().includes(searchTerm) ||
-            contract.clients?.name?.toLowerCase().includes(searchTerm) ||
-            contract.profiles?.full_name?.toLowerCase().includes(searchTerm)
-          );
-        });
-      }
-
       return {
-        data: filteredData,
-        total: search && search.trim() ? filteredData.length : (count || 0),
+        data: data || [],
+        total: count || 0,
         page,
         limit,
-        totalPages: Math.ceil((search && search.trim() ? filteredData.length : (count || 0)) / limit)
+        totalPages: Math.ceil((count || 0) / limit)
       };
     } catch (error) {
       console.error("Error in contractService.getAll with pagination:", error);
