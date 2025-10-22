@@ -19,6 +19,7 @@ import { commissionService } from "../../lib/commission.service";
 import WithdrawalManagement from "../admin/WithdrawalManagement";
 import { withdrawalService } from "../../lib/withdrawal.service";
 import { pdvGeneratorService } from "../../lib/pdv-generator.service";
+import { tempPDVGeneratorService } from "../../lib/supabase";
 import { formatDateBR, isDateOverdue } from "../../lib/date-utils";
 import WebhookTester from "./WebhookTester";
 
@@ -102,7 +103,6 @@ import {
   FileText,
   Settings,
   PlusCircle,
-  RefreshCw,
   Search,
   Bell,
   ChevronDown,
@@ -218,6 +218,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [adminPassword, setAdminPassword] = useState("");
   const [isContractTransferDialogOpen, setIsContractTransferDialogOpen] =
     useState(false);
+  const [isGeneratingPDV, setIsGeneratingPDV] = useState(false);
   const [representativeContracts, setRepresentativeContracts] = useState([]);
   const [transferOption, setTransferOption] = useState<
     "admin" | "representative" | ""
@@ -2209,7 +2210,34 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       console.error("Error updating representative:", error);
       const errorMessage =
         error instanceof Error ? error.message : "Erro desconhecido";
-      alert(`Erro ao atualizar representante: ${errorMessage}`);
+    }
+  };
+
+  // TEMPORÁRIO: Função para gerar PDV para todos os representantes existentes
+  const handleGeneratePDVForAll = async () => {
+    if (!confirm("⚠️ ATENÇÃO: Esta função irá gerar códigos PDV para TODOS os representantes que ainda não possuem.\n\nDeseja continuar?")) {
+      return;
+    }
+
+    setIsGeneratingPDV(true);
+    try {
+      console.log("🚀 Iniciando geração de PDV para todos os representantes...");
+      const result = await tempPDVGeneratorService.generatePDVForAllRepresentatives();
+      
+      if (result.success) {
+        alert(`✅ ${result.message}\n\nSucessos: ${result.successCount}\nErros: ${result.errorCount}\nTotal processados: ${result.totalProcessed}`);
+      } else {
+        alert(`⚠️ ${result.message}\n\nSucessos: ${result.successCount}\nErros: ${result.errorCount}\nTotal processados: ${result.totalProcessed}`);
+      }
+
+      // Recarregar lista de representantes
+      await loadRepresentatives();
+      
+    } catch (error) {
+      console.error("❌ Erro na geração de PDV:", error);
+      alert(`❌ Erro na geração de PDV: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
+    } finally {
+      setIsGeneratingPDV(false);
     }
   };
 
@@ -2246,62 +2274,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       const errorMessage =
         error instanceof Error ? error.message : "Erro desconhecido";
       alert(`Erro ao alterar senha: ${errorMessage}`);
-    }
-  };
-
-  // Função temporária para gerar PDV para todos os representantes
-  const generatePDVForAllRepresentatives = async () => {
-    if (!confirm("Esta ação irá gerar códigos PDV para todos os representantes que não possuem. Continuar?")) {
-      return;
-    }
-
-    try {
-      setIsLoading(true);
-      console.log("Iniciando geração de PDV para todos os representantes...");
-
-      // Buscar todos os representantes
-      const representatives = await representativeService.getAll();
-      console.log(`Encontrados ${representatives.length} representantes`);
-
-      let updated = 0;
-      let skipped = 0;
-
-      for (const rep of representatives) {
-        // Se já tem PDV, pular
-        if (rep.point_of_sale) {
-          console.log(`Representante ${rep.name} já possui PDV: ${rep.point_of_sale}`);
-          skipped++;
-          continue;
-        }
-
-        // Gerar PDV único
-        const pdvCode = await pdvGeneratorService.generateUniquePDVCode(async (code) => {
-          // Verificar se o código já existe no banco
-          const allReps = await representativeService.getAll();
-          return allReps.some(r => r.point_of_sale === code);
-        });
-
-        console.log(`Gerando PDV ${pdvCode} para ${rep.name}`);
-
-        // Atualizar representante com PDV
-        await representativeService.update(rep.id, {
-          point_of_sale: pdvCode
-        });
-
-        updated++;
-        console.log(`✅ ${rep.name}: ${pdvCode}`);
-      }
-
-      alert(`Migração concluída!\n\n✅ Atualizados: ${updated}\n⏭️ Já possuíam PDV: ${skipped}\n📊 Total processados: ${representatives.length}`);
-      
-      // Recarregar lista de representantes
-      await loadRepresentatives();
-
-    } catch (error) {
-      console.error("Erro na geração de PDV:", error);
-      alert(`Erro na geração de PDV: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -3976,26 +3948,16 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       Gerencie os representantes de vendas do sistema.
                     </p>
                   </div>
-                  <div className="flex gap-2">
-                    <Button 
-                      variant="outline" 
-                      onClick={generatePDVForAllRepresentatives}
-                      disabled={isLoading}
-                      className="bg-orange-100 hover:bg-orange-200 text-orange-800 border-orange-300"
-                    >
-                      <RefreshCw className="mr-2 h-4 w-4" />
-                      Gerar PDV para Todos
-                    </Button>
-                    <Dialog
-                      open={isNewRepDialogOpen}
-                      onOpenChange={setIsNewRepDialogOpen}
-                    >
-                      <DialogTrigger asChild>
-                        <Button className="bg-red-600 hover:bg-red-700">
-                          <PlusCircle className="mr-2 h-4 w-4" />
-                          Novo Representante
-                        </Button>
-                      </DialogTrigger>
+                  <Dialog
+                    open={isNewRepDialogOpen}
+                    onOpenChange={setIsNewRepDialogOpen}
+                  >
+                    <DialogTrigger asChild>
+                      <Button className="bg-red-600 hover:bg-red-700">
+                        <PlusCircle className="mr-2 h-4 w-4" />
+                        Novo Representante
+                      </Button>
+                    </DialogTrigger>
                     <DialogContent className="sm:max-w-[600px]">
                       <DialogHeader>
                         <DialogTitle>Criar Novo Representante</DialogTitle>
@@ -5622,6 +5584,35 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                             'Salvar Configurações Gerais'
                           )}
                         </Button>
+
+                        {/* TEMPORÁRIO: Botão para gerar PDV para todos os representantes */}
+                        <div className="mt-6 p-4 border border-orange-200 bg-orange-50 rounded-lg">
+                          <h3 className="text-lg font-semibold text-orange-800 mb-2">
+                            ⚠️ Função Temporária - Geração de PDV
+                          </h3>
+                          <p className="text-sm text-orange-700 mb-4">
+                            Esta função irá gerar códigos PDV (PV-A1234567) para todos os representantes que ainda não possuem.
+                            <br />
+                            <strong>Esta função será removida após a execução.</strong>
+                          </p>
+                          <Button 
+                            variant="outline"
+                            className="border-orange-300 text-orange-700 hover:bg-orange-100"
+                            onClick={handleGeneratePDVForAll}
+                            disabled={isGeneratingPDV}
+                          >
+                            {isGeneratingPDV ? (
+                              <>
+                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-orange-600 mr-2"></div>
+                                Gerando PDVs...
+                              </>
+                            ) : (
+                              <>
+                                ⚡ Gerar PDV para Todos os Representantes
+                              </>
+                            )}
+                          </Button>
+                        </div>
                       </CardContent>
                     </Card>
                   </TabsContent>
