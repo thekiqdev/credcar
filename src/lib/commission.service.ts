@@ -174,7 +174,7 @@ class CommissionService {
         .from("withdrawal_requests")
         .select("requested_value, status")
         .eq("representative_id", representativeId)
-        .eq("status", "approved");
+        .eq("status", "Aprovado");
 
       if (withdrawalsError) {
         console.error("Erro ao buscar withdrawals:", withdrawalsError);
