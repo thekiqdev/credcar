@@ -3,7 +3,7 @@
  * Handles complex date calculations for invoice due dates and generation dates
  */
 
-import { systemConfigService } from './system-config.service';
+import { systemConfigService } from './system-config.service.js';
 
 export interface InvoiceDateCalculation {
   dueDate: string; // YYYY-MM-DD format

@@ -234,7 +234,6 @@ class InvoiceGenerationService {
   ): Promise<InvoiceData[]> {
     try {
       // Calcular data de vencimento da primeira parcela
-      let dueDate: string;
       
       // Usar o novo serviço de cálculo de datas para primeira fatura também
       const { invoiceDateCalculatorService } = await import('./invoice-date-calculator.service');

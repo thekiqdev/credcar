@@ -1853,10 +1853,10 @@ app.get('/api/test/create-invoices/:contractId', async (req, res) => {
     const dueDateStr = `${yearStr}-${monthStr}-${dayStr}`;
 
     // Calcular next_invoice_date usando regra simplificada
-    // Para primeira fatura: próxima fatura será no dia 13 do próximo mês (15 dias antes do vencimento)
+    // Para primeira fatura: próxima fatura será no dia 13 do próximo mês (7 dias antes do vencimento dia 20)
     const nextInvoiceDate = new Date(today);
     nextInvoiceDate.setMonth(nextInvoiceDate.getMonth() + 1);
-    nextInvoiceDate.setDate(13); // Dia 13 (15 dias antes do dia 20)
+    nextInvoiceDate.setDate(13); // Dia 13 (7 dias antes do dia 20)
     const nextInvoiceDateStr = nextInvoiceDate.toISOString().split('T')[0];
 
     const newInvoice = {
@@ -2766,6 +2766,151 @@ app.get('/api/test/contract-quota/:contractId', async (req, res) => {
   }
 });
 
+// Endpoint para listar contratos disponíveis
+app.get('/api/debug/contracts', async (req, res) => {
+  try {
+    console.log('🔍 [DEBUG] Listando contratos disponíveis...');
+    
+    // Buscar contratos
+    const { data: contracts, error: contractsError } = await supabase
+      .from('contracts')
+      .select('id, client_id, status, created_at')
+      .order('id', { ascending: false })
+      .limit(10);
+    
+    if (contractsError) {
+      throw new Error(`Erro ao buscar contratos: ${contractsError.message}`);
+    }
+    
+    console.log('📋 [DEBUG] Contratos encontrados:', contracts);
+    
+    res.json({
+      success: true,
+      contracts: contracts,
+      message: 'Contratos obtidos com sucesso'
+    });
+  } catch (error) {
+    console.error('❌ [DEBUG] Erro ao listar contratos:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+app.get('/api/debug/invoice/:invoiceId', async (req, res) => {
+  try {
+    const { invoiceId } = req.params;
+    
+    console.log(`🔍 [DEBUG] Verificando fatura ID: ${invoiceId}`);
+    
+    // Buscar fatura
+    const { data: invoice, error: invoiceError } = await supabase
+      .from('invoices')
+      .select('*')
+      .eq('id', invoiceId)
+      .single();
+    
+    if (invoiceError) {
+      throw new Error(`Erro ao buscar fatura: ${invoiceError.message}`);
+    }
+    
+    console.log('📋 [DEBUG] Fatura encontrada:', invoice);
+    
+    res.json({
+      success: true,
+      invoice: invoice,
+      message: 'Fatura obtida com sucesso'
+    });
+  } catch (error) {
+    console.error('❌ [DEBUG] Erro ao verificar fatura:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+app.get('/api/debug/payment-config', async (req, res) => {
+  try {
+    console.log('🔍 [DEBUG] Verificando configurações de pagamento...');
+    
+    // Buscar configurações de pagamento
+    const { data: configs, error: configError } = await supabase
+      .from('system_config')
+      .select('key, value, description')
+      .eq('category', 'payment')
+      .order('key');
+    
+    if (configError) {
+      throw new Error(`Erro ao buscar configurações: ${configError.message}`);
+    }
+    
+    console.log('📋 [DEBUG] Configurações encontradas:', configs);
+    
+    res.json({
+      success: true,
+      configs: configs,
+      message: 'Configurações de pagamento obtidas com sucesso'
+    });
+  } catch (error) {
+    console.error('❌ [DEBUG] Erro ao verificar configurações:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// Endpoint para atualizar configuração de dias de antecedência
+app.post('/api/debug/update-days-advance', async (req, res) => {
+  try {
+    const { daysAdvance } = req.body;
+    
+    if (!daysAdvance || daysAdvance < 1 || daysAdvance > 30) {
+      return res.status(400).json({
+        success: false,
+        error: 'Dias de antecedência deve ser entre 1 e 30'
+      });
+    }
+    
+    console.log(`🔧 [DEBUG] Atualizando dias de antecedência para: ${daysAdvance}`);
+    
+    // Atualizar configuração
+    const { data, error } = await supabase
+      .from('system_config')
+      .upsert({
+        key: 'payment.invoice.generation.days.advance',
+        value: daysAdvance.toString(),
+        description: 'Dias de antecedência para geração automática de faturas',
+        category: 'payment',
+        is_active: true,
+        updated_at: new Date().toISOString()
+      }, {
+        onConflict: 'key'
+      })
+      .single();
+    
+    if (error) {
+      throw new Error(`Erro ao atualizar configuração: ${error.message}`);
+    }
+    
+    console.log('✅ [DEBUG] Configuração atualizada com sucesso');
+    
+    res.json({
+      success: true,
+      message: `Dias de antecedência atualizado para ${daysAdvance}`,
+      config: data
+    });
+  } catch (error) {
+    console.error('❌ [DEBUG] Erro ao atualizar configuração:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
 // Endpoint para teste manual do cronjob (sem autenticação para desenvolvimento)
 app.get('/api/cron/test-generate-invoices', async (req, res) => {
   try {
@@ -2812,9 +2957,6 @@ app.get('/api/cron/test-generate-invoices', async (req, res) => {
     // Processar cada fatura encontrada
     for (const invoice of invoicesToProcess) {
       result.processed++;
-      
-      // Declarar variáveis fora do try para evitar problemas de escopo
-      let nextInvoiceDateStr = null;
       
       try {
         console.log(`🔄 [CRON TEST] Processando contrato ${invoice.contract_id}, parcela ${invoice.installment_number}`);
@@ -2886,13 +3028,13 @@ app.get('/api/cron/test-generate-invoices', async (req, res) => {
         dueDate.setDate(20); // Dia fixo 20
         const dueDateStr = dueDate.toISOString().split('T')[0];
         
-        // Próxima fatura será 15 dias antes do próximo vencimento (dia 13)
+        // Próxima fatura será no dia 13 do próximo mês (7 dias antes do vencimento dia 20)
         const nextDueDate = new Date(dueDate);
         nextDueDate.setMonth(nextDueDate.getMonth() + 1);
-        nextDueDate.setDate(13); // Dia 13 (15 dias antes do dia 20)
+        nextDueDate.setDate(13); // Dia 13 (7 dias antes do dia 20)
         const nextInvoiceDateStr = nextDueDate.toISOString().split('T')[0];
 
-        console.log(`📅 Parcela ${nextInstallmentNumber}: Vencimento ${dueDateStr}`);
+        console.log(`📅 Parcela ${nextInstallmentNumber}: Vencimento ${dueDateStr}, Próxima geração ${nextInvoiceDateStr}`);
 
         const newInvoice = {
           contract_id: invoice.contract_id,
