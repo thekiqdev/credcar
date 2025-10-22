@@ -5231,7 +5231,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                 </TableBody>
                               </Table>
                               
-                              {/* Controles de Paginação */}
                               {(() => {
                                 const contractInvoices = invoices.filter(
                                   (inv) => inv.contract_id === parseInt(selectedContractForInvoices.id)
