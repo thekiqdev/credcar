@@ -102,6 +102,7 @@ import {
   FileText,
   Settings,
   PlusCircle,
+  RefreshCw,
   Search,
   Bell,
   ChevronDown,
@@ -2248,6 +2249,62 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     }
   };
 
+  // Função temporária para gerar PDV para todos os representantes
+  const generatePDVForAllRepresentatives = async () => {
+    if (!confirm("Esta ação irá gerar códigos PDV para todos os representantes que não possuem. Continuar?")) {
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      console.log("Iniciando geração de PDV para todos os representantes...");
+
+      // Buscar todos os representantes
+      const representatives = await representativeService.getAll();
+      console.log(`Encontrados ${representatives.length} representantes`);
+
+      let updated = 0;
+      let skipped = 0;
+
+      for (const rep of representatives) {
+        // Se já tem PDV, pular
+        if (rep.point_of_sale) {
+          console.log(`Representante ${rep.name} já possui PDV: ${rep.point_of_sale}`);
+          skipped++;
+          continue;
+        }
+
+        // Gerar PDV único
+        const pdvCode = await pdvGeneratorService.generateUniquePDVCode(async (code) => {
+          // Verificar se o código já existe no banco
+          const allReps = await representativeService.getAll();
+          return allReps.some(r => r.point_of_sale === code);
+        });
+
+        console.log(`Gerando PDV ${pdvCode} para ${rep.name}`);
+
+        // Atualizar representante com PDV
+        await representativeService.update(rep.id, {
+          point_of_sale: pdvCode
+        });
+
+        updated++;
+        console.log(`✅ ${rep.name}: ${pdvCode}`);
+      }
+
+      alert(`Migração concluída!\n\n✅ Atualizados: ${updated}\n⏭️ Já possuíam PDV: ${skipped}\n📊 Total processados: ${representatives.length}`);
+      
+      // Recarregar lista de representantes
+      await loadRepresentatives();
+
+    } catch (error) {
+      console.error("Erro na geração de PDV:", error);
+      alert(`Erro na geração de PDV: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const generatePasswordForEdit = () => {
     const chars =
       "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*";
@@ -3919,16 +3976,26 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       Gerencie os representantes de vendas do sistema.
                     </p>
                   </div>
-                  <Dialog
-                    open={isNewRepDialogOpen}
-                    onOpenChange={setIsNewRepDialogOpen}
-                  >
-                    <DialogTrigger asChild>
-                      <Button className="bg-red-600 hover:bg-red-700">
-                        <PlusCircle className="mr-2 h-4 w-4" />
-                        Novo Representante
-                      </Button>
-                    </DialogTrigger>
+                  <div className="flex gap-2">
+                    <Button 
+                      variant="outline" 
+                      onClick={generatePDVForAllRepresentatives}
+                      disabled={isLoading}
+                      className="bg-orange-100 hover:bg-orange-200 text-orange-800 border-orange-300"
+                    >
+                      <RefreshCw className="mr-2 h-4 w-4" />
+                      Gerar PDV para Todos
+                    </Button>
+                    <Dialog
+                      open={isNewRepDialogOpen}
+                      onOpenChange={setIsNewRepDialogOpen}
+                    >
+                      <DialogTrigger asChild>
+                        <Button className="bg-red-600 hover:bg-red-700">
+                          <PlusCircle className="mr-2 h-4 w-4" />
+                          Novo Representante
+                        </Button>
+                      </DialogTrigger>
                     <DialogContent className="sm:max-w-[600px]">
                       <DialogHeader>
                         <DialogTitle>Criar Novo Representante</DialogTitle>
