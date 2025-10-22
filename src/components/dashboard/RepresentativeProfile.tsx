@@ -349,8 +349,8 @@ const RepresentativeProfile: React.FC<RepresentativeProfileProps> = () => {
               <div>
                 <h1 className="text-2xl font-bold">{representative.name}</h1>
                 <p className="text-muted-foreground">
-                  ID:{" "}
-                  {representative.commission_code ||
+                  PDV:{" "}
+                  {representative.point_of_sale ||
                     representative.id.substring(0, 8)}{" "}
                   • {representative.status}
                 </p>
@@ -451,7 +451,7 @@ const RepresentativeProfile: React.FC<RepresentativeProfileProps> = () => {
                 )}
               </div>
               <p className="text-xs text-muted-foreground">
-                Tabela {representative.commission_code || "N/A"}
+                PDV {representative.point_of_sale || "N/A"}
               </p>
             </CardContent>
           </Card>
@@ -563,9 +563,9 @@ const RepresentativeProfile: React.FC<RepresentativeProfileProps> = () => {
                   </p>
                 </div>
                 <div className="space-y-1">
-                  <p className="text-sm font-medium">Tabela de Comissão</p>
+                  <p className="text-sm font-medium">Ponto de Venda</p>
                   <p className="text-sm text-muted-foreground">
-                    Tabela {representative.commission_code || "N/A"}
+                    PDV {representative.point_of_sale || "N/A"}
                   </p>
                 </div>
               </div>

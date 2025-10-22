@@ -1567,8 +1567,8 @@ const RepresentativeDashboard: React.FC<RepresentativeDashboardProps> = ({
                         </Badge>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium">Código de Comissão</span>
-                        <span className="text-sm font-mono">{currentUser?.commission_code || "Não definido"}</span>
+                        <span className="text-sm font-medium">Ponto de Venda</span>
+                        <span className="text-sm font-mono">{currentUser?.point_of_sale || "Não definido"}</span>
                       </div>
                       <div className="flex items-center justify-between">
                         <span className="text-sm font-medium">Data de Cadastro</span>
