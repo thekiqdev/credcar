@@ -207,7 +207,6 @@ class InvoiceDateCalculatorService {
    * @returns Date object
    */
   private calculateDueDate(baseDate: Date, installmentNumber: number, fixedDay: number): Date {
-    // Create a new date to avoid modifying the original
     const dueDate = new Date(baseDate);
     
     // For subsequent installments, add months from base date
@@ -215,19 +214,15 @@ class InvoiceDateCalculatorService {
       dueDate.setMonth(dueDate.getMonth() + (installmentNumber - 1));
     }
     
-    // Set to fixed day of the month (use setDate with proper handling)
-    const year = dueDate.getFullYear();
-    const month = dueDate.getMonth();
-    
-    // Create a new date with the fixed day
-    const resultDate = new Date(year, month, fixedDay);
+    // Set to fixed day of the month
+    dueDate.setDate(fixedDay);
     
     // If the fixed day doesn't exist in the month (e.g., Feb 30), use last day of month
-    if (resultDate.getDate() !== fixedDay) {
-      resultDate.setDate(0); // Last day of previous month
+    if (dueDate.getDate() !== fixedDay) {
+      dueDate.setDate(0); // Last day of previous month
     }
     
-    return resultDate;
+    return dueDate;
   }
 
   /**

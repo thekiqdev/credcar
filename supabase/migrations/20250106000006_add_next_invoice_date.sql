@@ -13,7 +13,7 @@ WHERE next_invoice_date IS NOT NULL;
 
 -- Adicionar comentário
 COMMENT ON COLUMN invoices.next_invoice_date IS 
-'Data em que a próxima fatura deve ser criada (15 dias antes do vencimento)';
+'Data em que a próxima fatura deve ser criada (conforme configuração das Regras de Geração de Faturas)';
 
 -- Adicionar comentário na tabela para documentação
 COMMENT ON TABLE invoices IS 

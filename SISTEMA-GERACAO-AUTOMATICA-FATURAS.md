@@ -94,7 +94,7 @@ pm2 start upload-server.js --name "credcar-upload-server"
 
 Quando um contrato é ativado:
 - Sistema cria APENAS a 1ª parcela
-- Calcula `next_invoice_date` da 2ª parcela (vencimento - 15 dias)
+- Calcula `next_invoice_date` da 2ª parcela conforme configuração das Regras de Geração de Faturas
 - Integra com ASAAS automaticamente
 
 ### 2. Execução Automática
@@ -131,7 +131,7 @@ curl -X GET http://localhost:3001/api/cron/test-generate-invoices
    - `installment_number: 1`
    - `amount: R$ 883,00`
    - `due_date: 2025-02-05` (hoje + 30 dias)
-   - `next_invoice_date: 2025-01-21` (vencimento 2ª parcela - 15 dias)
+   - `next_invoice_date: 2025-01-21` (conforme configuração das Regras de Geração de Faturas)
 
 2. **Cronjob Executa (2025-01-21)**:
    - Encontra fatura com `next_invoice_date: 2025-01-21`
@@ -139,7 +139,7 @@ curl -X GET http://localhost:3001/api/cron/test-generate-invoices
      - `installment_number: 2`
      - `amount: R$ 883,00`
      - `due_date: 2025-03-05`
-     - `next_invoice_date: 2025-02-18` (vencimento 3ª parcela - 15 dias)
+     - `next_invoice_date: 2025-02-18` (conforme configuração das Regras de Geração de Faturas)
    - Atualiza 1ª parcela: `next_invoice_date: NULL`
 
 3. **Pagamento Confirmado**:
@@ -151,7 +151,7 @@ curl -X GET http://localhost:3001/api/cron/test-generate-invoices
 ### Dias de Antecedência
 
 Configure em **Configurações > Pagamentos**:
-- Padrão: 15 dias antes do vencimento
+- Configurável nas Regras de Geração de Faturas (Configurações > Pagamentos)
 - Pode ser ajustado conforme necessidade
 
 ### Token de Segurança

@@ -1393,7 +1393,7 @@ app.get('/api/cron/generate-invoices', async (req, res) => {
     console.log('✅ [CRON API] Token de autorização válido');
     
     // Importar e executar o serviço de cron
-    const { invoiceCronService } = await import('./src/lib/invoice-cron.service.js');
+    const { invoiceCronService } = await import('./src/lib/invoice-cron.service.ts');
     
     const result = await invoiceCronService.processScheduledInvoices();
     

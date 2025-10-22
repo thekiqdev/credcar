@@ -459,7 +459,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     
     // Invoice Generation Rules
     invoiceGenerationFixedDay: 20,
-    invoiceGenerationDaysAdvance: 7,
+    invoiceGenerationDaysAdvance: 15,
     
     // Notification Settings
     sendPaymentNotifications: true,
@@ -1179,7 +1179,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
         defaultDueDays: 30,
         maxInstallments: 12,
         invoiceGenerationFixedDay: 20,
-        invoiceGenerationDaysAdvance: 7,
+        invoiceGenerationDaysAdvance: 15,
         sendPaymentNotifications: true,
         sendOverdueNotifications: true,
         notificationDaysBeforeDue: 7,
@@ -6432,7 +6432,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                 onChange={(e) =>
                                   setPaymentSettings({
                                     ...paymentSettings,
-                                    invoiceGenerationDaysAdvance: parseInt(e.target.value) || 7,
+                                    invoiceGenerationDaysAdvance: parseInt(e.target.value) || 15,
                                   })
                                 }
                                 placeholder="15"
