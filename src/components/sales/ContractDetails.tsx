@@ -882,21 +882,40 @@ const ContractDetails: React.FC<{
     
     if (editorRef.current) {
       console.log("🔍 Debug - Tentando inserir conteúdo no editor");
+      
+      // Forçar foco no editor primeiro
+      editorRef.current.editing.view.focus();
+      
       try {
-        // Tentar método alternativo usando model.insertContent
+        // Obter a posição atual do cursor
+        const selection = editorRef.current.model.document.selection;
+        console.log("🔍 Debug - Seleção atual:", selection);
+        
+        // Inserir conteúdo na posição do cursor
         editorRef.current.model.change(writer => {
           const textNode = writer.createText(placeholder);
-          editorRef.current.model.insertContent(textNode);
+          editorRef.current.model.insertContent(textNode, selection.getFirstPosition());
         });
+        
         console.log("✅ Debug - Conteúdo inserido com sucesso usando model.insertContent");
       } catch (error) {
         console.error("❌ Debug - Erro ao inserir conteúdo:", error);
-        // Fallback para método original
+        
+        // Fallback 1: Tentar insertContent simples
         try {
           editorRef.current.insertContent(placeholder);
-          console.log("✅ Debug - Fallback funcionou");
+          console.log("✅ Debug - Fallback insertContent funcionou");
         } catch (fallbackError) {
-          console.error("❌ Debug - Fallback também falhou:", fallbackError);
+          console.error("❌ Debug - Fallback insertContent falhou:", fallbackError);
+          
+          // Fallback 2: Usar setData (último recurso)
+          try {
+            const currentData = editorRef.current.getData();
+            editorRef.current.setData(currentData + placeholder);
+            console.log("✅ Debug - Fallback setData funcionou");
+          } catch (setDataError) {
+            console.error("❌ Debug - Todos os métodos falharam:", setDataError);
+          }
         }
       }
     } else {
