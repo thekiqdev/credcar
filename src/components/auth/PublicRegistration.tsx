@@ -206,9 +206,7 @@ const PublicRegistration = () => {
       <Card className="w-full max-w-2xl bg-white shadow-lg">
         <CardHeader className="text-center">
           <div className="flex items-center justify-center mb-4">
-            {configLoading ? (
-              <div className="h-8 w-8 rounded-md bg-red-600 mr-2 animate-pulse"></div>
-            ) : config?.logo_url ? (
+            {config?.logo_url ? (
               <img
                 src={config.logo_url}
                 alt={config.system_name || 'Logo'}
@@ -217,15 +215,12 @@ const PublicRegistration = () => {
                   maxWidth: config.logo_width ? `${Math.min(config.logo_width, 200)}px` : '200px',
                   maxHeight: config.logo_height ? `${Math.min(config.logo_height, 60)}px` : '60px'
                 }}
-                onError={(e) => {
-                  (e.target as HTMLImageElement).style.display = 'none';
-                }}
               />
             ) : (
               <div className="h-8 w-8 rounded-md bg-red-600 mr-2"></div>
             )}
             <h1 className="text-3xl font-bold text-red-600">
-              {configLoading ? 'Carregando...' : (config?.system_name || 'CredCar Finance')}
+              {config?.system_name || 'CredCar'}
             </h1>
           </div>
           <CardTitle className="text-2xl font-bold">

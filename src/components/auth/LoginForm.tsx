@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { authService, representativeService } from "../../lib/supabase";
-import { useSystemConfig } from "@/hooks/useSystemConfig";
 import {
   Card,
   CardContent,
@@ -14,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { AlertCircle, Eye, EyeOff, User, Lock, LogIn } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useSystemConfig } from "@/hooks/useSystemConfig";
 
 interface LoginFormProps {
   onLogin?: (email: string, password: string, userType: string) => void;
@@ -189,11 +189,7 @@ const LoginForm = ({ onLogin = () => {} }: LoginFormProps) => {
         {/* Logo and Header */}
         <div className="text-center mb-8">
           <div className="flex items-center justify-center mb-4">
-            {configLoading ? (
-              <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-red-600 to-red-700 flex items-center justify-center shadow-lg animate-pulse">
-                <div className="h-6 w-6 bg-white rounded-md"></div>
-              </div>
-            ) : config?.logo_url ? (
+            {config?.logo_url ? (
               <img
                 src={config.logo_url}
                 alt={config.system_name || 'Logo'}
@@ -201,9 +197,6 @@ const LoginForm = ({ onLogin = () => {} }: LoginFormProps) => {
                 style={{
                   maxWidth: config.logo_width ? `${Math.min(config.logo_width, 200)}px` : '200px',
                   maxHeight: config.logo_height ? `${Math.min(config.logo_height, 60)}px` : '60px'
-                }}
-                onError={(e) => {
-                  (e.target as HTMLImageElement).style.display = 'none';
                 }}
               />
             ) : (
@@ -213,10 +206,10 @@ const LoginForm = ({ onLogin = () => {} }: LoginFormProps) => {
             )}
           </div>
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            {configLoading ? 'Carregando...' : (config?.system_name || 'CredCar Finance')}
+            {config?.system_name || 'Cred Car Multimarcas'}
           </h1>
           <p className="text-gray-600">
-            {configLoading ? 'Carregando...' : (config?.system_description || 'Sistema de Gestão Financeira')}
+            {config?.system_description || 'Compra Programada'}
           </p>
         </div>
 
