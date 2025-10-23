@@ -206,8 +206,12 @@ const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
       // Atualizar status dos documentos baseado no banco
       if (data && data.length > 0) {
         setDocuments(prev => prev.map(doc => {
-          const dbDoc = data.find(db => db.document_type === doc.type);
-          console.log(`🔍 Comparando: "${dbDoc?.document_type}" === "${doc.type}"`);
+          const dbDoc = data.find(db => {
+            const match = db.document_type === doc.type;
+            console.log(`🔍 Comparando: "${db.document_type}" === "${doc.type}" = ${match}`);
+            return match;
+          });
+          
           if (dbDoc && dbDoc.file_url && dbDoc.file_url.trim() !== '') {
             // Só considera enviado se tem file_url válida
             console.log(`✅ Documento encontrado: ${doc.type} - ${dbDoc.file_url}`);
@@ -218,6 +222,11 @@ const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
               progress: dbDoc.status === 'Aprovado' ? 100 : 
                        dbDoc.status === 'Reprovado' ? 0 : 100
             };
+          } else {
+            console.log(`❌ Documento não encontrado ou sem file_url: ${doc.type}`);
+            if (dbDoc) {
+              console.log(`📄 dbDoc encontrado mas sem file_url:`, dbDoc);
+            }
           }
           return doc; // Mantém status original se não tem arquivo
         }));
