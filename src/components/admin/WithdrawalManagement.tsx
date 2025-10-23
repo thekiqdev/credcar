@@ -170,9 +170,11 @@ const WithdrawalManagement: React.FC<WithdrawalManagementProps> = ({ onClose }) 
     }
     
     try {
-      // Construir URL completa do arquivo
-      const baseUrl = window.location.origin;
-      const fullUrl = `${baseUrl}/api/view-document?filePath=${encodeURIComponent(invoiceUrl)}`;
+      // Construir URL completa do servidor Node.js
+      const serverUrl = 'http://localhost:3001'; // URL do upload-server
+      const fullUrl = `${serverUrl}/api/view-document?filePath=${encodeURIComponent(invoiceUrl)}`;
+      
+      console.log('📄 Abrindo visualização:', fullUrl);
       
       // Abrir em nova janela
       const newWindow = window.open(fullUrl, '_blank', 'width=800,height=600,scrollbars=yes,resizable=yes');
@@ -180,8 +182,6 @@ const WithdrawalManagement: React.FC<WithdrawalManagementProps> = ({ onClose }) 
       if (!newWindow) {
         alert("Por favor, permita pop-ups para visualizar a nota fiscal");
       }
-      
-      console.log(`📄 Visualização aberta em nova janela: ${invoiceUrl}`);
     } catch (error) {
       console.error("Erro ao abrir visualização:", error);
       alert("Erro ao abrir visualização da nota fiscal. Tente novamente.");
@@ -196,10 +196,12 @@ const WithdrawalManagement: React.FC<WithdrawalManagementProps> = ({ onClose }) 
     }
 
     try {
-      // Construir URL completa do arquivo
-      const baseUrl = window.location.origin;
-      const fullUrl = `${baseUrl}/api/download-document?filePath=${encodeURIComponent(invoiceUrl)}`;
+      // Construir URL completa do servidor Node.js
+      const serverUrl = 'http://localhost:3001'; // URL do upload-server
+      const fullUrl = `${serverUrl}/api/download-document?filePath=${encodeURIComponent(invoiceUrl)}`;
       
+      console.log('📥 Iniciando download:', fullUrl);
+        
       // Criar link temporário para download
       const link = document.createElement('a');
       link.href = fullUrl;
@@ -208,9 +210,9 @@ const WithdrawalManagement: React.FC<WithdrawalManagementProps> = ({ onClose }) 
       link.click();
       document.body.removeChild(link);
       
-      console.log(`📄 Download iniciado: ${requestCode}`);
+      console.log(`✅ Download iniciado: ${requestCode}`);
     } catch (error) {
-      console.error("Erro ao baixar nota fiscal:", error);
+      console.error("❌ Erro ao baixar nota fiscal:", error);
       alert("Erro ao baixar nota fiscal. Tente novamente.");
     }
   };
