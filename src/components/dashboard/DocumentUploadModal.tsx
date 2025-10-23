@@ -406,6 +406,18 @@ const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
           console.log(`📤 Iniciando upload: ${doc.type} - ${doc.file.name} (${doc.file.size} bytes)`);
           console.log(`🏢 Documento da empresa? ${doc.type.includes('empresa') || doc.type.includes('cnpj') || doc.type.includes('contrato') || doc.type.includes('bancários') || doc.type.includes('cartilha de credenciamento preenchida')}`);
           console.log(`👤 Documento do sócio? ${doc.type.includes('socio') || doc.type.includes('pf') || doc.type.includes('certidão') || doc.type.includes('foto')}`);
+          
+          // Log específico para cartilha de credenciamento preenchida
+          if (doc.type === 'cartilha de credenciamento preenchida') {
+            console.log(`🔍 === DEBUG CARTILHA ===`);
+            console.log(`📄 Tipo exato: "${doc.type}"`);
+            console.log(`📁 Arquivo: ${doc.file.name}`);
+            console.log(`📊 Tamanho: ${doc.file.size} bytes`);
+            console.log(`📋 Tipo MIME: ${doc.file.type}`);
+            console.log(`🔍 CPF/CNPJ: ${representativeCpfCnpj}`);
+            console.log(`👤 Representative ID: ${representativeId}`);
+            console.log(`🔍 === FIM DEBUG CARTILHA ===`);
+          }
 
         // Não atualizar status durante upload para evitar piscar
 
@@ -447,6 +459,16 @@ const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
             // Tentar novamente uma vez para documentos da empresa (problema intermitente)
             if (doc.type.includes('empresa') || doc.type.includes('cnpj') || doc.type.includes('contrato') || doc.type.includes('bancários') || doc.type.includes('cartilha de credenciamento preenchida')) {
               console.log(`🔄 Tentando novamente upload para documento da empresa: ${doc.type}`);
+              
+              // Log específico para cartilha
+              if (doc.type === 'cartilha de credenciamento preenchida') {
+                console.log(`🔍 === RETRY CARTILHA ===`);
+                console.log(`📄 Erro original: ${result.error}`);
+                console.log(`📁 Arquivo: ${doc.file.name}`);
+                console.log(`📊 Tamanho: ${doc.file.size} bytes`);
+                console.log(`🔍 === FIM RETRY CARTILHA ===`);
+              }
+              
               await new Promise(resolve => setTimeout(resolve, 1000)); // Aguardar 1 segundo
               
               const retryResult = await uploadService.uploadComplete(doc.file, docInfo);
@@ -456,6 +478,17 @@ const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
                 Object.assign(result, retryResult);
               } else {
                 console.error(`❌ Retry também falhou para ${doc.type}:`, retryResult.error);
+                
+                // Log específico para cartilha quando retry falha
+                if (doc.type === 'cartilha de credenciamento preenchida') {
+                  console.error(`🔍 === ERRO FINAL CARTILHA ===`);
+                  console.error(`📄 Erro retry: ${retryResult.error}`);
+                  console.error(`📁 Arquivo: ${doc.file.name}`);
+                  console.error(`📊 Tamanho: ${doc.file.size} bytes`);
+                  console.error(`🔍 CPF/CNPJ: ${representativeCpfCnpj}`);
+                  console.error(`🔍 === FIM ERRO FINAL CARTILHA ===`);
+                }
+                
                 throw new Error(retryResult.error || 'Erro ao salvar arquivo após retry');
               }
             } else {
