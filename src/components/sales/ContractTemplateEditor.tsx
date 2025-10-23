@@ -302,6 +302,9 @@ const ContractTemplateEditor: React.FC<ContractTemplateEditorProps> = ({
               height="calc(100vh - 300px)"
               placeholder="Digite o conteúdo do modelo de contrato..."
               showMergeFields={showMergeFields}
+              onInit={(editor) => {
+                editorRef.current = editor;
+              }}
               onInsertSignature={(signatoryName) => {
                 // Inserir campo de assinatura
                 const signatureBlock = `

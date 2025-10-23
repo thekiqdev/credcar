@@ -2959,6 +2959,9 @@ const ContractDetails: React.FC<{
                       height={500}
                       placeholder="Digite o conteúdo do contrato..."
                       showMergeFields={showMergeFields}
+                      onInit={(editor) => {
+                        editorRef.current = editor;
+                      }}
                       onInsertSignature={(signatoryName) => {
                         // Inserir campo de assinatura
                         const signatureBlock = `
