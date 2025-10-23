@@ -43,6 +43,14 @@ export interface NotificationConfig {
   daysBeforeDue: number;
 }
 
+export interface SystemIdentityConfig {
+  system_name: string;
+  system_description: string;
+  logo_url: string;
+  logo_width: number;
+  logo_height: number;
+}
+
 // Cache for configurations
 class ConfigCache {
   private cache: Map<string, SystemConfig> = new Map();
@@ -388,6 +396,78 @@ class SystemConfigService {
    */
   clearCache(): void {
     this.cache.clear();
+  }
+
+  /**
+   * Get system identity configuration (name, logo, etc.)
+   */
+  async getSystemConfig(): Promise<SystemIdentityConfig | null> {
+    try {
+      const configs = await this.getConfigsByCategory('system');
+      
+      const systemName = configs.find(c => c.key === 'system.name')?.value || 'CredCar Finance';
+      const systemDescription = configs.find(c => c.key === 'system.description')?.value || 'Sistema de Gestão Financeira';
+      const logoUrl = configs.find(c => c.key === 'system.logo.url')?.value || '';
+      const logoWidth = parseInt(configs.find(c => c.key === 'system.logo.width')?.value || '200');
+      const logoHeight = parseInt(configs.find(c => c.key === 'system.logo.height')?.value || '60');
+
+      return {
+        system_name: systemName,
+        system_description: systemDescription,
+        logo_url: logoUrl,
+        logo_width: logoWidth,
+        logo_height: logoHeight,
+      };
+    } catch (error) {
+      console.error('Error getting system config:', error);
+      return {
+        system_name: 'CredCar Finance',
+        system_description: 'Sistema de Gestão Financeira',
+        logo_url: '',
+        logo_width: 200,
+        logo_height: 60,
+      };
+    }
+  }
+
+  /**
+   * Set system identity configuration
+   */
+  async setSystemConfig(config: Partial<SystemIdentityConfig>): Promise<boolean> {
+    try {
+      const promises: Promise<boolean>[] = [];
+
+      if (config.system_name !== undefined) {
+        promises.push(this.setConfig('system.name', config.system_name, 'Nome do sistema', 'system'));
+      }
+      if (config.system_description !== undefined) {
+        promises.push(this.setConfig('system.description', config.system_description, 'Descrição do sistema', 'system'));
+      }
+      if (config.logo_url !== undefined) {
+        promises.push(this.setConfig('system.logo.url', config.logo_url, 'URL do logo do sistema', 'system'));
+      }
+      if (config.logo_width !== undefined) {
+        promises.push(this.setConfig('system.logo.width', config.logo_width.toString(), 'Largura do logo', 'system'));
+      }
+      if (config.logo_height !== undefined) {
+        promises.push(this.setConfig('system.logo.height', config.logo_height.toString(), 'Altura do logo', 'system'));
+      }
+
+      const results = await Promise.all(promises);
+      return results.every(result => result);
+    } catch (error) {
+      console.error('Error setting system config:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Update page title with system name
+   */
+  updatePageTitle(systemName: string): void {
+    if (typeof document !== 'undefined') {
+      document.title = systemName;
+    }
   }
 }
 

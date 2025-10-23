@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { systemConfigService, SystemConfig } from '@/lib/system-config.service';
+import { systemConfigService, SystemIdentityConfig } from '@/lib/system-config.service';
 
 export function useSystemConfig() {
-  const [config, setConfig] = useState<SystemConfig | null>(null);
+  const [config, setConfig] = useState<SystemIdentityConfig | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -26,9 +26,9 @@ export function useSystemConfig() {
     }
   };
 
-  const updateConfig = async (newConfig: Partial<SystemConfig>) => {
+  const updateConfig = async (newConfig: Partial<SystemIdentityConfig>) => {
     try {
-      const success = await systemConfigService.updateSystemConfig(newConfig);
+      const success = await systemConfigService.setSystemConfig(newConfig);
       
       if (success) {
         // Recarrega a configuração

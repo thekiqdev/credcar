@@ -6,14 +6,14 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, Upload, Image, Save, AlertCircle, CheckCircle } from 'lucide-react';
-import { systemConfigService, SystemConfig, SystemConfigUpdate } from '@/lib/system-config.service';
+import { systemConfigService, SystemIdentityConfig } from '@/lib/system-config.service';
 
 interface SystemConfigProps {
-  onConfigUpdate?: (config: SystemConfig) => void;
+  onConfigUpdate?: (config: SystemIdentityConfig) => void;
 }
 
 export default function SystemConfig({ onConfigUpdate }: SystemConfigProps) {
-  const [config, setConfig] = useState<SystemConfig | null>(null);
+  const [config, setConfig] = useState<SystemIdentityConfig | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);

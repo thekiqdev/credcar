@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { authService, representativeService } from "../../lib/supabase";
+import { useSystemConfig } from "@/hooks/useSystemConfig";
 import {
   Card,
   CardContent,
@@ -20,6 +21,7 @@ interface LoginFormProps {
 
 const LoginForm = ({ onLogin = () => {} }: LoginFormProps) => {
   const navigate = useNavigate();
+  const { config, loading: configLoading } = useSystemConfig();
   const [email, setEmail] = useState("");
   const [cpf, setCpf] = useState("");
   const [password, setPassword] = useState("");
@@ -187,13 +189,34 @@ const LoginForm = ({ onLogin = () => {} }: LoginFormProps) => {
         {/* Logo and Header */}
         <div className="text-center mb-8">
           <div className="flex items-center justify-center mb-4">
-            <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-red-600 to-red-700 flex items-center justify-center shadow-lg">
-              <div className="h-6 w-6 bg-white rounded-md"></div>
-            </div>
+            {configLoading ? (
+              <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-red-600 to-red-700 flex items-center justify-center shadow-lg animate-pulse">
+                <div className="h-6 w-6 bg-white rounded-md"></div>
+              </div>
+            ) : config?.logo_url ? (
+              <img
+                src={config.logo_url}
+                alt={config.system_name || 'Logo'}
+                className="h-12 w-auto object-contain"
+                style={{
+                  maxWidth: config.logo_width ? `${Math.min(config.logo_width, 200)}px` : '200px',
+                  maxHeight: config.logo_height ? `${Math.min(config.logo_height, 60)}px` : '60px'
+                }}
+                onError={(e) => {
+                  (e.target as HTMLImageElement).style.display = 'none';
+                }}
+              />
+            ) : (
+              <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-red-600 to-red-700 flex items-center justify-center shadow-lg">
+                <div className="h-6 w-6 bg-white rounded-md"></div>
+              </div>
+            )}
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Cred Car Multimarcas</h1>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            {configLoading ? 'Carregando...' : (config?.system_name || 'CredCar Finance')}
+          </h1>
           <p className="text-gray-600">
-            Compra Programada
+            {configLoading ? 'Carregando...' : (config?.system_description || 'Sistema de Gestão Financeira')}
           </p>
         </div>
 
