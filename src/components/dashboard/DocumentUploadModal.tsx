@@ -443,7 +443,24 @@ const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
               cpfCnpj: representativeCpfCnpj,
               error: result.error
             });
-            throw new Error(result.error || 'Erro ao salvar arquivo');
+            
+            // Tentar novamente uma vez para documentos da empresa (problema intermitente)
+            if (doc.type.includes('empresa') || doc.type.includes('cnpj') || doc.type.includes('contrato') || doc.type.includes('bancários') || doc.type.includes('cartilha de credenciamento preenchida')) {
+              console.log(`🔄 Tentando novamente upload para documento da empresa: ${doc.type}`);
+              await new Promise(resolve => setTimeout(resolve, 1000)); // Aguardar 1 segundo
+              
+              const retryResult = await uploadService.uploadComplete(doc.file, docInfo);
+              if (retryResult.success) {
+                console.log(`✅ Retry bem-sucedido para ${doc.type}`);
+                // Usar resultado do retry
+                Object.assign(result, retryResult);
+              } else {
+                console.error(`❌ Retry também falhou para ${doc.type}:`, retryResult.error);
+                throw new Error(retryResult.error || 'Erro ao salvar arquivo após retry');
+              }
+            } else {
+              throw new Error(result.error || 'Erro ao salvar arquivo');
+            }
           }
 
           console.log(`✅ Document ${doc.type} saved successfully:`, result.data?.filePath);
