@@ -222,7 +222,9 @@ class ChunkUploadService {
    * Verifica se um arquivo deve usar upload em chunks
    */
   shouldUseChunkUpload(fileSize: number, threshold: number = 1024 * 1024): boolean {
-    return fileSize > threshold; // 1MB por padrão
+    const shouldUse = fileSize > threshold;
+    console.log(`🔍 Chunk Upload Check: ${fileSize} bytes > ${threshold} bytes = ${shouldUse}`);
+    return shouldUse; // 1MB por padrão
   }
 
   /**

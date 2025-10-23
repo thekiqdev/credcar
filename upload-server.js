@@ -3270,8 +3270,17 @@ app.post('/api/upload-chunk-start', (req, res) => {
   }
 });
 
+// Configuração específica para chunks (sem filtro de tipo de arquivo)
+const chunkUpload = multer({
+  storage: multer.memoryStorage(), // Armazenar chunks na memória
+  limits: {
+    fileSize: 2 * 1024 * 1024, // 2MB por chunk (maior que nosso chunk de 512KB)
+  }
+  // Sem fileFilter - chunks podem ser de qualquer tipo
+});
+
 // Rota para enviar chunk individual
-app.post('/api/upload-chunk', upload.single('chunk'), (req, res) => {
+app.post('/api/upload-chunk', chunkUpload.single('chunk'), (req, res) => {
   try {
     const { uploadId, chunkIndex, totalChunks } = req.body;
     
