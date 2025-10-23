@@ -275,8 +275,13 @@ const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
 
       // Validação adicional: verificar se o caminho do arquivo não está vazio
       const filePath = fileData.filePath || fileData.directory;
+      console.log('🔍 fileData.filePath:', fileData.filePath);
+      console.log('🔍 fileData.directory:', fileData.directory);
+      console.log('🔍 filePath final:', filePath);
+      
       if (!filePath || filePath.trim() === '') {
         console.error('❌ Dados inválidos: caminho do arquivo está vazio');
+        console.error('❌ fileData completo:', fileData);
         throw new Error('Caminho do arquivo não pode estar vazio');
       }
 
@@ -403,21 +408,7 @@ const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
           continue;
         }
 
-          console.log(`📤 Iniciando upload: ${doc.type} - ${doc.file.name} (${doc.file.size} bytes)`);
-          console.log(`🏢 Documento da empresa? ${doc.type.includes('empresa') || doc.type.includes('cnpj') || doc.type.includes('contrato') || doc.type.includes('bancários') || doc.type.includes('cartilha de credenciamento preenchida')}`);
-          console.log(`👤 Documento do sócio? ${doc.type.includes('socio') || doc.type.includes('pf') || doc.type.includes('certidão') || doc.type.includes('foto')}`);
-          
-          // Log específico para cartilha de credenciamento preenchida
-          if (doc.type === 'cartilha de credenciamento preenchida') {
-            console.log(`🔍 === DEBUG CARTILHA ===`);
-            console.log(`📄 Tipo exato: "${doc.type}"`);
-            console.log(`📁 Arquivo: ${doc.file.name}`);
-            console.log(`📊 Tamanho: ${doc.file.size} bytes`);
-            console.log(`📋 Tipo MIME: ${doc.file.type}`);
-            console.log(`🔍 CPF/CNPJ: ${representativeCpfCnpj}`);
-            console.log(`👤 Representative ID: ${representativeId}`);
-            console.log(`🔍 === FIM DEBUG CARTILHA ===`);
-          }
+        console.log(`📤 Iniciando upload: ${doc.type} - ${doc.file.name} (${doc.file.size} bytes)`);
 
         // Não atualizar status durante upload para evitar piscar
 
@@ -440,103 +431,12 @@ const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
 
           console.log('📋 Document Info:', docInfo);
           console.log('🔍 CPF/CNPJ:', representativeCpfCnpj);
-          console.log('🔍 Document Type específico:', doc.type);
-          console.log('🔍 Document Type lowercase:', doc.type.toLowerCase());
 
           // Upload completo: criar pastas + salvar arquivo
-          let result;
-          
-          // Tratamento especial para cartilha de credenciamento preenchida
-          if (doc.type === 'cartilha de credenciamento preenchida') {
-            console.log(`🔍 === UPLOAD ESPECIAL CARTILHA ===`);
-            console.log(`📄 Usando método especial para cartilha`);
-            
-            // Tentar upload direto primeiro
-            try {
-              result = await uploadService.uploadComplete(doc.file, docInfo);
-              console.log(`✅ Upload especial da cartilha bem-sucedido na primeira tentativa`);
-            } catch (error) {
-              console.error(`❌ Upload especial da cartilha falhou:`, error);
-              result = { success: false, error: error.message };
-            }
-          } else {
-            result = await uploadService.uploadComplete(doc.file, docInfo);
-          }
+          const result = await uploadService.uploadComplete(doc.file, docInfo);
 
           if (!result.success) {
-            console.error(`❌ Upload falhou para ${doc.type}:`, result.error);
-            console.error(`🔍 Detalhes do erro:`, {
-              documentType: doc.type,
-              fileName: doc.file.name,
-              fileSize: doc.file.size,
-              cpfCnpj: representativeCpfCnpj,
-              error: result.error
-            });
-            
-            // Tentar novamente uma vez para documentos da empresa (problema intermitente)
-            if (doc.type.includes('empresa') || doc.type.includes('cnpj') || doc.type.includes('contrato') || doc.type.includes('bancários') || doc.type.includes('cartilha de credenciamento preenchida')) {
-              console.log(`🔄 Tentando novamente upload para documento da empresa: ${doc.type}`);
-              
-              // Log específico para cartilha
-              if (doc.type === 'cartilha de credenciamento preenchida') {
-                console.log(`🔍 === RETRY CARTILHA ===`);
-                console.log(`📄 Erro original: ${result.error}`);
-                console.log(`📁 Arquivo: ${doc.file.name}`);
-                console.log(`📊 Tamanho: ${doc.file.size} bytes`);
-                console.log(`🔍 === FIM RETRY CARTILHA ===`);
-              }
-              
-              await new Promise(resolve => setTimeout(resolve, 2000)); // Aguardar 2 segundos para cartilha
-              
-              let retryResult;
-              
-              // Método especial para cartilha
-              if (doc.type === 'cartilha de credenciamento preenchida') {
-                console.log(`🔍 === RETRY ESPECIAL CARTILHA ===`);
-                console.log(`📄 Tentando método alternativo para cartilha`);
-                
-                // Tentar criar pasta primeiro, depois upload
-                try {
-                  const folderResult = await uploadService.createRepresentativeFolder(representativeId, representativeCpfCnpj);
-                  console.log(`📁 Resultado da criação de pasta:`, folderResult);
-                  
-                  if (folderResult.success) {
-                    retryResult = await uploadService.uploadDocument(doc.file, docInfo);
-                    console.log(`📤 Resultado do upload direto:`, retryResult);
-                  } else {
-                    retryResult = { success: false, error: 'Erro ao criar pasta' };
-                  }
-                } catch (error) {
-                  console.error(`❌ Erro no método alternativo:`, error);
-                  retryResult = { success: false, error: error.message };
-                }
-                
-                console.log(`🔍 === FIM RETRY ESPECIAL CARTILHA ===`);
-              } else {
-                retryResult = await uploadService.uploadComplete(doc.file, docInfo);
-              }
-              if (retryResult.success) {
-                console.log(`✅ Retry bem-sucedido para ${doc.type}`);
-                // Usar resultado do retry
-                Object.assign(result, retryResult);
-              } else {
-                console.error(`❌ Retry também falhou para ${doc.type}:`, retryResult.error);
-                
-                // Log específico para cartilha quando retry falha
-                if (doc.type === 'cartilha de credenciamento preenchida') {
-                  console.error(`🔍 === ERRO FINAL CARTILHA ===`);
-                  console.error(`📄 Erro retry: ${retryResult.error}`);
-                  console.error(`📁 Arquivo: ${doc.file.name}`);
-                  console.error(`📊 Tamanho: ${doc.file.size} bytes`);
-                  console.error(`🔍 CPF/CNPJ: ${representativeCpfCnpj}`);
-                  console.error(`🔍 === FIM ERRO FINAL CARTILHA ===`);
-                }
-                
-                throw new Error(retryResult.error || 'Erro ao salvar arquivo após retry');
-              }
-            } else {
-              throw new Error(result.error || 'Erro ao salvar arquivo');
-            }
+            throw new Error(result.error || 'Erro ao salvar arquivo');
           }
 
           console.log(`✅ Document ${doc.type} saved successfully:`, result.data?.filePath);
