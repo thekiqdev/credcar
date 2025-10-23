@@ -93,10 +93,45 @@ class AuthService {
   async logout(): Promise<void> {
     try {
       console.log('🔓 Logging out...');
-      await supabase.auth.signOut();
+      
+      // Tentar logout do Supabase
+      const { error } = await supabase.auth.signOut();
+      
+      if (error) {
+        console.error('❌ Supabase logout error:', error);
+        // Mesmo com erro, continuar com limpeza local
+      }
+      
+      // Limpeza adicional para garantir logout completo
+      try {
+        // Limpar localStorage relacionado ao Supabase
+        localStorage.removeItem('sb-cgystsylstnkgfgbqoel-auth-token');
+        localStorage.removeItem('supabase.auth.token');
+        
+        // Limpar sessionStorage
+        sessionStorage.clear();
+        
+        // Limpar cookies relacionados ao Supabase
+        document.cookie.split(";").forEach(function(c) { 
+          document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/"); 
+        });
+        
+        console.log('✅ Local cleanup completed');
+      } catch (cleanupError) {
+        console.error('❌ Cleanup error:', cleanupError);
+      }
+      
       console.log('✅ Logged out successfully');
     } catch (error) {
       console.error('❌ Logout error:', error);
+      // Mesmo com erro, tentar limpeza local
+      try {
+        localStorage.clear();
+        sessionStorage.clear();
+        console.log('✅ Emergency cleanup completed');
+      } catch (emergencyError) {
+        console.error('❌ Emergency cleanup failed:', emergencyError);
+      }
     }
   }
 
@@ -107,7 +142,25 @@ class AuthService {
   async getCurrentUser(): Promise<UserProfile | null> {
     try {
       console.log('🔍 auth.service: Getting current user...');
-      const { data: { session } } = await supabase.auth.getSession();
+      
+      // Verificar se há tokens no localStorage primeiro
+      const hasLocalToken = localStorage.getItem('sb-cgystsylstnkgfgbqoel-auth-token') || 
+                           localStorage.getItem('supabase.auth.token');
+      
+      if (!hasLocalToken) {
+        console.log('ℹ️ auth.service: No local token found');
+        return null;
+      }
+      
+      const { data: { session }, error } = await supabase.auth.getSession();
+      
+      if (error) {
+        console.error('❌ auth.service: Session error:', error);
+        // Se há erro na sessão, limpar tokens locais
+        localStorage.removeItem('sb-cgystsylstnkgfgbqoel-auth-token');
+        localStorage.removeItem('supabase.auth.token');
+        return null;
+      }
       
       if (!session?.user) {
         console.log('ℹ️ auth.service: No session found');
@@ -131,6 +184,13 @@ class AuthService {
       return profile;
     } catch (error) {
       console.error('❌ Get current user error:', error);
+      // Em caso de erro, limpar tokens locais
+      try {
+        localStorage.removeItem('sb-cgystsylstnkgfgbqoel-auth-token');
+        localStorage.removeItem('supabase.auth.token');
+      } catch (cleanupError) {
+        console.error('❌ Cleanup error in getCurrentUser:', cleanupError);
+      }
       return null;
     }
   }
@@ -139,8 +199,29 @@ class AuthService {
    * Verificar se usuário está autenticado
    */
   async isAuthenticated(): Promise<boolean> {
-    const { data: { session } } = await supabase.auth.getSession();
-    return !!session;
+    try {
+      // Verificar tokens locais primeiro
+      const hasLocalToken = localStorage.getItem('sb-cgystsylstnkgfgbqoel-auth-token') || 
+                           localStorage.getItem('supabase.auth.token');
+      
+      if (!hasLocalToken) {
+        return false;
+      }
+      
+      const { data: { session }, error } = await supabase.auth.getSession();
+      
+      if (error) {
+        // Se há erro, limpar tokens e retornar false
+        localStorage.removeItem('sb-cgystsylstnkgfgbqoel-auth-token');
+        localStorage.removeItem('supabase.auth.token');
+        return false;
+      }
+      
+      return !!session;
+    } catch (error) {
+      console.error('❌ isAuthenticated error:', error);
+      return false;
+    }
   }
 
   /**
