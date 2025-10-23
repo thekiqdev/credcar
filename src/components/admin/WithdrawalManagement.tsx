@@ -54,8 +54,6 @@ const WithdrawalManagement: React.FC<WithdrawalManagementProps> = ({ onClose }) 
   const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
   const [rejectionReason, setRejectionReason] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
-  const [isInvoiceViewerOpen, setIsInvoiceViewerOpen] = useState(false);
-  const [selectedInvoiceUrl, setSelectedInvoiceUrl] = useState("");
 
   // Carregar solicitações
   const loadWithdrawals = async () => {
@@ -170,8 +168,24 @@ const WithdrawalManagement: React.FC<WithdrawalManagementProps> = ({ onClose }) 
       alert("Nota fiscal não disponível");
       return;
     }
-    setSelectedInvoiceUrl(invoiceUrl);
-    setIsInvoiceViewerOpen(true);
+    
+    try {
+      // Construir URL completa do arquivo
+      const baseUrl = window.location.origin;
+      const fullUrl = `${baseUrl}/api/view-document?filePath=${encodeURIComponent(invoiceUrl)}`;
+      
+      // Abrir em nova janela
+      const newWindow = window.open(fullUrl, '_blank', 'width=800,height=600,scrollbars=yes,resizable=yes');
+      
+      if (!newWindow) {
+        alert("Por favor, permita pop-ups para visualizar a nota fiscal");
+      }
+      
+      console.log(`📄 Visualização aberta em nova janela: ${invoiceUrl}`);
+    } catch (error) {
+      console.error("Erro ao abrir visualização:", error);
+      alert("Erro ao abrir visualização da nota fiscal. Tente novamente.");
+    }
   };
 
   // Baixar nota fiscal
@@ -552,55 +566,6 @@ const WithdrawalManagement: React.FC<WithdrawalManagementProps> = ({ onClose }) 
             >
               {isProcessing ? "Processando..." : "Rejeitar"}
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Dialog de Visualização da Nota Fiscal */}
-      <Dialog open={isInvoiceViewerOpen} onOpenChange={setIsInvoiceViewerOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh]">
-          <DialogHeader>
-            <DialogTitle>Nota Fiscal</DialogTitle>
-            <DialogDescription>
-              Visualização da nota fiscal enviada pelo representante
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            {selectedInvoiceUrl && (
-              <div className="w-full h-[600px] border rounded-lg overflow-hidden">
-                <iframe
-                  src={`/api/view-document?filePath=${encodeURIComponent(selectedInvoiceUrl)}`}
-                  className="w-full h-full"
-                  title="Nota Fiscal"
-                />
-              </div>
-            )}
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setIsInvoiceViewerOpen(false)}
-            >
-              Fechar
-            </Button>
-            {selectedInvoiceUrl && (
-              <Button
-                onClick={() => {
-                  const baseUrl = window.location.origin;
-                  const fullUrl = `${baseUrl}/api/download-document?filePath=${encodeURIComponent(selectedInvoiceUrl)}`;
-                  const link = document.createElement('a');
-                  link.href = fullUrl;
-                  link.download = `nota_fiscal.pdf`;
-                  document.body.appendChild(link);
-                  link.click();
-                  document.body.removeChild(link);
-                }}
-                className="bg-green-600 hover:bg-green-700"
-              >
-                <Download className="h-4 w-4 mr-2" />
-                Baixar PDF
-              </Button>
-            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
