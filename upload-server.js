@@ -989,6 +989,16 @@ app.post('/api/upload-document', upload.single('file'), validateFile, (req, res)
     console.log('🔍 Document Type Lowercase:', documentType.toLowerCase());
     console.log('🔍 Mapped Path:', documentTypeMap[documentType.toLowerCase()]);
     
+    // Log específico para cartilha de credenciamento preenchida
+    if (documentType.toLowerCase() === 'cartilha de credenciamento preenchida') {
+      console.log('🔍 === DEBUG CARTILHA UPLOAD-SERVER ===');
+      console.log('📄 Document Type:', documentType);
+      console.log('📄 Document Type Lowercase:', documentType.toLowerCase());
+      console.log('📄 Mapped Path:', documentTypeMap[documentType.toLowerCase()]);
+      console.log('📄 CPF/CNPJ:', cpfCnpj);
+      console.log('🔍 === FIM DEBUG CARTILHA UPLOAD-SERVER ===');
+    }
+    
     const mappedPath = documentTypeMap[documentType.toLowerCase()] || 
       documentType.toLowerCase().replace(/[^a-z0-9]/g, '_');
     
@@ -1043,6 +1053,17 @@ app.post('/api/upload-document', upload.single('file'), validateFile, (req, res)
     };
 
     console.log('📊 File Info Completo:', fileInfo);
+    
+    // Log específico para cartilha de credenciamento preenchida
+    if (documentType.toLowerCase() === 'cartilha de credenciamento preenchida') {
+      console.log('🔍 === DEBUG CARTILHA FILE INFO ===');
+      console.log('📄 fileInfo.documentType:', fileInfo.documentType);
+      console.log('📄 fileInfo.filePath:', fileInfo.filePath);
+      console.log('📄 fileInfo.directory:', fileInfo.directory);
+      console.log('📄 relativePath:', relativePath);
+      console.log('📄 finalFilePath:', finalFilePath);
+      console.log('🔍 === FIM DEBUG CARTILHA FILE INFO ===');
+    }
 
     console.log('✅ Arquivo enviado com sucesso!');
     console.log('📁 Final Path:', finalFilePath);

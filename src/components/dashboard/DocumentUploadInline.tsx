@@ -200,7 +200,15 @@ const DocumentUploadInline: React.FC<DocumentUploadInlineProps> = ({
       // Atualizar status dos documentos baseado no banco
       if (data && data.length > 0) {
         setDocuments(prev => prev.map(doc => {
-          const dbDoc = data.find(db => db.document_type === doc.type);
+          // Encontrar o documento mais recente (por uploaded_at) do tipo correto
+          const dbDocs = data.filter(db => db.document_type === doc.type);
+          const dbDoc = dbDocs.length > 0 
+            ? dbDocs.reduce((latest, current) => {
+                const latestDate = new Date(latest.uploaded_at || 0);
+                const currentDate = new Date(current.uploaded_at || 0);
+                return currentDate > latestDate ? current : latest;
+              })
+            : undefined;
           console.log(`🔍 Comparando: "${dbDoc?.document_type}" === "${doc.type}"`);
           if (dbDoc && dbDoc.file_url && dbDoc.file_url.trim() !== '') {
             // Só considera enviado se tem file_url válida
