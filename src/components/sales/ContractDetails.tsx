@@ -877,8 +877,30 @@ const ContractDetails: React.FC<{
 
   // Função para inserir campos de mesclagem
   const handleInsertField = (placeholder: string) => {
+    console.log("🔍 Debug - handleInsertField chamado:", placeholder);
+    console.log("🔍 Debug - editorRef.current:", !!editorRef.current);
+    
     if (editorRef.current) {
-      editorRef.current.insertContent(placeholder);
+      console.log("🔍 Debug - Tentando inserir conteúdo no editor");
+      try {
+        // Tentar método alternativo usando model.insertContent
+        editorRef.current.model.change(writer => {
+          const textNode = writer.createText(placeholder);
+          editorRef.current.model.insertContent(textNode);
+        });
+        console.log("✅ Debug - Conteúdo inserido com sucesso usando model.insertContent");
+      } catch (error) {
+        console.error("❌ Debug - Erro ao inserir conteúdo:", error);
+        // Fallback para método original
+        try {
+          editorRef.current.insertContent(placeholder);
+          console.log("✅ Debug - Fallback funcionou");
+        } catch (fallbackError) {
+          console.error("❌ Debug - Fallback também falhou:", fallbackError);
+        }
+      }
+    } else {
+      console.log("❌ Debug - editorRef.current não está disponível");
     }
   };
 
@@ -2960,7 +2982,9 @@ const ContractDetails: React.FC<{
                       placeholder="Digite o conteúdo do contrato..."
                       showMergeFields={showMergeFields}
                       onInit={(editor) => {
+                        console.log("🔍 Debug - CKEditor inicializado:", !!editor);
                         editorRef.current = editor;
+                        console.log("🔍 Debug - editorRef.current definido:", !!editorRef.current);
                       }}
                       onInsertSignature={(signatoryName) => {
                         // Inserir campo de assinatura
