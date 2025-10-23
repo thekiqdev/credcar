@@ -39,7 +39,7 @@ const documentValidations = {
   // Documentos da Empresa
   'cartilha de credenciamento preenchida': { maxSize: 5 * 1024 * 1024, requiredTypes: ['application/pdf'] },
   'cartão cnpj': { maxSize: 2 * 1024 * 1024, requiredTypes: ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'] },
-  'contrato social e última alteração': { maxSize: 10 * 1024 * 1024, requiredTypes: ['application/pdf'] },
+  'contrato social e última alteração': { maxSize: 50 * 1024 * 1024, requiredTypes: ['application/pdf'] },
   'comprovante de endereço empresa': { maxSize: 2 * 1024 * 1024, requiredTypes: ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'] },
   'dados bancários': { maxSize: 2 * 1024 * 1024, requiredTypes: ['application/pdf'] },
   
@@ -90,7 +90,7 @@ const storage = multer.diskStorage({
 const upload = multer({ 
   storage,
   limits: {
-    fileSize: 10 * 1024 * 1024, // 10MB
+    fileSize: 50 * 1024 * 1024, // 50MB
   },
   fileFilter: (req, file, cb) => {
     // Tipos de arquivo permitidos

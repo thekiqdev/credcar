@@ -43,23 +43,6 @@ export interface NotificationConfig {
   daysBeforeDue: number;
 }
 
-// System Identity Configuration
-export interface SystemConfig {
-  system_name: string;
-  system_description: string;
-  logo_url?: string;
-  logo_width?: number;
-  logo_height?: number;
-}
-
-export interface SystemConfigUpdate {
-  system_name?: string;
-  system_description?: string;
-  logo_url?: string;
-  logo_width?: number;
-  logo_height?: number;
-}
-
 // Cache for configurations
 class ConfigCache {
   private cache: Map<string, SystemConfig> = new Map();
@@ -405,99 +388,6 @@ class SystemConfigService {
    */
   clearCache(): void {
     this.cache.clear();
-  }
-
-  /**
-   * Get System Identity Configuration
-   */
-  async getSystemConfig(): Promise<SystemConfig | null> {
-    try {
-      const configs = await this.getConfigsByCategory('system');
-      
-      const systemConfig: SystemConfig = {
-        system_name: configs.find(c => c.key === 'system.name')?.value || 'CredCar Finance',
-        system_description: configs.find(c => c.key === 'system.description')?.value || 'Sistema de Gestão Financeira',
-        logo_url: configs.find(c => c.key === 'system.logo.url')?.value || undefined,
-        logo_width: configs.find(c => c.key === 'system.logo.width')?.value ? parseInt(configs.find(c => c.key === 'system.logo.width')!.value) : undefined,
-        logo_height: configs.find(c => c.key === 'system.logo.height')?.value ? parseInt(configs.find(c => c.key === 'system.logo.height')!.value) : undefined,
-      };
-
-      return systemConfig;
-    } catch (error) {
-      console.error('Error getting System config:', error);
-      return {
-        system_name: 'CredCar Finance',
-        system_description: 'Sistema de Gestão Financeira',
-      };
-    }
-  }
-
-  /**
-   * Update System Identity Configuration
-   */
-  async updateSystemConfig(config: SystemConfigUpdate): Promise<boolean> {
-    try {
-      const promises: Promise<boolean>[] = [];
-
-      if (config.system_name !== undefined) {
-        promises.push(this.setConfig('system.name', config.system_name, 'Nome do sistema', 'system'));
-      }
-      if (config.system_description !== undefined) {
-        promises.push(this.setConfig('system.description', config.system_description, 'Descrição do sistema', 'system'));
-      }
-      if (config.logo_url !== undefined) {
-        promises.push(this.setConfig('system.logo.url', config.logo_url, 'URL do logo do sistema', 'system'));
-      }
-      if (config.logo_width !== undefined) {
-        promises.push(this.setConfig('system.logo.width', config.logo_width.toString(), 'Largura do logo', 'system'));
-      }
-      if (config.logo_height !== undefined) {
-        promises.push(this.setConfig('system.logo.height', config.logo_height.toString(), 'Altura do logo', 'system'));
-      }
-
-      const results = await Promise.all(promises);
-      return results.every(result => result);
-    } catch (error) {
-      console.error('Error updating System config:', error);
-      return false;
-    }
-  }
-
-  /**
-   * Validate logo file
-   */
-  validateLogoFile(file: File): { valid: boolean; message?: string } {
-    const maxSize = 5 * 1024 * 1024; // 5MB
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-
-    if (file.size > maxSize) {
-      return { valid: false, message: 'Arquivo muito grande. Máximo 5MB.' };
-    }
-
-    if (!allowedTypes.includes(file.type)) {
-      return { valid: false, message: 'Tipo de arquivo não suportado. Use JPEG, PNG, GIF ou WebP.' };
-    }
-
-    return { valid: true };
-  }
-
-  /**
-   * Convert file to base64
-   */
-  async fileToBase64(file: File): Promise<string> {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
-  }
-
-  /**
-   * Update page title
-   */
-  updatePageTitle(systemName: string): void {
-    document.title = `${systemName} - Sistema de Gestão Financeira`;
   }
 }
 

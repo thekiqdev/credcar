@@ -2,7 +2,6 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { representativeService, authService } from "../../lib/supabase";
 import { pdvGeneratorService } from "../../lib/pdv-generator.service";
-import { useSystemConfig } from "@/hooks/useSystemConfig";
 import {
   Card,
   CardContent,
@@ -18,7 +17,6 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const PublicRegistration = () => {
   const navigate = useNavigate();
-  const { config, loading: configLoading } = useSystemConfig();
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -206,22 +204,8 @@ const PublicRegistration = () => {
       <Card className="w-full max-w-2xl bg-white shadow-lg">
         <CardHeader className="text-center">
           <div className="flex items-center justify-center mb-4">
-            {config?.logo_url ? (
-              <img
-                src={config.logo_url}
-                alt={config.system_name || 'Logo'}
-                className="h-8 w-auto object-contain mr-2"
-                style={{
-                  maxWidth: config.logo_width ? `${Math.min(config.logo_width, 200)}px` : '200px',
-                  maxHeight: config.logo_height ? `${Math.min(config.logo_height, 60)}px` : '60px'
-                }}
-              />
-            ) : (
-              <div className="h-8 w-8 rounded-md bg-red-600 mr-2"></div>
-            )}
-            <h1 className="text-3xl font-bold text-red-600">
-              {config?.system_name || 'CredCar'}
-            </h1>
+            <div className="h-8 w-8 rounded-md bg-red-600 mr-2"></div>
+            <h1 className="text-3xl font-bold text-red-600">CredCar</h1>
           </div>
           <CardTitle className="text-2xl font-bold">
             Cadastro de Representante

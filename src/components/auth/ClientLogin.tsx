@@ -13,7 +13,6 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { AlertCircle, Eye, EyeOff, User, Lock, LogIn } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { useSystemConfig } from "@/hooks/useSystemConfig";
 
 interface ClientLoginProps {
   onLogin?: () => void;
@@ -21,7 +20,6 @@ interface ClientLoginProps {
 
 const ClientLogin = ({ onLogin = () => {} }: ClientLoginProps) => {
   const navigate = useNavigate();
-  const { config, loading: configLoading } = useSystemConfig();
   const [cpf, setCpf] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -105,28 +103,12 @@ const ClientLogin = ({ onLogin = () => {} }: ClientLoginProps) => {
         {/* Logo and Header */}
         <div className="text-center mb-8">
           <div className="flex items-center justify-center mb-4">
-            {config?.logo_url ? (
-              <img
-                src={config.logo_url}
-                alt={config.system_name || 'Logo'}
-                className="h-12 w-auto object-contain"
-                style={{
-                  maxWidth: config.logo_width ? `${Math.min(config.logo_width, 200)}px` : '200px',
-                  maxHeight: config.logo_height ? `${Math.min(config.logo_height, 60)}px` : '60px'
-                }}
-              />
-            ) : (
-              <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-red-600 to-red-700 flex items-center justify-center shadow-lg">
-                <div className="h-6 w-6 bg-white rounded-md"></div>
-              </div>
-            )}
+            <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-red-600 to-red-700 flex items-center justify-center shadow-lg">
+              <div className="h-6 w-6 bg-white rounded-md"></div>
+            </div>
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            {config?.system_name || 'Cred Car Multimarcas'}
-          </h1>
-          <p className="text-gray-600">
-            {config?.system_description || 'Compra Programada'}
-          </p>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Cred Car Multimarcas</h1>
+          <p className="text-gray-600">Compra Programada</p>
         </div>
 
         {/* Login Card */}
