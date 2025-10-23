@@ -138,6 +138,10 @@ const RepresentativeDashboard: React.FC<RepresentativeDashboardProps> = ({
     React.useState(false);
   const [withdrawalAmount, setWithdrawalAmount] = React.useState("");
   const [isProcessing, setIsProcessing] = React.useState(false);
+  const [invoiceFile, setInvoiceFile] = React.useState<File | null>(null);
+  const [isUploadingInvoice, setIsUploadingInvoice] = React.useState(false);
+  const [invoiceUploadProgress, setInvoiceUploadProgress] = React.useState(0);
+  const [invoiceUploadError, setInvoiceUploadError] = React.useState<string | null>(null);
   const [activeTab, setActiveTab] = React.useState("dashboard");
   const [showContractFlow, setShowContractFlow] = React.useState(false);
   const [selectedContractId, setSelectedContractId] = React.useState<
@@ -376,6 +380,38 @@ const RepresentativeDashboard: React.FC<RepresentativeDashboardProps> = ({
 
   // Document upload functions removed - now using inline component
 
+  // Funções para upload de nota fiscal
+  const validateInvoiceFile = (file: File): boolean => {
+    const allowedTypes = ['application/pdf'];
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    
+    if (!allowedTypes.includes(file.type)) {
+      setInvoiceUploadError('Apenas arquivos PDF são permitidos para nota fiscal');
+      return false;
+    }
+    
+    if (file.size > maxSize) {
+      setInvoiceUploadError('Arquivo muito grande. Tamanho máximo: 5MB');
+      return false;
+    }
+    
+    setInvoiceUploadError(null);
+    return true;
+  };
+
+  const handleInvoiceFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (validateInvoiceFile(file)) {
+        setInvoiceFile(file);
+        setInvoiceUploadError(null);
+      } else {
+        setInvoiceFile(null);
+        e.target.value = '';
+      }
+    }
+  };
+
   const handleWithdrawalRequest = async () => {
     try {
       const amount = parseFloat(withdrawalAmount);
@@ -389,6 +425,12 @@ const RepresentativeDashboard: React.FC<RepresentativeDashboardProps> = ({
         alert(`Saldo insuficiente. Valor disponível: R$ ${availableBalance.toLocaleString("pt-BR")}`);
         return;
       }
+
+      // Validar nota fiscal
+      if (!invoiceFile) {
+        alert("Por favor, anexe a nota fiscal (PDF)");
+        return;
+      }
       
       setIsProcessing(true);
       
@@ -400,6 +442,8 @@ const RepresentativeDashboard: React.FC<RepresentativeDashboardProps> = ({
       // Atualizar UI
       setIsWithdrawalDialogOpen(false);
       setWithdrawalAmount("");
+      setInvoiceFile(null);
+      setInvoiceUploadError(null);
       
       // Recarregar dados do dashboard para atualizar saldo
       const loadData = async () => {
@@ -1076,18 +1120,88 @@ const RepresentativeDashboard: React.FC<RepresentativeDashboardProps> = ({
                             </p>
                           </div>
                         )}
+
+                        {/* Campo de Upload de Nota Fiscal */}
+                        <div className="space-y-2">
+                          <Label htmlFor="invoice-file" className="text-sm font-medium">
+                            Nota Fiscal (PDF) *
+                          </Label>
+                          <div className="space-y-2">
+                            <Input
+                              id="invoice-file"
+                              type="file"
+                              accept=".pdf,application/pdf"
+                              onChange={handleInvoiceFileSelect}
+                              disabled={isProcessing || isUploadingInvoice}
+                              className="cursor-pointer"
+                            />
+                            {invoiceFile && (
+                              <div className="flex items-center gap-2 p-2 bg-green-50 border border-green-200 rounded-lg">
+                                <FileText className="h-4 w-4 text-green-600" />
+                                <div className="flex-1">
+                                  <p className="text-sm font-medium text-green-800">
+                                    {invoiceFile.name}
+                                  </p>
+                                  <p className="text-xs text-green-600">
+                                    {(invoiceFile.size / 1024).toFixed(2)} KB
+                                  </p>
+                                </div>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    setInvoiceFile(null);
+                                    const input = document.getElementById('invoice-file') as HTMLInputElement;
+                                    if (input) input.value = '';
+                                  }}
+                                  disabled={isProcessing || isUploadingInvoice}
+                                  className="text-red-600 hover:text-red-700"
+                                >
+                                  <XCircle className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            )}
+                            {invoiceUploadError && (
+                              <div className="flex items-center gap-2 p-2 bg-red-50 border border-red-200 rounded-lg">
+                                <AlertCircle className="h-4 w-4 text-red-600" />
+                                <p className="text-sm text-red-800">{invoiceUploadError}</p>
+                              </div>
+                            )}
+                            {isUploadingInvoice && (
+                              <div className="space-y-2">
+                                <div className="flex items-center gap-2">
+                                  <div className="flex-1">
+                                    <Progress value={invoiceUploadProgress} />
+                                  </div>
+                                  <span className="text-sm text-gray-600">
+                                    {invoiceUploadProgress.toFixed(0)}%
+                                  </span>
+                                </div>
+                                <p className="text-xs text-gray-600">Enviando nota fiscal...</p>
+                              </div>
+                            )}
+                            <p className="text-xs text-muted-foreground">
+                              Anexe a nota fiscal em formato PDF (máximo 5MB)
+                            </p>
+                          </div>
+                        </div>
                       </div>
                       <DialogFooter>
                         <Button
                           variant="outline"
-                          onClick={() => setIsWithdrawalDialogOpen(false)}
-                          disabled={isProcessing}
+                          onClick={() => {
+                            setIsWithdrawalDialogOpen(false);
+                            setInvoiceFile(null);
+                            setInvoiceUploadError(null);
+                            setWithdrawalAmount("");
+                          }}
+                          disabled={isProcessing || isUploadingInvoice}
                         >
                           Cancelar
                         </Button>
                         <Button 
                           onClick={handleWithdrawalRequest}
-                          disabled={isProcessing}
+                          disabled={isProcessing || isUploadingInvoice || !invoiceFile}
                         >
                           {isProcessing ? "Processando..." : "Solicitar Retirada"}
                         </Button>
