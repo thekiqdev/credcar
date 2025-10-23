@@ -978,6 +978,9 @@ app.post('/api/upload-document', upload.single('file'), validateFile, (req, res)
       'foto de identidade ou cnh (frente)': 'socio/foto_identidade_frente',
       'foto de identidade ou cnh (verso)': 'socio/foto_identidade_verso',
       
+      // Notas Fiscais de Comissão
+      'nota_fiscal_comissao': 'invoices/comissoes',
+      
       // Compatibilidade com documentos antigos
       'certidão negativa civil': 'socio/certidao_negativa_civel_1grau',
       'comprovante de endereço': 'empresa/comprovante_endereco_empresa',
@@ -3424,7 +3427,8 @@ async function processDocumentUpload(req) {
     'certidão negativa cível de 1º grau': 'socio/certidao_negativa_civel_1grau',
     'certidão negativa criminal de 1º grau': 'socio/certidao_negativa_criminal_1grau',
     'foto de identidade ou cnh (frente)': 'socio/foto_identidade_frente',
-    'foto de identidade ou cnh (verso)': 'socio/foto_identidade_verso'
+    'foto de identidade ou cnh (verso)': 'socio/foto_identidade_verso',
+    'nota_fiscal_comissao': 'invoices/comissoes'
   };
   
   const mappedPath = documentTypeMap[documentType.toLowerCase()] || 

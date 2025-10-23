@@ -18,11 +18,22 @@ export interface WithdrawalRequest {
 
 class WithdrawalService {
   /**
-   * Criar nova solicitação de retirada
+   * Criar nova solicitação de retirada (sem upload - legacy)
    */
   async createWithdrawalRequest(
     representativeId: string,
     amount: number
+  ): Promise<WithdrawalRequest> {
+    return this.createWithdrawalRequestWithInvoice(representativeId, amount, null);
+  }
+
+  /**
+   * Criar nova solicitação de retirada com upload de nota fiscal
+   */
+  async createWithdrawalRequestWithInvoice(
+    representativeId: string,
+    amount: number,
+    invoiceFile: File | null
   ): Promise<WithdrawalRequest> {
     try {
       // 1. Validar que amount > 0
@@ -40,12 +51,20 @@ class WithdrawalService {
         );
       }
 
-      // 4. Gerar request_code único
+      // 4. Upload da nota fiscal (se fornecida)
+      let invoiceUrl = "";
+      if (invoiceFile) {
+        console.log("📄 Iniciando upload da nota fiscal...");
+        invoiceUrl = await this.uploadInvoiceFile(invoiceFile, representativeId);
+        console.log("✅ Nota fiscal enviada:", invoiceUrl);
+      }
+
+      // 5. Gerar request_code único
       const timestamp = Date.now();
       const random = Math.random().toString(36).substring(2, 8).toUpperCase();
       const request_code = `WD-${timestamp}-${random}`;
 
-      // 5. Inserir em withdrawal_requests
+      // 6. Inserir em withdrawal_requests
       const { data, error } = await supabase
         .from("withdrawal_requests")
         .insert({
@@ -54,7 +73,7 @@ class WithdrawalService {
           requested_value: amount,
           requested_at: new Date().toISOString(),
           status: "Pendente" as Database["public"]["Enums"]["withdrawal_status"],
-          invoice_url: "", // Será preenchido pelo admin ao aprovar
+          invoice_url: invoiceUrl, // URL da nota fiscal enviada pelo representante
         })
         .select()
         .single();
@@ -71,8 +90,82 @@ class WithdrawalService {
       console.log("✅ Solicitação de retirada criada:", data);
       return data as WithdrawalRequest;
     } catch (error) {
-      console.error("Erro em createWithdrawalRequest:", error);
+      console.error("Erro em createWithdrawalRequestWithInvoice:", error);
       throw error;
+    }
+  }
+
+  /**
+   * Upload de nota fiscal para solicitação de retirada
+   */
+  private async uploadInvoiceFile(
+    file: File,
+    representativeId: string
+  ): Promise<string> {
+    try {
+      // Importar serviços de upload
+      const { uploadService } = await import('./upload.service');
+      const { chunkUploadService } = await import('./chunk-upload.service');
+
+      // Buscar CPF/CNPJ do representante
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('cnpj, cpf')
+        .eq('id', representativeId)
+        .single();
+
+      if (profileError) {
+        throw new Error(`Erro ao buscar dados do representante: ${profileError.message}`);
+      }
+
+      const cpfCnpj = profile?.cnpj || profile?.cpf || '';
+      if (!cpfCnpj) {
+        throw new Error('CPF/CNPJ do representante não encontrado');
+      }
+
+      // Preparar dados do arquivo
+      const docInfo = {
+        representativeId: representativeId,
+        cpfCnpj: cpfCnpj,
+        documentType: 'nota_fiscal_comissao',
+        fileName: file.name,
+        fileSize: file.size,
+        fileType: file.type
+      };
+
+      let result;
+
+      // Verificar se deve usar upload em chunks
+      const shouldUseChunks = chunkUploadService.shouldUseChunkUpload(file.size);
+
+      if (shouldUseChunks) {
+        console.log(`🔧 Usando upload em chunks para nota fiscal: ${file.size} bytes`);
+        result = await chunkUploadService.uploadFile({
+          file: file,
+          documentType: 'nota_fiscal_comissao',
+          cpfCnpj: cpfCnpj,
+          representativeId: representativeId,
+        });
+      } else {
+        console.log(`📤 Usando upload normal para nota fiscal: ${file.size} bytes`);
+        result = await uploadService.uploadComplete(file, docInfo);
+      }
+
+      if (!result.success) {
+        throw new Error(result.error || 'Erro ao fazer upload da nota fiscal');
+      }
+
+      const filePath = result.data?.filePath || result.data?.directory || '';
+      if (!filePath) {
+        throw new Error('Caminho do arquivo não retornado pelo servidor');
+      }
+
+      return filePath;
+    } catch (error) {
+      console.error('❌ Erro no upload da nota fiscal:', error);
+      throw new Error(
+        error instanceof Error ? error.message : 'Erro ao fazer upload da nota fiscal'
+      );
     }
   }
 

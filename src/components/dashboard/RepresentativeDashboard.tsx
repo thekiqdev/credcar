@@ -434,9 +434,11 @@ const RepresentativeDashboard: React.FC<RepresentativeDashboardProps> = ({
       
       setIsProcessing(true);
       
-      const withdrawal = await withdrawalService.createWithdrawalRequest(
+      // Criar solicitação com upload de nota fiscal
+      const withdrawal = await withdrawalService.createWithdrawalRequestWithInvoice(
         currentUser.id,
-        amount
+        amount,
+        invoiceFile
       );
       
       // Atualizar UI
