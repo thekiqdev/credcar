@@ -66,10 +66,11 @@ const DocumentApproval: React.FC<DocumentApprovalProps> = ({
 
       // Criar lista completa com documentos esperados
       const allDocuments: Document[] = expectedDocuments.map(docType => {
-        // Buscar TODOS os documentos do tipo e pegar o mais recente
-        const docsOfType = data?.filter(doc => doc.document_type === docType) || [];
-        const existingDoc = docsOfType.length > 0
-          ? docsOfType.reduce((latest, current) => {
+        // Buscar documento correspondente EXATO (sem variações)
+        // Encontrar o documento mais recente (por uploaded_at) do tipo correto
+        const dbDocs = data?.filter(doc => doc.document_type === docType) || [];
+        const existingDoc = dbDocs.length > 0 
+          ? dbDocs.reduce((latest, current) => {
               const latestDate = new Date(latest.uploaded_at || 0);
               const currentDate = new Date(current.uploaded_at || 0);
               return currentDate > latestDate ? current : latest;
@@ -78,22 +79,23 @@ const DocumentApproval: React.FC<DocumentApprovalProps> = ({
         
         // Log específico para cartilha de credenciamento preenchida
         if (docType === 'cartilha de credenciamento preenchida') {
-          console.log('🔍 === DEBUG CARTILHA ADMIN ===');
+          console.log('🔍 === DEBUG CARTILHA ADMIN LOAD ===');
           console.log('📄 docType:', docType);
-          console.log('📄 Total de registros encontrados:', docsOfType.length);
-          if (docsOfType.length > 1) {
-            console.log('⚠️ MÚLTIPLOS REGISTROS ENCONTRADOS:');
-            docsOfType.forEach((d, i) => {
+          console.log('📄 Total de registros encontrados:', dbDocs.length);
+          if (dbDocs.length > 1) {
+            console.log('⚠️ MÚLTIPLOS REGISTROS ENCONTRADOS NO ADMIN:');
+            dbDocs.forEach((d, i) => {
               console.log(`  ${i + 1}. ID: ${d.id}, file_url: "${d.file_url}", uploaded_at: ${d.uploaded_at}`);
             });
             console.log('📄 Usando o mais recente (ID:', existingDoc?.id, ')');
           }
+          console.log('📄 existingDoc encontrado:', !!existingDoc);
           if (existingDoc) {
-            console.log('📄 existingDoc:', JSON.stringify(existingDoc, null, 2));
-          } else {
-            console.log('❌ Nenhum documento encontrado');
+            console.log('📄 existingDoc COMPLETO:', JSON.stringify(existingDoc, null, 2));
+            console.log('📄 existingDoc.file_url:', existingDoc.file_url);
+            console.log('📄 existingDoc.file_url.trim() !== "":', existingDoc.file_url?.trim() !== '');
           }
-          console.log('🔍 === FIM DEBUG CARTILHA ADMIN ===');
+          console.log('🔍 === FIM DEBUG CARTILHA ADMIN LOAD ===');
         }
         
         if (existingDoc && existingDoc.file_url && existingDoc.file_url.trim() !== '') {

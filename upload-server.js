@@ -100,7 +100,7 @@ const storage = multer.diskStorage({
 const upload = multer({ 
   storage: storage,
   limits: {
-    fileSize: 50 * 1024 * 1024 // 50MB
+    fileSize: 10 * 1024 * 1024 // 10MB
   },
   fileFilter: (req, file, cb) => {
     const allowedTypes = [
@@ -674,7 +674,7 @@ app.post('/api/upload-representative-contract', upload.single('file'), validateF
 
     // Validação específica para contrato representante
     const allowedTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
-    const maxSize = 50 * 1024 * 1024; // 50MB
+    const maxSize = 10 * 1024 * 1024; // 10MB
 
     if (!allowedTypes.includes(req.file.mimetype)) {
       return res.status(400).json({ 
@@ -842,9 +842,9 @@ app.post('/api/upload-contract-document', upload.single('file'), async (req, res
       return res.status(400).json({ error: 'Tipo de arquivo não permitido' });
     }
 
-    // Validar tamanho (máx 50MB)
-    if (req.file.size > 50 * 1024 * 1024) {
-      return res.status(400).json({ error: 'Arquivo muito grande. Máximo: 50MB' });
+    // Validar tamanho (máx 10MB)
+    if (req.file.size > 10 * 1024 * 1024) {
+      return res.status(400).json({ error: 'Arquivo muito grande. Máximo: 10MB' });
     }
 
     // Criar estrutura de pastas: documentos/contratos/{contractId}/documentos/
@@ -922,7 +922,7 @@ app.post('/api/upload-document', upload.single('file'), validateFile, (req, res)
       // Documentos da Empresa
       'cartilha de credenciamento preenchida': { maxSize: 5 * 1024 * 1024, requiredTypes: ['application/pdf'] },
       'cartão cnpj': { maxSize: 2 * 1024 * 1024, requiredTypes: ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'] },
-      'contrato social e última alteração': { maxSize: 50 * 1024 * 1024, requiredTypes: ['application/pdf'] },
+      'contrato social e última alteração': { maxSize: 10 * 1024 * 1024, requiredTypes: ['application/pdf'] },
       'certificado de microempreendedor individual (mei)': { maxSize: 3 * 1024 * 1024, requiredTypes: ['application/pdf'] },
       'comprovante de endereço empresa': { maxSize: 2 * 1024 * 1024, requiredTypes: ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'] },
       'declaração de endereço': { maxSize: 2 * 1024 * 1024, requiredTypes: ['application/pdf'] },
@@ -989,6 +989,16 @@ app.post('/api/upload-document', upload.single('file'), validateFile, (req, res)
     console.log('🔍 Document Type Lowercase:', documentType.toLowerCase());
     console.log('🔍 Mapped Path:', documentTypeMap[documentType.toLowerCase()]);
     
+    // Log específico para cartilha de credenciamento preenchida
+    if (documentType.toLowerCase() === 'cartilha de credenciamento preenchida') {
+      console.log('🔍 === DEBUG CARTILHA UPLOAD-SERVER ===');
+      console.log('📄 Document Type:', documentType);
+      console.log('📄 Document Type Lowercase:', documentType.toLowerCase());
+      console.log('📄 Mapped Path:', documentTypeMap[documentType.toLowerCase()]);
+      console.log('📄 CPF/CNPJ:', cpfCnpj);
+      console.log('🔍 === FIM DEBUG CARTILHA UPLOAD-SERVER ===');
+    }
+    
     const mappedPath = documentTypeMap[documentType.toLowerCase()] || 
       documentType.toLowerCase().replace(/[^a-z0-9]/g, '_');
     
@@ -1043,6 +1053,17 @@ app.post('/api/upload-document', upload.single('file'), validateFile, (req, res)
     };
 
     console.log('📊 File Info Completo:', fileInfo);
+    
+    // Log específico para cartilha de credenciamento preenchida
+    if (documentType.toLowerCase() === 'cartilha de credenciamento preenchida') {
+      console.log('🔍 === DEBUG CARTILHA FILE INFO ===');
+      console.log('📄 fileInfo.documentType:', fileInfo.documentType);
+      console.log('📄 fileInfo.filePath:', fileInfo.filePath);
+      console.log('📄 fileInfo.directory:', fileInfo.directory);
+      console.log('📄 relativePath:', relativePath);
+      console.log('📄 finalFilePath:', finalFilePath);
+      console.log('🔍 === FIM DEBUG CARTILHA FILE INFO ===');
+    }
 
     console.log('✅ Arquivo enviado com sucesso!');
     console.log('📁 Final Path:', finalFilePath);

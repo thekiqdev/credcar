@@ -210,6 +210,27 @@ const DocumentUploadInline: React.FC<DocumentUploadInlineProps> = ({
               })
             : undefined;
           console.log(`🔍 Comparando: "${dbDoc?.document_type}" === "${doc.type}"`);
+          
+          // Log específico para cartilha de credenciamento preenchida
+          if (doc.type === 'cartilha de credenciamento preenchida') {
+            console.log('🔍 === DEBUG CARTILHA INLINE LOAD ===');
+            console.log('📄 doc.type:', doc.type);
+            console.log('📄 Total de registros encontrados:', dbDocs.length);
+            if (dbDocs.length > 1) {
+              console.log('⚠️ MÚLTIPLOS REGISTROS ENCONTRADOS NO INLINE:');
+              dbDocs.forEach((d, i) => {
+                console.log(`  ${i + 1}. ID: ${d.id}, file_url: "${d.file_url}", uploaded_at: ${d.uploaded_at}`);
+              });
+              console.log('📄 Usando o mais recente (ID:', dbDoc?.id, ')');
+            }
+            console.log('📄 dbDoc encontrado:', !!dbDoc);
+            if (dbDoc) {
+              console.log('📄 dbDoc.file_url:', dbDoc.file_url);
+              console.log('📄 dbDoc.file_url.trim() !== "":', dbDoc.file_url?.trim() !== '');
+            }
+            console.log('🔍 === FIM DEBUG CARTILHA INLINE LOAD ===');
+          }
+          
           if (dbDoc && dbDoc.file_url && dbDoc.file_url.trim() !== '') {
             // Só considera enviado se tem file_url válida
             console.log(`✅ Documento encontrado: ${doc.type} - ${dbDoc.file_url}`);
