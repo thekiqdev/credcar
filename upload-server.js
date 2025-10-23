@@ -3477,6 +3477,68 @@ async function processDocumentUpload(req) {
 }
 
 // Iniciar servidor
+// ===== ROTA DE DOWNLOAD DE DOCUMENTOS =====
+app.get('/api/download-document', (req, res) => {
+  const { filePath } = req.query;
+  
+  if (!filePath) {
+    return res.status(400).json({ error: 'Caminho do arquivo não fornecido' });
+  }
+  
+  try {
+    const fullPath = path.join(__dirname, 'documentos', filePath);
+    
+    // Verificar se o arquivo existe
+    if (!fs.existsSync(fullPath)) {
+      return res.status(404).json({ error: 'Arquivo não encontrado' });
+    }
+    
+    // Definir headers para download
+    res.setHeader('Content-Disposition', `attachment; filename="${path.basename(fullPath)}"`);
+    res.setHeader('Content-Type', 'application/octet-stream');
+    
+    // Enviar arquivo
+    res.sendFile(fullPath);
+  } catch (error) {
+    console.error('Erro ao baixar documento:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
+// ===== ROTA DE VISUALIZAÇÃO DE DOCUMENTOS =====
+app.get('/api/view-document', (req, res) => {
+  const { filePath } = req.query;
+  
+  if (!filePath) {
+    return res.status(400).json({ error: 'Caminho do arquivo não fornecido' });
+  }
+  
+  try {
+    const fullPath = path.join(__dirname, 'documentos', filePath);
+    
+    // Verificar se o arquivo existe
+    if (!fs.existsSync(fullPath)) {
+      return res.status(404).json({ error: 'Arquivo não encontrado' });
+    }
+    
+    // Verificar se é PDF
+    const ext = path.extname(fullPath).toLowerCase();
+    if (ext !== '.pdf') {
+      return res.status(400).json({ error: 'Apenas arquivos PDF podem ser visualizados' });
+    }
+    
+    // Definir headers para visualização inline
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', 'inline');
+    
+    // Enviar arquivo
+    res.sendFile(fullPath);
+  } catch (error) {
+    console.error('Erro ao visualizar documento:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`🚀 Servidor de upload rodando na porta ${PORT}`);
   console.log(`📁 Diretório de documentos: ${path.join(__dirname, 'documentos')}`);
@@ -3490,4 +3552,6 @@ app.listen(PORT, () => {
   console.log(`🔔 ASAAS Webhook: http://localhost:${PORT}/api/webhooks/asaas`);
   console.log(`⏰ Cron Generate Invoices: http://localhost:${PORT}/api/cron/generate-invoices`);
   console.log(`🧪 Cron Test: http://localhost:${PORT}/api/cron/test-generate-invoices`);
+  console.log(`📄 Download Document: http://localhost:${PORT}/api/download-document`);
+  console.log(`👁️ View Document: http://localhost:${PORT}/api/view-document`);
 });

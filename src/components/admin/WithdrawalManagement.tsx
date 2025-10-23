@@ -33,6 +33,9 @@ import {
   Search,
   Filter,
   RefreshCw,
+  FileText,
+  Eye,
+  Download,
 } from "lucide-react";
 import { withdrawalService, WithdrawalRequest } from "../../lib/withdrawal.service";
 
@@ -51,6 +54,8 @@ const WithdrawalManagement: React.FC<WithdrawalManagementProps> = ({ onClose }) 
   const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
   const [rejectionReason, setRejectionReason] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isInvoiceViewerOpen, setIsInvoiceViewerOpen] = useState(false);
+  const [selectedInvoiceUrl, setSelectedInvoiceUrl] = useState("");
 
   // Carregar solicitações
   const loadWithdrawals = async () => {
@@ -157,6 +162,43 @@ const WithdrawalManagement: React.FC<WithdrawalManagementProps> = ({ onClose }) 
       style: "currency",
       currency: "BRL",
     }).format(value);
+  };
+
+  // Visualizar nota fiscal
+  const handleViewInvoice = (invoiceUrl: string) => {
+    if (!invoiceUrl) {
+      alert("Nota fiscal não disponível");
+      return;
+    }
+    setSelectedInvoiceUrl(invoiceUrl);
+    setIsInvoiceViewerOpen(true);
+  };
+
+  // Baixar nota fiscal
+  const handleDownloadInvoice = async (invoiceUrl: string, requestCode: string) => {
+    if (!invoiceUrl) {
+      alert("Nota fiscal não disponível");
+      return;
+    }
+
+    try {
+      // Construir URL completa do arquivo
+      const baseUrl = window.location.origin;
+      const fullUrl = `${baseUrl}/api/download-document?filePath=${encodeURIComponent(invoiceUrl)}`;
+      
+      // Criar link temporário para download
+      const link = document.createElement('a');
+      link.href = fullUrl;
+      link.download = `nota_fiscal_${requestCode}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      console.log(`📄 Download iniciado: ${requestCode}`);
+    } catch (error) {
+      console.error("Erro ao baixar nota fiscal:", error);
+      alert("Erro ao baixar nota fiscal. Tente novamente.");
+    }
   };
 
   // Obter cor do status
@@ -318,6 +360,7 @@ const WithdrawalManagement: React.FC<WithdrawalManagementProps> = ({ onClose }) 
                   <TableHead>Representante</TableHead>
                   <TableHead>Valor Solicitado</TableHead>
                   <TableHead>Data</TableHead>
+                  <TableHead>Nota Fiscal</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Ações</TableHead>
                 </TableRow>
@@ -325,7 +368,7 @@ const WithdrawalManagement: React.FC<WithdrawalManagementProps> = ({ onClose }) 
               <TableBody>
                 {filteredWithdrawals.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8 text-gray-500">
+                    <TableCell colSpan={7} className="text-center py-8 text-gray-500">
                       Nenhuma solicitação encontrada
                     </TableCell>
                   </TableRow>
@@ -346,6 +389,35 @@ const WithdrawalManagement: React.FC<WithdrawalManagementProps> = ({ onClose }) 
                       </TableCell>
                       <TableCell className="text-sm">
                         {formatDate(withdrawal.requested_at)}
+                      </TableCell>
+                      <TableCell>
+                        {withdrawal.invoice_url ? (
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                              onClick={() => handleViewInvoice(withdrawal.invoice_url)}
+                              title="Visualizar nota fiscal"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                              onClick={() => handleDownloadInvoice(withdrawal.invoice_url, withdrawal.request_code)}
+                              title="Baixar nota fiscal"
+                            >
+                              <Download className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2 text-gray-500">
+                            <FileText className="h-4 w-4" />
+                            <span className="text-sm">Não enviada</span>
+                          </div>
+                        )}
                       </TableCell>
                       <TableCell>
                         <Badge
@@ -480,6 +552,55 @@ const WithdrawalManagement: React.FC<WithdrawalManagementProps> = ({ onClose }) 
             >
               {isProcessing ? "Processando..." : "Rejeitar"}
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog de Visualização da Nota Fiscal */}
+      <Dialog open={isInvoiceViewerOpen} onOpenChange={setIsInvoiceViewerOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh]">
+          <DialogHeader>
+            <DialogTitle>Nota Fiscal</DialogTitle>
+            <DialogDescription>
+              Visualização da nota fiscal enviada pelo representante
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            {selectedInvoiceUrl && (
+              <div className="w-full h-[600px] border rounded-lg overflow-hidden">
+                <iframe
+                  src={`/api/view-document?filePath=${encodeURIComponent(selectedInvoiceUrl)}`}
+                  className="w-full h-full"
+                  title="Nota Fiscal"
+                />
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsInvoiceViewerOpen(false)}
+            >
+              Fechar
+            </Button>
+            {selectedInvoiceUrl && (
+              <Button
+                onClick={() => {
+                  const baseUrl = window.location.origin;
+                  const fullUrl = `${baseUrl}/api/download-document?filePath=${encodeURIComponent(selectedInvoiceUrl)}`;
+                  const link = document.createElement('a');
+                  link.href = fullUrl;
+                  link.download = `nota_fiscal.pdf`;
+                  document.body.appendChild(link);
+                  link.click();
+                  document.body.removeChild(link);
+                }}
+                className="bg-green-600 hover:bg-green-700"
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Baixar PDF
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
