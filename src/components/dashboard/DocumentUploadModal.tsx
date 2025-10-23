@@ -444,7 +444,24 @@ const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
           console.log('🔍 Document Type lowercase:', doc.type.toLowerCase());
 
           // Upload completo: criar pastas + salvar arquivo
-          const result = await uploadService.uploadComplete(doc.file, docInfo);
+          let result;
+          
+          // Tratamento especial para cartilha de credenciamento preenchida
+          if (doc.type === 'cartilha de credenciamento preenchida') {
+            console.log(`🔍 === UPLOAD ESPECIAL CARTILHA ===`);
+            console.log(`📄 Usando método especial para cartilha`);
+            
+            // Tentar upload direto primeiro
+            try {
+              result = await uploadService.uploadComplete(doc.file, docInfo);
+              console.log(`✅ Upload especial da cartilha bem-sucedido na primeira tentativa`);
+            } catch (error) {
+              console.error(`❌ Upload especial da cartilha falhou:`, error);
+              result = { success: false, error: error.message };
+            }
+          } else {
+            result = await uploadService.uploadComplete(doc.file, docInfo);
+          }
 
           if (!result.success) {
             console.error(`❌ Upload falhou para ${doc.type}:`, result.error);
@@ -469,9 +486,35 @@ const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
                 console.log(`🔍 === FIM RETRY CARTILHA ===`);
               }
               
-              await new Promise(resolve => setTimeout(resolve, 1000)); // Aguardar 1 segundo
+              await new Promise(resolve => setTimeout(resolve, 2000)); // Aguardar 2 segundos para cartilha
               
-              const retryResult = await uploadService.uploadComplete(doc.file, docInfo);
+              let retryResult;
+              
+              // Método especial para cartilha
+              if (doc.type === 'cartilha de credenciamento preenchida') {
+                console.log(`🔍 === RETRY ESPECIAL CARTILHA ===`);
+                console.log(`📄 Tentando método alternativo para cartilha`);
+                
+                // Tentar criar pasta primeiro, depois upload
+                try {
+                  const folderResult = await uploadService.createRepresentativeFolder(representativeId, representativeCpfCnpj);
+                  console.log(`📁 Resultado da criação de pasta:`, folderResult);
+                  
+                  if (folderResult.success) {
+                    retryResult = await uploadService.uploadDocument(doc.file, docInfo);
+                    console.log(`📤 Resultado do upload direto:`, retryResult);
+                  } else {
+                    retryResult = { success: false, error: 'Erro ao criar pasta' };
+                  }
+                } catch (error) {
+                  console.error(`❌ Erro no método alternativo:`, error);
+                  retryResult = { success: false, error: error.message };
+                }
+                
+                console.log(`🔍 === FIM RETRY ESPECIAL CARTILHA ===`);
+              } else {
+                retryResult = await uploadService.uploadComplete(doc.file, docInfo);
+              }
               if (retryResult.success) {
                 console.log(`✅ Retry bem-sucedido para ${doc.type}`);
                 // Usar resultado do retry
