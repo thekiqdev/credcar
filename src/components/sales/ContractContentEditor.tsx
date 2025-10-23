@@ -314,7 +314,11 @@ const ContractContentEditor: React.FC<ContractContentEditorProps> = ({
 
   // Função para inserir campos de mesclagem
   const handleInsertField = (placeholder: string) => {
-    setContent(content + placeholder);
+    if (editorRef.current) {
+      editorRef.current.insertContent(placeholder);
+    } else {
+      setContent(content + placeholder);
+    }
   };
 
   // Handle template selection
