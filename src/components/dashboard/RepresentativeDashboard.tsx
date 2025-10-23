@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useGeneralSettings } from "@/hooks/useGeneralSettings";
 import {
   Card,
   CardContent,
@@ -111,6 +112,7 @@ const RepresentativeDashboard: React.FC<RepresentativeDashboardProps> = ({
   commissionHistory: propCommissionHistory,
 }) => {
   const navigate = useNavigate();
+  const { settings: generalSettings, loading: settingsLoading } = useGeneralSettings();
   const [currentUser, setCurrentUser] = useState(null);
   const [performanceData, setPerformanceData] = useState(
     propPerformanceData || {
@@ -575,8 +577,22 @@ const RepresentativeDashboard: React.FC<RepresentativeDashboardProps> = ({
               className="flex items-center cursor-pointer"
               onClick={() => navigate("/")}
             >
-              <div className="h-8 w-8 rounded-md bg-red-600 mr-2"></div>
-              <h1 className="text-xl font-bold text-red-600">CredCar</h1>
+              {generalSettings?.logo_url ? (
+                <img
+                  src={generalSettings.logo_url}
+                  alt={generalSettings.system_name || 'Logo'}
+                  className="h-8 w-auto object-contain mr-2"
+                  style={{
+                    maxWidth: generalSettings.logo_width ? `${Math.min(generalSettings.logo_width, 200)}px` : '200px',
+                    maxHeight: generalSettings.logo_height ? `${Math.min(generalSettings.logo_height, 60)}px` : '60px'
+                  }}
+                />
+              ) : (
+                <div className="h-8 w-8 rounded-md bg-red-600 mr-2"></div>
+              )}
+              <h1 className="text-xl font-bold text-red-600">
+                {generalSettings?.system_name || "CredCar"}
+              </h1>
             </div>
             <h2 className="text-lg font-medium text-foreground">
               Dashboard do Representante

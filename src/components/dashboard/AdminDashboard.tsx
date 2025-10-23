@@ -16,6 +16,7 @@ import {
 import { systemConfigService } from "../../lib/system-config.service";
 import { asaasService } from "../../lib/asaas.service";
 import { commissionService } from "../../lib/commission.service";
+import { useGeneralSettings } from "@/hooks/useGeneralSettings";
 import WithdrawalManagement from "../admin/WithdrawalManagement";
 import { withdrawalService } from "../../lib/withdrawal.service";
 import { pdvGeneratorService } from "../../lib/pdv-generator.service";
@@ -174,6 +175,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const navigate = useNavigate();
   const form = useForm();
   const [activeSection, setActiveSection] = useState("dashboard");
+  const { settings: generalSettings, loading: settingsLoading } = useGeneralSettings();
 
   // Authentication check removed - ProtectedRoute already handles this
   const [activeConfigTab, setActiveConfigTab] = useState("commission-tables");
@@ -3685,8 +3687,22 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
             className="flex items-center mb-8 cursor-pointer"
             onClick={() => navigate("/")}
           >
-            <div className="h-8 w-8 rounded-md bg-red-600 mr-2"></div>
-            <h1 className="text-xl font-bold">CredCar</h1>
+            {generalSettings?.logo_url ? (
+              <img
+                src={generalSettings.logo_url}
+                alt={generalSettings.system_name || 'Logo'}
+                className="h-8 w-auto object-contain mr-2"
+                style={{
+                  maxWidth: generalSettings.logo_width ? `${Math.min(generalSettings.logo_width, 200)}px` : '200px',
+                  maxHeight: generalSettings.logo_height ? `${Math.min(generalSettings.logo_height, 60)}px` : '60px'
+                }}
+              />
+            ) : (
+              <div className="h-8 w-8 rounded-md bg-red-600 mr-2"></div>
+            )}
+            <h1 className="text-xl font-bold">
+              {generalSettings?.system_name || "CredCar"}
+            </h1>
           </div>
 
           <nav className="space-y-4">
