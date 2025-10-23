@@ -213,6 +213,19 @@ const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
             return match;
           });
           
+          // Log específico para cartilha de credenciamento preenchida
+          if (doc.type === 'cartilha de credenciamento preenchida') {
+            console.log(`🔍 === DEBUG CARTILHA COMPARAÇÃO ===`);
+            console.log(`📄 doc.type: "${doc.type}"`);
+            console.log(`📄 dbDoc encontrado:`, !!dbDoc);
+            if (dbDoc) {
+              console.log(`📄 dbDoc.document_type: "${dbDoc.document_type}"`);
+              console.log(`📄 dbDoc.file_url: "${dbDoc.file_url}"`);
+              console.log(`📄 dbDoc.file_url length: ${dbDoc.file_url?.length || 0}`);
+            }
+            console.log(`🔍 === FIM DEBUG CARTILHA ===`);
+          }
+          
           if (dbDoc && dbDoc.file_url && dbDoc.file_url.trim() !== '') {
             // Só considera enviado se tem file_url válida
             console.log(`✅ Documento encontrado: ${doc.type} - ${dbDoc.file_url}`);
@@ -228,8 +241,12 @@ const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
             if (dbDoc) {
               console.log(`📄 dbDoc encontrado mas sem file_url:`, dbDoc);
             }
+            return {
+              ...doc,
+              status: 'pending',
+              progress: 0
+            };
           }
-          return doc; // Mantém status original se não tem arquivo
         }));
       } else {
         console.log('⚠️ Nenhum documento encontrado no banco para este representante');
