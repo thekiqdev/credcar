@@ -3488,20 +3488,68 @@ app.get('/api/download-document', (req, res) => {
   try {
     const fullPath = path.join(__dirname, 'documentos', filePath);
     
+    console.log('📄 Tentando baixar arquivo:', fullPath);
+    
     // Verificar se o arquivo existe
     if (!fs.existsSync(fullPath)) {
+      console.error('❌ Arquivo não encontrado:', fullPath);
       return res.status(404).json({ error: 'Arquivo não encontrado' });
     }
     
+    // Obter informações do arquivo
+    const stats = fs.statSync(fullPath);
+    const fileName = path.basename(fullPath);
+    const ext = path.extname(fullPath).toLowerCase();
+    
+    console.log('📊 Informações do arquivo:', {
+      fileName,
+      size: stats.size,
+      extension: ext,
+      modified: stats.mtime
+    });
+    
+    // Definir Content-Type baseado na extensão
+    let contentType = 'application/octet-stream';
+    if (ext === '.pdf') {
+      contentType = 'application/pdf';
+    } else if (ext === '.jpg' || ext === '.jpeg') {
+      contentType = 'image/jpeg';
+    } else if (ext === '.png') {
+      contentType = 'image/png';
+    } else if (ext === '.doc') {
+      contentType = 'application/msword';
+    } else if (ext === '.docx') {
+      contentType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+    }
+    
     // Definir headers para download
-    res.setHeader('Content-Disposition', `attachment; filename="${path.basename(fullPath)}"`);
-    res.setHeader('Content-Type', 'application/octet-stream');
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+    res.setHeader('Content-Length', stats.size);
+    res.setHeader('Cache-Control', 'no-cache');
+    
+    console.log('📤 Enviando arquivo com headers:', {
+      'Content-Type': contentType,
+      'Content-Length': stats.size,
+      'Content-Disposition': `attachment; filename="${fileName}"`
+    });
     
     // Enviar arquivo
-    res.sendFile(fullPath);
+    res.sendFile(fullPath, (err) => {
+      if (err) {
+        console.error('❌ Erro ao enviar arquivo:', err);
+        if (!res.headersSent) {
+          res.status(500).json({ error: 'Erro ao enviar arquivo' });
+        }
+      } else {
+        console.log('✅ Arquivo enviado com sucesso:', fileName);
+      }
+    });
   } catch (error) {
-    console.error('Erro ao baixar documento:', error);
-    res.status(500).json({ error: 'Erro interno do servidor' });
+    console.error('❌ Erro ao baixar documento:', error);
+    if (!res.headersSent) {
+      res.status(500).json({ error: 'Erro interno do servidor' });
+    }
   }
 });
 

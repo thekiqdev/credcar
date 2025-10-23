@@ -200,17 +200,32 @@ const WithdrawalManagement: React.FC<WithdrawalManagementProps> = ({ onClose }) 
       const baseUrl = window.location.origin;
       const fullUrl = `${baseUrl}/api/download-document?filePath=${encodeURIComponent(invoiceUrl)}`;
       
+      console.log('📄 Iniciando download:', {
+        invoiceUrl,
+        requestCode,
+        fullUrl
+      });
+      
       // Criar link temporário para download
       const link = document.createElement('a');
       link.href = fullUrl;
-      link.download = `nota_fiscal_${requestCode}.pdf`;
+      
+      // Extrair nome do arquivo da URL
+      const fileName = invoiceUrl.split('/').pop() || `nota_fiscal_${requestCode}.pdf`;
+      link.download = fileName;
+      
+      // Adicionar ao DOM temporariamente
       document.body.appendChild(link);
+      
+      // Simular clique
       link.click();
+      
+      // Remover do DOM
       document.body.removeChild(link);
       
-      console.log(`📄 Download iniciado: ${requestCode}`);
+      console.log(`✅ Download iniciado: ${fileName}`);
     } catch (error) {
-      console.error("Erro ao baixar nota fiscal:", error);
+      console.error("❌ Erro ao baixar nota fiscal:", error);
       alert("Erro ao baixar nota fiscal. Tente novamente.");
     }
   };
