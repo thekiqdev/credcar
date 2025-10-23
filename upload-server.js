@@ -3481,14 +3481,21 @@ async function processDocumentUpload(req) {
 app.get('/api/download-document', (req, res) => {
   const { filePath } = req.query;
   
+  console.log('📥 === DOWNLOAD REQUEST ===');
+  console.log('📁 File Path (raw):', filePath);
+  
   if (!filePath) {
+    console.error('❌ Caminho do arquivo não fornecido');
     return res.status(400).json({ error: 'Caminho do arquivo não fornecido' });
   }
   
   try {
-    const fullPath = path.join(__dirname, 'documentos', filePath);
+    // Normalizar o caminho (converter barras para o sistema operacional)
+    const normalizedPath = filePath.replace(/\\/g, path.sep).replace(/\//g, path.sep);
+    const fullPath = path.join(__dirname, 'documentos', normalizedPath);
     
-    console.log('📄 Tentando baixar arquivo:', fullPath);
+    console.log('📂 Full Path:', fullPath);
+    console.log('🔍 File exists:', fs.existsSync(fullPath));
     
     // Verificar se o arquivo existe
     if (!fs.existsSync(fullPath)) {
@@ -3496,43 +3503,17 @@ app.get('/api/download-document', (req, res) => {
       return res.status(404).json({ error: 'Arquivo não encontrado' });
     }
     
-    // Obter informações do arquivo
+    // Verificar tamanho do arquivo
     const stats = fs.statSync(fullPath);
-    const fileName = path.basename(fullPath);
-    const ext = path.extname(fullPath).toLowerCase();
-    
-    console.log('📊 Informações do arquivo:', {
-      fileName,
-      size: stats.size,
-      extension: ext,
-      modified: stats.mtime
-    });
-    
-    // Definir Content-Type baseado na extensão
-    let contentType = 'application/octet-stream';
-    if (ext === '.pdf') {
-      contentType = 'application/pdf';
-    } else if (ext === '.jpg' || ext === '.jpeg') {
-      contentType = 'image/jpeg';
-    } else if (ext === '.png') {
-      contentType = 'image/png';
-    } else if (ext === '.doc') {
-      contentType = 'application/msword';
-    } else if (ext === '.docx') {
-      contentType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
-    }
+    console.log('📊 File size:', stats.size, 'bytes');
     
     // Definir headers para download
-    res.setHeader('Content-Type', contentType);
+    const fileName = path.basename(fullPath);
     res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+    res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Length', stats.size);
-    res.setHeader('Cache-Control', 'no-cache');
     
-    console.log('📤 Enviando arquivo com headers:', {
-      'Content-Type': contentType,
-      'Content-Length': stats.size,
-      'Content-Disposition': `attachment; filename="${fileName}"`
-    });
+    console.log('✅ Enviando arquivo:', fileName);
     
     // Enviar arquivo
     res.sendFile(fullPath, (err) => {
@@ -3542,14 +3523,12 @@ app.get('/api/download-document', (req, res) => {
           res.status(500).json({ error: 'Erro ao enviar arquivo' });
         }
       } else {
-        console.log('✅ Arquivo enviado com sucesso:', fileName);
+        console.log('✅ Arquivo enviado com sucesso');
       }
     });
   } catch (error) {
-    console.error('❌ Erro ao baixar documento:', error);
-    if (!res.headersSent) {
-      res.status(500).json({ error: 'Erro interno do servidor' });
-    }
+    console.error('❌ Erro ao processar download:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
   }
 });
 
@@ -3557,32 +3536,59 @@ app.get('/api/download-document', (req, res) => {
 app.get('/api/view-document', (req, res) => {
   const { filePath } = req.query;
   
+  console.log('👁️ === VIEW REQUEST ===');
+  console.log('📁 File Path (raw):', filePath);
+  
   if (!filePath) {
+    console.error('❌ Caminho do arquivo não fornecido');
     return res.status(400).json({ error: 'Caminho do arquivo não fornecido' });
   }
   
   try {
-    const fullPath = path.join(__dirname, 'documentos', filePath);
+    // Normalizar o caminho (converter barras para o sistema operacional)
+    const normalizedPath = filePath.replace(/\\/g, path.sep).replace(/\//g, path.sep);
+    const fullPath = path.join(__dirname, 'documentos', normalizedPath);
+    
+    console.log('📂 Full Path:', fullPath);
+    console.log('🔍 File exists:', fs.existsSync(fullPath));
     
     // Verificar se o arquivo existe
     if (!fs.existsSync(fullPath)) {
+      console.error('❌ Arquivo não encontrado:', fullPath);
       return res.status(404).json({ error: 'Arquivo não encontrado' });
     }
     
     // Verificar se é PDF
     const ext = path.extname(fullPath).toLowerCase();
     if (ext !== '.pdf') {
+      console.error('❌ Arquivo não é PDF:', ext);
       return res.status(400).json({ error: 'Apenas arquivos PDF podem ser visualizados' });
     }
+    
+    // Verificar tamanho do arquivo
+    const stats = fs.statSync(fullPath);
+    console.log('📊 File size:', stats.size, 'bytes');
     
     // Definir headers para visualização inline
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', 'inline');
+    res.setHeader('Content-Length', stats.size);
+    
+    console.log('✅ Enviando arquivo para visualização');
     
     // Enviar arquivo
-    res.sendFile(fullPath);
+    res.sendFile(fullPath, (err) => {
+      if (err) {
+        console.error('❌ Erro ao enviar arquivo:', err);
+        if (!res.headersSent) {
+          res.status(500).json({ error: 'Erro ao enviar arquivo' });
+        }
+      } else {
+        console.log('✅ Arquivo enviado com sucesso para visualização');
+      }
+    });
   } catch (error) {
-    console.error('Erro ao visualizar documento:', error);
+    console.error('❌ Erro ao processar visualização:', error);
     res.status(500).json({ error: 'Erro interno do servidor' });
   }
 });
