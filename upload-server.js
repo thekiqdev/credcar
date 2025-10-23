@@ -3379,8 +3379,15 @@ app.post('/api/upload-chunk-complete', async (req, res) => {
     // Chamar a função de processamento existente
     const result = await processDocumentUpload(mockReq);
     
-    // Limpar arquivo temporário
-    fs.unlinkSync(tempFilePath);
+    // Limpar arquivo temporário (após processamento)
+    try {
+      if (fs.existsSync(tempFilePath)) {
+        fs.unlinkSync(tempFilePath);
+        console.log(`🗑️ Arquivo temporário removido: ${tempFilePath}`);
+      }
+    } catch (cleanupError) {
+      console.warn('⚠️ Erro ao limpar arquivo temporário:', cleanupError.message);
+    }
     
     // Limpar dados do upload
     chunksStorage.delete(uploadId);

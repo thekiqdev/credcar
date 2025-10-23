@@ -489,6 +489,12 @@ const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
           // Verificar se deve usar upload em chunks
           const shouldUseChunks = chunkUploadService.shouldUseChunkUpload(doc.file.size);
           
+          console.log(`🔍 === DETECÇÃO DE CHUNKS ===`);
+          console.log(`📄 Arquivo: ${doc.file.name}`);
+          console.log(`📏 Tamanho: ${doc.file.size} bytes`);
+          console.log(`🔧 Deve usar chunks: ${shouldUseChunks}`);
+          console.log(`🔍 === FIM DETECÇÃO DE CHUNKS ===`);
+          
           // Log específico para cartilha
           if (doc.type === 'cartilha de credenciamento preenchida') {
             console.log('🔍 === DEBUG CARTILHA UPLOAD START ===');
