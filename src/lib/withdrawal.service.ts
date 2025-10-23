@@ -251,17 +251,24 @@ class WithdrawalService {
    */
   async approveWithdrawal(
     withdrawalId: number,
-    invoiceUrl: string = ""
+    invoiceUrl?: string
   ): Promise<WithdrawalRequest> {
     try {
+      // Se invoiceUrl não foi fornecido, preservar o valor existente
+      const updateData: any = {
+        status: "Aprovado" as Database["public"]["Enums"]["withdrawal_status"],
+        processed_at: new Date().toISOString(),
+        payment_status: "Não Pago" as const,
+      };
+
+      // Só atualizar invoice_url se um novo valor foi fornecido
+      if (invoiceUrl !== undefined) {
+        updateData.invoice_url = invoiceUrl;
+      }
+
       const { data, error } = await supabase
         .from("withdrawal_requests")
-        .update({
-          status: "Aprovado" as Database["public"]["Enums"]["withdrawal_status"],
-          processed_at: new Date().toISOString(),
-          invoice_url: invoiceUrl,
-          payment_status: "Não Pago" as const,
-        })
+        .update(updateData)
         .eq("id", withdrawalId)
         .select()
         .single();
