@@ -314,9 +314,27 @@ const ContractContentEditor: React.FC<ContractContentEditorProps> = ({
 
   // Função para inserir campos de mesclagem
   const handleInsertField = (placeholder: string) => {
+    console.log("🔍 Debug - ContractContentEditor handleInsertField chamado:", placeholder);
+    console.log("🔍 Debug - editorRef.current:", !!editorRef.current);
+    
     if (editorRef.current) {
-      editorRef.current.insertContent(placeholder);
+      console.log("🔍 Debug - Tentando inserir conteúdo no editor");
+      
+      try {
+        // Usar a API correta do CKEditor 5
+        editorRef.current.model.change(writer => {
+          const textNode = writer.createText(placeholder);
+          editorRef.current.model.insertContent(textNode);
+        });
+        console.log("✅ Debug - Conteúdo inserido com sucesso usando model.insertContent");
+      } catch (error) {
+        console.error("❌ Debug - Erro ao inserir conteúdo:", error);
+        // Fallback para concatenação de string
+        setContent(content + placeholder);
+        console.log("✅ Debug - Fallback para concatenação funcionou");
+      }
     } else {
+      console.log("❌ Debug - editorRef.current não está disponível, usando fallback");
       setContent(content + placeholder);
     }
   };
