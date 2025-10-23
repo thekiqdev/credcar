@@ -43,12 +43,21 @@ export interface NotificationConfig {
   daysBeforeDue: number;
 }
 
-export interface SystemIdentityConfig {
+// System Identity Configuration
+export interface SystemConfig {
   system_name: string;
   system_description: string;
-  logo_url: string;
-  logo_width: number;
-  logo_height: number;
+  logo_url?: string;
+  logo_width?: number;
+  logo_height?: number;
+}
+
+export interface SystemConfigUpdate {
+  system_name?: string;
+  system_description?: string;
+  logo_url?: string;
+  logo_width?: number;
+  logo_height?: number;
 }
 
 // Cache for configurations
@@ -399,41 +408,34 @@ class SystemConfigService {
   }
 
   /**
-   * Get system identity configuration (name, logo, etc.)
+   * Get System Identity Configuration
    */
-  async getSystemConfig(): Promise<SystemIdentityConfig | null> {
+  async getSystemConfig(): Promise<SystemConfig | null> {
     try {
       const configs = await this.getConfigsByCategory('system');
       
-      const systemName = configs.find(c => c.key === 'system.name')?.value || 'CredCar Finance';
-      const systemDescription = configs.find(c => c.key === 'system.description')?.value || 'Sistema de Gestão Financeira';
-      const logoUrl = configs.find(c => c.key === 'system.logo.url')?.value || '';
-      const logoWidth = parseInt(configs.find(c => c.key === 'system.logo.width')?.value || '200');
-      const logoHeight = parseInt(configs.find(c => c.key === 'system.logo.height')?.value || '60');
-
-      return {
-        system_name: systemName,
-        system_description: systemDescription,
-        logo_url: logoUrl,
-        logo_width: logoWidth,
-        logo_height: logoHeight,
+      const systemConfig: SystemConfig = {
+        system_name: configs.find(c => c.key === 'system.name')?.value || 'CredCar Finance',
+        system_description: configs.find(c => c.key === 'system.description')?.value || 'Sistema de Gestão Financeira',
+        logo_url: configs.find(c => c.key === 'system.logo.url')?.value || undefined,
+        logo_width: configs.find(c => c.key === 'system.logo.width')?.value ? parseInt(configs.find(c => c.key === 'system.logo.width')!.value) : undefined,
+        logo_height: configs.find(c => c.key === 'system.logo.height')?.value ? parseInt(configs.find(c => c.key === 'system.logo.height')!.value) : undefined,
       };
+
+      return systemConfig;
     } catch (error) {
-      console.error('Error getting system config:', error);
+      console.error('Error getting System config:', error);
       return {
         system_name: 'CredCar Finance',
         system_description: 'Sistema de Gestão Financeira',
-        logo_url: '',
-        logo_width: 200,
-        logo_height: 60,
       };
     }
   }
 
   /**
-   * Set system identity configuration
+   * Update System Identity Configuration
    */
-  async setSystemConfig(config: Partial<SystemIdentityConfig>): Promise<boolean> {
+  async updateSystemConfig(config: SystemConfigUpdate): Promise<boolean> {
     try {
       const promises: Promise<boolean>[] = [];
 
@@ -456,18 +458,46 @@ class SystemConfigService {
       const results = await Promise.all(promises);
       return results.every(result => result);
     } catch (error) {
-      console.error('Error setting system config:', error);
+      console.error('Error updating System config:', error);
       return false;
     }
   }
 
   /**
-   * Update page title with system name
+   * Validate logo file
+   */
+  validateLogoFile(file: File): { valid: boolean; message?: string } {
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+
+    if (file.size > maxSize) {
+      return { valid: false, message: 'Arquivo muito grande. Máximo 5MB.' };
+    }
+
+    if (!allowedTypes.includes(file.type)) {
+      return { valid: false, message: 'Tipo de arquivo não suportado. Use JPEG, PNG, GIF ou WebP.' };
+    }
+
+    return { valid: true };
+  }
+
+  /**
+   * Convert file to base64
+   */
+  async fileToBase64(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+
+  /**
+   * Update page title
    */
   updatePageTitle(systemName: string): void {
-    if (typeof document !== 'undefined') {
-      document.title = systemName;
-    }
+    document.title = `${systemName} - Sistema de Gestão Financeira`;
   }
 }
 

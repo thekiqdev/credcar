@@ -22,6 +22,13 @@ interface LoginFormProps {
 const LoginForm = ({ onLogin = () => {} }: LoginFormProps) => {
   const navigate = useNavigate();
   const { config, loading: configLoading } = useSystemConfig();
+  
+  // Debug logs
+  console.log("🔍 LoginForm - config:", config);
+  console.log("🔍 LoginForm - configLoading:", configLoading);
+  console.log("🔍 LoginForm - logo_url:", config?.logo_url);
+  console.log("🔍 LoginForm - system_name:", config?.system_name);
+  
   const [email, setEmail] = useState("");
   const [cpf, setCpf] = useState("");
   const [password, setPassword] = useState("");
