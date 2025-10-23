@@ -3226,6 +3226,236 @@ app.get('/api/test/asaas-customer/:customerId', async (req, res) => {
   }
 });
 
+// ===== UPLOAD EM CHUNKS =====
+// Armazenar chunks temporariamente
+const chunksStorage = new Map();
+
+// Rota para iniciar upload em chunks
+app.post('/api/upload-chunk-start', (req, res) => {
+  try {
+    const { fileName, fileSize, totalChunks, documentType, cpfCnpj, representativeId } = req.body;
+    
+    console.log('🔧 === INICIANDO UPLOAD EM CHUNKS ===');
+    console.log('📄 fileName:', fileName);
+    console.log('📏 fileSize:', fileSize);
+    console.log('🧩 totalChunks:', totalChunks);
+    console.log('📋 documentType:', documentType);
+    console.log('👤 cpfCnpj:', cpfCnpj);
+    console.log('👤 representativeId:', representativeId);
+    
+    const uploadId = `${representativeId}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
+    chunksStorage.set(uploadId, {
+      fileName,
+      fileSize,
+      totalChunks,
+      documentType,
+      cpfCnpj,
+      representativeId,
+      receivedChunks: new Map(),
+      startTime: Date.now()
+    });
+    
+    console.log('✅ Upload ID criado:', uploadId);
+    console.log('🔧 === FIM INICIANDO UPLOAD EM CHUNKS ===');
+    
+    res.json({
+      success: true,
+      uploadId,
+      message: 'Upload em chunks iniciado'
+    });
+  } catch (error) {
+    console.error('❌ Erro ao iniciar upload em chunks:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Rota para enviar chunk individual
+app.post('/api/upload-chunk', upload.single('chunk'), (req, res) => {
+  try {
+    const { uploadId, chunkIndex, totalChunks } = req.body;
+    
+    console.log(`📦 Recebendo chunk ${chunkIndex + 1}/${totalChunks} para upload ${uploadId}`);
+    
+    if (!req.file) {
+      return res.status(400).json({ error: 'Chunk não encontrado' });
+    }
+    
+    const uploadData = chunksStorage.get(uploadId);
+    if (!uploadData) {
+      return res.status(404).json({ error: 'Upload não encontrado' });
+    }
+    
+    // Armazenar chunk
+    uploadData.receivedChunks.set(parseInt(chunkIndex), req.file.buffer);
+    
+    console.log(`✅ Chunk ${chunkIndex + 1}/${totalChunks} recebido (${req.file.size} bytes)`);
+    
+    res.json({
+      success: true,
+      chunkIndex: parseInt(chunkIndex),
+      message: `Chunk ${chunkIndex + 1}/${totalChunks} recebido`
+    });
+  } catch (error) {
+    console.error('❌ Erro ao processar chunk:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Rota para finalizar upload em chunks
+app.post('/api/upload-chunk-complete', async (req, res) => {
+  try {
+    const { uploadId } = req.body;
+    
+    console.log('🔧 === FINALIZANDO UPLOAD EM CHUNKS ===');
+    console.log('📋 uploadId:', uploadId);
+    
+    const uploadData = chunksStorage.get(uploadId);
+    if (!uploadData) {
+      return res.status(404).json({ error: 'Upload não encontrado' });
+    }
+    
+    const { fileName, fileSize, totalChunks, documentType, cpfCnpj, representativeId, receivedChunks } = uploadData;
+    
+    // Verificar se todos os chunks foram recebidos
+    if (receivedChunks.size !== totalChunks) {
+      console.log(`❌ Chunks faltando: ${receivedChunks.size}/${totalChunks}`);
+      return res.status(400).json({ error: 'Nem todos os chunks foram recebidos' });
+    }
+    
+    // Reconstruir arquivo
+    console.log('🔧 Reconstruindo arquivo...');
+    const chunks = [];
+    for (let i = 0; i < totalChunks; i++) {
+      const chunk = receivedChunks.get(i);
+      if (!chunk) {
+        return res.status(400).json({ error: `Chunk ${i} não encontrado` });
+      }
+      chunks.push(chunk);
+    }
+    
+    const fileBuffer = Buffer.concat(chunks);
+    console.log(`✅ Arquivo reconstruído: ${fileBuffer.length} bytes`);
+    
+    // Criar arquivo temporário
+    const tempFileName = `temp_${Date.now()}_${fileName}`;
+    const tempFilePath = path.join(__dirname, 'temp', tempFileName);
+    
+    // Garantir que diretório temp existe
+    fs.mkdirSync(path.dirname(tempFilePath), { recursive: true });
+    
+    // Salvar arquivo temporário
+    fs.writeFileSync(tempFilePath, fileBuffer);
+    console.log(`📁 Arquivo temporário salvo: ${tempFilePath}`);
+    
+    // Processar como upload normal
+    const mockFile = {
+      originalname: fileName,
+      filename: tempFileName,
+      path: tempFilePath,
+      size: fileBuffer.length,
+      mimetype: 'application/pdf' // Assumir PDF por enquanto
+    };
+    
+    // Usar a lógica existente de upload
+    const mockReq = {
+      file: mockFile,
+      body: {
+        cpfCnpj,
+        documentType,
+        representativeId
+      }
+    };
+    
+    // Chamar a função de processamento existente
+    const result = await processDocumentUpload(mockReq);
+    
+    // Limpar arquivo temporário
+    fs.unlinkSync(tempFilePath);
+    
+    // Limpar dados do upload
+    chunksStorage.delete(uploadId);
+    
+    console.log('✅ Upload em chunks finalizado com sucesso');
+    console.log('🔧 === FIM FINALIZANDO UPLOAD EM CHUNKS ===');
+    
+    res.json({
+      success: true,
+      message: 'Upload em chunks finalizado com sucesso',
+      data: result
+    });
+    
+  } catch (error) {
+    console.error('❌ Erro ao finalizar upload em chunks:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Função auxiliar para processar upload (extraída da rota existente)
+async function processDocumentUpload(req) {
+  const { cpfCnpj, documentType, partnerId, partnerCpf } = req.body;
+  
+  // Mapear tipos de documento para nomes corretos
+  const documentTypeMap = {
+    'cartilha de credenciamento preenchida': 'empresa/cartilha_credenciamento_empresa',
+    'cartão cnpj': 'empresa/cartao_cnpj',
+    'contrato social e última alteração': 'empresa/contrato_social',
+    'comprovante de endereço em nome da empresa': 'empresa/comprovante_endereco_empresa',
+    'dados bancários para recebimento das comissões': 'empresa/dados_bancarios_comissoes',
+    'cartilha de credenciamento pf': 'socio/cartilha_credenciamento_pf',
+    'comprovante de endereço em nome do sócio': 'socio/comprovante_endereco_socio',
+    'certidão de antecedentes criminais': 'socio/certidao_antecedentes_criminais',
+    'certidão negativa cível de 1º grau': 'socio/certidao_negativa_civel_1grau',
+    'certidão negativa criminal de 1º grau': 'socio/certidao_negativa_criminal_1grau',
+    'foto de identidade ou cnh (frente)': 'socio/foto_identidade_frente',
+    'foto de identidade ou cnh (verso)': 'socio/foto_identidade_verso'
+  };
+  
+  const mappedPath = documentTypeMap[documentType.toLowerCase()] || 
+    documentType.toLowerCase().replace(/[^a-z0-9]/g, '_');
+  
+  // Criar estrutura de pastas
+  const baseDir = path.join(__dirname, 'documentos');
+  const sanitizedCpfCnpj = cpfCnpj.replace(/[^a-zA-Z0-9]/g, '');
+  
+  let finalPath;
+  if (partnerId && partnerCpf) {
+    const sanitizedPartnerCpf = partnerCpf.replace(/[^a-zA-Z0-9]/g, '');
+    const docType = mappedPath.split('/')[1];
+    finalPath = path.join(baseDir, sanitizedCpfCnpj, 'socio', sanitizedPartnerCpf, docType);
+  } else {
+    finalPath = path.join(baseDir, sanitizedCpfCnpj, mappedPath);
+  }
+  
+  // Criar diretório final
+  fs.mkdirSync(finalPath, { recursive: true });
+  
+  // Gerar nome único para o arquivo
+  const timestamp = Date.now();
+  const randomId = Math.floor(Math.random() * 1000000000);
+  const fileExtension = path.extname(req.file.originalname);
+  const finalFileName = `PRO_${timestamp}_${randomId}${fileExtension}`;
+  
+  // Mover arquivo para local final
+  const finalFilePath = path.join(finalPath, finalFileName);
+  fs.renameSync(req.file.path, finalFilePath);
+  
+  // Construir caminho relativo
+  const relativePath = path.relative(path.join(__dirname, 'documentos'), finalFilePath);
+  
+  return {
+    originalName: req.file.originalname,
+    filename: finalFileName,
+    filePath: relativePath,
+    directory: relativePath,
+    size: req.file.size,
+    mimetype: req.file.mimetype,
+    documentType: documentType,
+    cpfCnpj: cpfCnpj,
+    uploadedAt: new Date().toISOString()
+  };
+}
+
 // Iniciar servidor
 app.listen(PORT, () => {
   console.log(`🚀 Servidor de upload rodando na porta ${PORT}`);

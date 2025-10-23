@@ -22,6 +22,7 @@ import {
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { supabase } from '../../lib/supabase';
 import { uploadService, DocumentInfo } from '../../lib/upload.service';
+import { chunkUploadService } from '../../lib/chunk-upload.service';
 
 interface DocumentUploadModalProps {
   representativeId: string;
@@ -485,6 +486,9 @@ const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
           console.log('📋 Document Info:', docInfo);
           console.log('🔍 CPF/CNPJ:', representativeCpfCnpj);
           
+          // Verificar se deve usar upload em chunks
+          const shouldUseChunks = chunkUploadService.shouldUseChunkUpload(doc.file.size);
+          
           // Log específico para cartilha
           if (doc.type === 'cartilha de credenciamento preenchida') {
             console.log('🔍 === DEBUG CARTILHA UPLOAD START ===');
@@ -492,11 +496,32 @@ const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
             console.log('📄 doc.file.name:', doc.file.name);
             console.log('📄 doc.file.size:', doc.file.size);
             console.log('📄 docInfo:', JSON.stringify(docInfo, null, 2));
-            console.log('🔍 === CHAMANDO uploadService.uploadComplete ===');
+            console.log('📄 shouldUseChunks:', shouldUseChunks);
+            console.log('🔍 === CHAMANDO UPLOAD (chunks ou normal) ===');
           }
 
           // Upload completo: criar pastas + salvar arquivo
-          const result = await uploadService.uploadComplete(doc.file, docInfo);
+          let result;
+          
+          if (shouldUseChunks) {
+            console.log(`🔧 Usando upload em chunks para arquivo grande: ${doc.file.size} bytes`);
+            
+            result = await chunkUploadService.uploadFile({
+              file: doc.file,
+              documentType: doc.type,
+              cpfCnpj: representativeCpfCnpj || '',
+              representativeId: representativeId,
+              onProgress: (progress) => {
+                console.log(`📊 Progresso do upload em chunks: ${progress.toFixed(1)}%`);
+              },
+              onChunkComplete: (chunkIndex, totalChunks) => {
+                console.log(`📦 Chunk ${chunkIndex}/${totalChunks} enviado`);
+              }
+            });
+          } else {
+            console.log(`📤 Usando upload normal para arquivo pequeno: ${doc.file.size} bytes`);
+            result = await uploadService.uploadComplete(doc.file, docInfo);
+          }
           
           // Log específico para cartilha - resultado do upload
           if (doc.type === 'cartilha de credenciamento preenchida') {
