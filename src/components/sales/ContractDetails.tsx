@@ -883,41 +883,55 @@ const ContractDetails: React.FC<{
     if (editorRef.current) {
       console.log("🔍 Debug - Tentando inserir conteúdo no editor");
       
-      // Forçar foco no editor primeiro
-      editorRef.current.editing.view.focus();
-      
-      try {
-        // Obter a posição atual do cursor
-        const selection = editorRef.current.model.document.selection;
-        console.log("🔍 Debug - Seleção atual:", selection);
-        
-        // Inserir conteúdo na posição do cursor
-        editorRef.current.model.change(writer => {
-          const textNode = writer.createText(placeholder);
-          editorRef.current.model.insertContent(textNode, selection.getFirstPosition());
-        });
-        
-        console.log("✅ Debug - Conteúdo inserido com sucesso usando model.insertContent");
-      } catch (error) {
-        console.error("❌ Debug - Erro ao inserir conteúdo:", error);
-        
-        // Fallback 1: Tentar insertContent simples
-        try {
-          editorRef.current.insertContent(placeholder);
-          console.log("✅ Debug - Fallback insertContent funcionou");
-        } catch (fallbackError) {
-          console.error("❌ Debug - Fallback insertContent falhou:", fallbackError);
+      // Aguardar um tick para garantir que o editor está pronto
+      setTimeout(() => {
+        if (editorRef.current) {
+          console.log("🔍 Debug - Editor ainda disponível após timeout");
           
-          // Fallback 2: Usar setData (último recurso)
+          // Forçar foco no editor primeiro
           try {
-            const currentData = editorRef.current.getData();
-            editorRef.current.setData(currentData + placeholder);
-            console.log("✅ Debug - Fallback setData funcionou");
-          } catch (setDataError) {
-            console.error("❌ Debug - Todos os métodos falharam:", setDataError);
+            editorRef.current.editing.view.focus();
+            console.log("🔍 Debug - Foco aplicado no editor");
+          } catch (focusError) {
+            console.error("❌ Debug - Erro ao aplicar foco:", focusError);
           }
+          
+          try {
+            // Obter a posição atual do cursor
+            const selection = editorRef.current.model.document.selection;
+            console.log("🔍 Debug - Seleção atual:", selection);
+            
+            // Inserir conteúdo na posição do cursor
+            editorRef.current.model.change(writer => {
+              const textNode = writer.createText(placeholder);
+              editorRef.current.model.insertContent(textNode, selection.getFirstPosition());
+            });
+            
+            console.log("✅ Debug - Conteúdo inserido com sucesso usando model.insertContent");
+          } catch (error) {
+            console.error("❌ Debug - Erro ao inserir conteúdo:", error);
+            
+            // Fallback 1: Tentar insertContent simples
+            try {
+              editorRef.current.insertContent(placeholder);
+              console.log("✅ Debug - Fallback insertContent funcionou");
+            } catch (fallbackError) {
+              console.error("❌ Debug - Fallback insertContent falhou:", fallbackError);
+              
+              // Fallback 2: Usar setData (último recurso)
+              try {
+                const currentData = editorRef.current.getData();
+                editorRef.current.setData(currentData + placeholder);
+                console.log("✅ Debug - Fallback setData funcionou");
+              } catch (setDataError) {
+                console.error("❌ Debug - Todos os métodos falharam:", setDataError);
+              }
+            }
+          }
+        } else {
+          console.log("❌ Debug - editorRef.current não está mais disponível após timeout");
         }
-      }
+      }, 100); // Aguardar 100ms
     } else {
       console.log("❌ Debug - editorRef.current não está disponível");
     }
