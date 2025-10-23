@@ -435,6 +435,9 @@ const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
           // Upload completo: criar pastas + salvar arquivo
           const result = await uploadService.uploadComplete(doc.file, docInfo);
 
+          console.log('📋 Resultado do upload:', result);
+          console.log('📋 result.data:', result.data);
+
           if (!result.success) {
             throw new Error(result.error || 'Erro ao salvar arquivo');
           }
