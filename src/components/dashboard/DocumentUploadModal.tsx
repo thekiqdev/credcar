@@ -202,6 +202,7 @@ const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
       }
 
       console.log('📋 Documentos carregados do banco:', data);
+      console.log('📋 Total de documentos no banco:', data?.length || 0);
 
       // Atualizar status dos documentos baseado no banco
       if (data && data.length > 0) {
@@ -230,6 +231,8 @@ const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
           }
           return doc; // Mantém status original se não tem arquivo
         }));
+      } else {
+        console.log('⚠️ Nenhum documento encontrado no banco para este representante');
       }
     } catch (error) {
       console.error('Error loading document status:', error);
@@ -453,6 +456,12 @@ const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
           await saveToDatabase(saveData, representativeId);
           
           console.log('✅ Metadados salvos para:', doc.type);
+
+          // Forçar recarga dos documentos após salvar
+          console.log('🔄 Forçando recarga dos documentos após upload...');
+          setTimeout(() => {
+            loadDocumentStatus();
+          }, 500); // Aguardar 500ms para garantir que o banco foi atualizado
 
           // Atualizar status para uploaded (sem progresso para evitar piscar)
           updateDocumentStatus(doc.id, { status: 'uploaded' });
