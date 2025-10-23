@@ -3481,53 +3481,37 @@ async function processDocumentUpload(req) {
 app.get('/api/download-document', (req, res) => {
   const { filePath } = req.query;
   
-  console.log('📥 === DOWNLOAD REQUEST ===');
-  console.log('📁 File Path (raw):', filePath);
+  console.log('📥 === DOWNLOAD SOLICITADO ===');
+  console.log('📄 FilePath recebido:', filePath);
   
   if (!filePath) {
-    console.error('❌ Caminho do arquivo não fornecido');
     return res.status(400).json({ error: 'Caminho do arquivo não fornecido' });
   }
   
   try {
-    // Normalizar o caminho (converter barras para o sistema operacional)
-    const normalizedPath = filePath.replace(/\\/g, path.sep).replace(/\//g, path.sep);
-    const fullPath = path.join(__dirname, 'documentos', normalizedPath);
+    // Normalizar o caminho (converter barras invertidas para normais)
+    const normalizedPath = filePath.replace(/\\/g, '/');
+    console.log('🔧 FilePath normalizado:', normalizedPath);
     
-    console.log('📂 Full Path:', fullPath);
-    console.log('🔍 File exists:', fs.existsSync(fullPath));
+    const fullPath = path.join(__dirname, 'documentos', normalizedPath);
+    console.log('📁 Caminho completo:', fullPath);
     
     // Verificar se o arquivo existe
     if (!fs.existsSync(fullPath)) {
       console.error('❌ Arquivo não encontrado:', fullPath);
-      return res.status(404).json({ error: 'Arquivo não encontrado' });
+      return res.status(404).json({ error: 'Arquivo não encontrado', path: fullPath });
     }
     
-    // Verificar tamanho do arquivo
-    const stats = fs.statSync(fullPath);
-    console.log('📊 File size:', stats.size, 'bytes');
+    console.log('✅ Arquivo encontrado, enviando...');
     
     // Definir headers para download
-    const fileName = path.basename(fullPath);
-    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Length', stats.size);
-    
-    console.log('✅ Enviando arquivo:', fileName);
+    res.setHeader('Content-Disposition', `attachment; filename="${path.basename(fullPath)}"`);
+    res.setHeader('Content-Type', 'application/octet-stream');
     
     // Enviar arquivo
-    res.sendFile(fullPath, (err) => {
-      if (err) {
-        console.error('❌ Erro ao enviar arquivo:', err);
-        if (!res.headersSent) {
-          res.status(500).json({ error: 'Erro ao enviar arquivo' });
-        }
-      } else {
-        console.log('✅ Arquivo enviado com sucesso');
-      }
-    });
+    res.sendFile(fullPath);
   } catch (error) {
-    console.error('❌ Erro ao processar download:', error);
+    console.error('❌ Erro ao baixar documento:', error);
     res.status(500).json({ error: 'Erro interno do servidor' });
   }
 });
@@ -3536,59 +3520,46 @@ app.get('/api/download-document', (req, res) => {
 app.get('/api/view-document', (req, res) => {
   const { filePath } = req.query;
   
-  console.log('👁️ === VIEW REQUEST ===');
-  console.log('📁 File Path (raw):', filePath);
+  console.log('👁️ === VISUALIZAÇÃO SOLICITADA ===');
+  console.log('📄 FilePath recebido:', filePath);
   
   if (!filePath) {
-    console.error('❌ Caminho do arquivo não fornecido');
     return res.status(400).json({ error: 'Caminho do arquivo não fornecido' });
   }
   
   try {
-    // Normalizar o caminho (converter barras para o sistema operacional)
-    const normalizedPath = filePath.replace(/\\/g, path.sep).replace(/\//g, path.sep);
-    const fullPath = path.join(__dirname, 'documentos', normalizedPath);
+    // Normalizar o caminho (converter barras invertidas para normais)
+    const normalizedPath = filePath.replace(/\\/g, '/');
+    console.log('🔧 FilePath normalizado:', normalizedPath);
     
-    console.log('📂 Full Path:', fullPath);
-    console.log('🔍 File exists:', fs.existsSync(fullPath));
+    const fullPath = path.join(__dirname, 'documentos', normalizedPath);
+    console.log('📁 Caminho completo:', fullPath);
     
     // Verificar se o arquivo existe
     if (!fs.existsSync(fullPath)) {
       console.error('❌ Arquivo não encontrado:', fullPath);
-      return res.status(404).json({ error: 'Arquivo não encontrado' });
+      return res.status(404).json({ error: 'Arquivo não encontrado', path: fullPath });
     }
     
     // Verificar se é PDF
     const ext = path.extname(fullPath).toLowerCase();
+    console.log('📝 Extensão do arquivo:', ext);
+    
     if (ext !== '.pdf') {
       console.error('❌ Arquivo não é PDF:', ext);
       return res.status(400).json({ error: 'Apenas arquivos PDF podem ser visualizados' });
     }
     
-    // Verificar tamanho do arquivo
-    const stats = fs.statSync(fullPath);
-    console.log('📊 File size:', stats.size, 'bytes');
+    console.log('✅ Arquivo PDF encontrado, enviando para visualização...');
     
     // Definir headers para visualização inline
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', 'inline');
-    res.setHeader('Content-Length', stats.size);
-    
-    console.log('✅ Enviando arquivo para visualização');
     
     // Enviar arquivo
-    res.sendFile(fullPath, (err) => {
-      if (err) {
-        console.error('❌ Erro ao enviar arquivo:', err);
-        if (!res.headersSent) {
-          res.status(500).json({ error: 'Erro ao enviar arquivo' });
-        }
-      } else {
-        console.log('✅ Arquivo enviado com sucesso para visualização');
-      }
-    });
+    res.sendFile(fullPath);
   } catch (error) {
-    console.error('❌ Erro ao processar visualização:', error);
+    console.error('❌ Erro ao visualizar documento:', error);
     res.status(500).json({ error: 'Erro interno do servidor' });
   }
 });
