@@ -110,7 +110,7 @@ class WithdrawalService {
       // Buscar CPF/CNPJ do representante
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
-        .select('cnpj, cpf')
+        .select('cnpj')
         .eq('id', representativeId)
         .single();
 
@@ -118,7 +118,7 @@ class WithdrawalService {
         throw new Error(`Erro ao buscar dados do representante: ${profileError.message}`);
       }
 
-      const cpfCnpj = profile?.cnpj || profile?.cpf || '';
+      const cpfCnpj = profile?.cnpj || '';
       if (!cpfCnpj) {
         throw new Error('CPF/CNPJ do representante não encontrado');
       }
