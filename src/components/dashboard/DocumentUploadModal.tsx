@@ -403,7 +403,9 @@ const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
           continue;
         }
 
-        console.log(`📤 Iniciando upload: ${doc.type} - ${doc.file.name} (${doc.file.size} bytes)`);
+          console.log(`📤 Iniciando upload: ${doc.type} - ${doc.file.name} (${doc.file.size} bytes)`);
+          console.log(`🏢 Documento da empresa? ${doc.type.includes('empresa') || doc.type.includes('cnpj') || doc.type.includes('contrato') || doc.type.includes('bancários') || doc.type.includes('cartilha de credenciamento preenchida')}`);
+          console.log(`👤 Documento do sócio? ${doc.type.includes('socio') || doc.type.includes('pf') || doc.type.includes('certidão') || doc.type.includes('foto')}`);
 
         // Não atualizar status durante upload para evitar piscar
 
@@ -426,11 +428,21 @@ const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
 
           console.log('📋 Document Info:', docInfo);
           console.log('🔍 CPF/CNPJ:', representativeCpfCnpj);
+          console.log('🔍 Document Type específico:', doc.type);
+          console.log('🔍 Document Type lowercase:', doc.type.toLowerCase());
 
           // Upload completo: criar pastas + salvar arquivo
           const result = await uploadService.uploadComplete(doc.file, docInfo);
 
           if (!result.success) {
+            console.error(`❌ Upload falhou para ${doc.type}:`, result.error);
+            console.error(`🔍 Detalhes do erro:`, {
+              documentType: doc.type,
+              fileName: doc.file.name,
+              fileSize: doc.file.size,
+              cpfCnpj: representativeCpfCnpj,
+              error: result.error
+            });
             throw new Error(result.error || 'Erro ao salvar arquivo');
           }
 
