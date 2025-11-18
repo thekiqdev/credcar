@@ -45,6 +45,12 @@ export interface MergeData {
     remaining_installments_value?: number;
     custom_installments?: string; // String formatada com as parcelas personalizadas
     group_name?: string;
+    // Campos de quantidade de parcelas
+    total_installments_count?: number;
+    remaining_installments_count?: number;
+    custom_installments_count?: number;
+    // Número da cota
+    quota_number?: string; // String para suportar múltiplas cotas (ex: "123" ou "123, 124, 125")
   };
   representative?: {
     name?: string;
@@ -292,6 +298,30 @@ export const MERGE_FIELDS: MergeField[] = [
         example: "Grupo ABC - Consórcio Imobiliário",
         description: "Nome do grupo de consórcio"
       },
+      { 
+        placeholder: "{contract_total_installments_count}", 
+        label: "Quantidade Total de Parcelas", 
+        example: "80",
+        description: "Quantidade total de parcelas do contrato"
+      },
+      { 
+        placeholder: "{contract_remaining_installments_count}", 
+        label: "Quantidade de Parcelas Restantes", 
+        example: "77",
+        description: "Quantidade de parcelas restantes (excluindo primeira e personalizadas)"
+      },
+      { 
+        placeholder: "{contract_custom_installments_count}", 
+        label: "Quantidade de Parcelas Personalizadas", 
+        example: "2",
+        description: "Quantidade de parcelas com valores personalizados"
+      },
+      { 
+        placeholder: "{quota_number}", 
+        label: "Número da Cota", 
+        example: "123",
+        description: "Número da cota do consórcio (ou números separados por vírgula se múltiplas cotas)"
+      },
     ]
   },
   {
@@ -410,6 +440,14 @@ export function mergePlaceholders(template: string, data: MergeData): string {
     
     content = content.replace(/{contract_custom_installments}/g, data.contract.custom_installments || '');
     content = content.replace(/{group_name}/g, data.contract.group_name || '');
+    
+    // Novos campos de quantidade de parcelas
+    content = content.replace(/{contract_total_installments_count}/g, data.contract.total_installments_count?.toString() || '');
+    content = content.replace(/{contract_remaining_installments_count}/g, data.contract.remaining_installments_count?.toString() || '');
+    content = content.replace(/{contract_custom_installments_count}/g, data.contract.custom_installments_count?.toString() || '');
+    
+    // Número da cota
+    content = content.replace(/{quota_number}/g, data.contract.quota_number || '');
   }
   
   // Representante

@@ -727,6 +727,7 @@ const ContractDetails: React.FC<{
         let firstInstallmentValue: number | undefined;
         let remainingInstallmentsValue: number | undefined;
         let customInstallmentsText = '';
+        let customInstallmentsCount = 0;
         let groupName = contractData.quota?.group?.name || '';
         
         // Buscar dados da faixa de crédito se disponível
@@ -754,6 +755,8 @@ const ContractDetails: React.FC<{
               .filter(c => c.numero_parcela !== 1)
               .sort((a, b) => a.numero_parcela - b.numero_parcela);
             
+            customInstallmentsCount = sortedCustom.length;
+            
             if (sortedCustom.length > 0) {
               customInstallmentsText = sortedCustom
                 .map(c => {
@@ -767,6 +770,13 @@ const ContractDetails: React.FC<{
             }
           }
         }
+        
+        // Calcular quantidades de parcelas
+        const totalInstallmentsCount = contractData.total_installments;
+        const remainingInstallmentsCount = totalInstallmentsCount - 1 - customInstallmentsCount; // Total - primeira - personalizadas
+        
+        // Obter número da cota
+        const quotaNumber = contractData.quota?.quota_number?.toString() || '';
         
         const mergeData: MergeData = {
           client: contractData.client ? {
@@ -813,6 +823,12 @@ const ContractDetails: React.FC<{
             remaining_installments_value: remainingInstallmentsValue,
             custom_installments: customInstallmentsText,
             group_name: groupName,
+            // Campos de quantidade de parcelas
+            total_installments_count: totalInstallmentsCount,
+            remaining_installments_count: remainingInstallmentsCount,
+            custom_installments_count: customInstallmentsCount,
+            // Número da cota
+            quota_number: quotaNumber,
           },
           representative: contractData.representative ? {
             name: contractData.representative.full_name,
@@ -987,6 +1003,7 @@ const ContractDetails: React.FC<{
       let firstInstallmentValue: number | undefined;
       let remainingInstallmentsValue: number | undefined;
       let customInstallmentsText = '';
+      let customInstallmentsCount = 0;
       let groupName = '';
       
       // Buscar nome do grupo da quota
@@ -1019,6 +1036,8 @@ const ContractDetails: React.FC<{
             .filter(c => c.numero_parcela !== 1) // Excluir primeira parcela
             .sort((a, b) => a.numero_parcela - b.numero_parcela);
           
+          customInstallmentsCount = sortedCustom.length;
+          
           if (sortedCustom.length > 0) {
             customInstallmentsText = sortedCustom
               .map(c => {
@@ -1032,6 +1051,13 @@ const ContractDetails: React.FC<{
           }
         }
       }
+      
+      // Calcular quantidades de parcelas
+      const totalInstallmentsCount = contract.total_installments;
+      const remainingInstallmentsCount = totalInstallmentsCount - 1 - customInstallmentsCount; // Total - primeira - personalizadas
+      
+      // Obter número da cota
+      const quotaNumber = contract.quota?.quota_number?.toString() || '';
       
       // Preparar dados do contrato existente para mesclagem
       const mergeData: MergeData = {
@@ -1079,6 +1105,12 @@ const ContractDetails: React.FC<{
           remaining_installments_value: remainingInstallmentsValue,
           custom_installments: customInstallmentsText,
           group_name: groupName,
+          // Campos de quantidade de parcelas
+          total_installments_count: totalInstallmentsCount,
+          remaining_installments_count: remainingInstallmentsCount,
+          custom_installments_count: customInstallmentsCount,
+          // Número da cota
+          quota_number: quotaNumber,
         },
         representative: contract.representative ? {
           name: contract.representative.full_name,

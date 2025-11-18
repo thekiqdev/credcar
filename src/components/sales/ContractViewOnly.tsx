@@ -96,6 +96,10 @@ interface ContractData {
     remainingInstallmentsValue?: number;
     customInstallmentsText?: string;
     groupName?: string;
+    totalInstallmentsCount?: number;
+    remainingInstallmentsCount?: number;
+    customInstallmentsCount?: number;
+    quotaNumber?: string;
   };
 }
 
@@ -258,6 +262,7 @@ const ContractViewOnly: React.FC = () => {
       let firstInstallmentValue: number | undefined;
       let remainingInstallmentsValue: number | undefined;
       let customInstallmentsText = "";
+      let customInstallmentsCount = 0;
       let groupName = quotaData?.groups?.name || "";
 
       if (data.id_faixa_de_credito) {
@@ -283,6 +288,8 @@ const ContractViewOnly: React.FC = () => {
             .filter((c) => c.numero_parcela !== 1)
             .sort((a, b) => a.numero_parcela - b.numero_parcela);
 
+          customInstallmentsCount = sortedCustom.length;
+
           if (sortedCustom.length > 0) {
             customInstallmentsText = sortedCustom
               .map((c) => {
@@ -296,6 +303,13 @@ const ContractViewOnly: React.FC = () => {
           }
         }
       }
+
+      // Calcular quantidades de parcelas
+      const totalInstallmentsCount = data.total_installments || 0;
+      const remainingInstallmentsCount = totalInstallmentsCount - 1 - customInstallmentsCount; // Total - primeira - personalizadas
+      
+      // Obter número da cota
+      const quotaNumber = quotaData?.quota_number?.toString() || '';
 
       const contractData: ContractData = {
         id: data.id,
@@ -371,6 +385,10 @@ const ContractViewOnly: React.FC = () => {
           remainingInstallmentsValue,
           customInstallmentsText,
           groupName,
+          totalInstallmentsCount,
+          remainingInstallmentsCount,
+          customInstallmentsCount,
+          quotaNumber,
         },
       };
 
@@ -518,6 +536,12 @@ const ContractViewOnly: React.FC = () => {
               contract.mergeExtras?.groupName ||
               contract.quota?.group?.name ||
               "",
+            // Campos de quantidade de parcelas
+            total_installments_count: contract.mergeExtras?.totalInstallmentsCount,
+            remaining_installments_count: contract.mergeExtras?.remainingInstallmentsCount,
+            custom_installments_count: contract.mergeExtras?.customInstallmentsCount,
+            // Número da cota
+            quota_number: contract.mergeExtras?.quotaNumber || contract.quota?.quota_number?.toString() || '',
           }
         : undefined,
       representative: contract?.representative

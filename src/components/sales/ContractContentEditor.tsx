@@ -366,10 +366,13 @@ const ContractContentEditor: React.FC<ContractContentEditorProps> = ({
         
         // Formatar parcelas personalizadas
         let customInstallmentsText = '';
+        let customInstallmentsCount = 0;
         if (selectedCreditRange.customInstallments && selectedCreditRange.customInstallments.length > 0) {
           const sortedCustom = [...selectedCreditRange.customInstallments]
             .sort((a, b) => a.numero_parcela - b.numero_parcela)
             .filter(c => c.numero_parcela !== 1); // Excluir primeira parcela
+          
+          customInstallmentsCount = sortedCustom.length;
           
           if (sortedCustom.length > 0) {
             customInstallmentsText = sortedCustom
@@ -383,6 +386,18 @@ const ContractContentEditor: React.FC<ContractContentEditorProps> = ({
               .join(' | ');
           }
         }
+        
+        // Calcular quantidades de parcelas
+        const totalInstallmentsCount = selectedCreditRange.numero_total_parcelas;
+        const remainingInstallmentsCount = totalInstallmentsCount - 1 - customInstallmentsCount; // Total - primeira - personalizadas
+        
+        // Formatar número(s) da(s) cota(s)
+        // Se houver apenas uma cota, usar o número diretamente
+        // Se houver múltiplas cotas, deixar o placeholder {quota_number} para ser substituído
+        // individualmente para cada contrato no ContractCreationFlow
+        const quotaNumber = selectedQuotas.length === 1 
+          ? selectedQuotas[0].quota_number.toString()
+          : '{quota_number}'; // Placeholder para ser substituído por cada cota específica
         
         const formattedBirthDate =
           clientData.birth_date && !isNaN(new Date(clientData.birth_date).getTime())
@@ -433,6 +448,12 @@ const ContractContentEditor: React.FC<ContractContentEditorProps> = ({
             remaining_installments_value: selectedCreditRange.valor_parcelas_restantes,
             custom_installments: customInstallmentsText,
             group_name: selectedGroup.name,
+            // Campos de quantidade de parcelas
+            total_installments_count: totalInstallmentsCount,
+            remaining_installments_count: remainingInstallmentsCount,
+            custom_installments_count: customInstallmentsCount,
+            // Número da cota
+            quota_number: quotaNumber,
           },
         };
         

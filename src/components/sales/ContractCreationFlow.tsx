@@ -298,11 +298,24 @@ const ContractCreationFlow: React.FC<ContractCreationFlowProps> = ({
 
       // Create contracts for each selected quota
       const contracts = [];
+      const baseContent = contentToSave || contractContent;
+      
       for (let i = 0; i < selectedQuotas.length; i++) {
         const quota = selectedQuotas[i];
         const contractNumberForQuota = selectedQuotas.length > 1 
           ? `${contractNumber}-${i + 1}` 
           : contractNumber;
+
+        // Personalizar conteúdo para esta cota específica
+        // Substituir {quota_number} pelo número da cota atual
+        let personalizedContent = baseContent;
+        const quotaNumber = quota.quota_number?.toString() || '';
+        
+        // Substituir placeholder {quota_number} pelo número da cota específica
+        personalizedContent = personalizedContent.replace(
+          /\{quota_number\}/g, 
+          quotaNumber
+        );
 
         // Create contract using the correct schema from the migration
         const { data: contract, error: contractError } = await supabase
@@ -327,7 +340,7 @@ const ContractCreationFlow: React.FC<ContractCreationFlowProps> = ({
                 selectedCreditRange!.valor_parcelas_restantes.toString(),
               paid_installments: 0,
               status: "Pendente",
-              contract_content: contentToSave || contractContent, // Save the HTML content
+              contract_content: personalizedContent, // Save personalized content for this quota
             },
           ])
           .select("id")
