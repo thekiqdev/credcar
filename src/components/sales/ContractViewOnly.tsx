@@ -25,7 +25,7 @@ import {
   generalSettingsService,
   electronicSignatureService,
 } from "@/lib/supabase";
-import { mergePlaceholders } from "@/lib/merge-fields";
+import { mergePlaceholders, MergeData } from "@/lib/merge-fields";
 import { Database } from "@/types/supabase";
 
 type ContractStatus = Database["public"]["Enums"]["contract_status"];
@@ -33,10 +33,14 @@ type ContractStatus = Database["public"]["Enums"]["contract_status"];
 interface ContractData {
   id: number;
   contract_code: string;
+  contract_number?: string | null;
   total_value: number;
   status: ContractStatus;
   created_at: string;
   contract_content: string | null;
+  total_installments: number;
+  credit_amount?: number;
+  id_faixa_de_credito?: number | null;
   client: {
     id: number;
     full_name: string;
@@ -44,6 +48,28 @@ interface ContractData {
     phone: string | null;
     cpf_cnpj: string | null;
     address: string | null;
+    city?: string;
+    state?: string;
+    zip_code?: string;
+    rg?: string | null;
+    birth_date?: string | null;
+    nationality?: string | null;
+    marital_status?: string | null;
+    spouse_name?: string | null;
+    spouse_phone?: string | null;
+    company?: string | null;
+    salary?: string | null;
+    position?: string | null;
+    reference_name?: string | null;
+    reference_address?: string | null;
+    reference_phone?: string | null;
+    address_street?: string | null;
+    address_number?: string | null;
+    address_complement?: string | null;
+    address_neighborhood?: string | null;
+    address_city?: string | null;
+    address_state?: string | null;
+    address_zip?: string | null;
   };
   commission_table: {
     id: number;
@@ -55,6 +81,21 @@ interface ContractData {
     full_name: string;
     email: string;
     phone: string | null;
+  };
+  quota?: {
+    id: number;
+    quota_number: number;
+    group?: {
+      id: number;
+      name: string;
+      description?: string | null;
+    };
+  } | null;
+  mergeExtras?: {
+    firstInstallmentValue?: number;
+    remainingInstallmentsValue?: number;
+    customInstallmentsText?: string;
+    groupName?: string;
   };
 }
 
@@ -144,7 +185,26 @@ const ContractViewOnly: React.FC = () => {
             email,
             phone,
             cpf_cnpj,
-            address
+            address,
+            address_street,
+            address_number,
+            address_complement,
+            address_neighborhood,
+            address_city,
+            address_state,
+            address_zip,
+            rg,
+            birth_date,
+            nationality,
+            marital_status,
+            spouse_name,
+            spouse_phone,
+            company,
+            salary,
+            position,
+            reference_name,
+            reference_address,
+            reference_phone
           ),
           planos!inner (
             id,
@@ -172,11 +232,82 @@ const ContractViewOnly: React.FC = () => {
         throw new Error("Contrato não encontrado");
       }
 
+      // Buscar dados da quota (para obter nome do grupo)
+      let quotaData = null;
+      if (data.quota_id) {
+        const { data: quota, error: quotaError } = await supabase
+          .from("quotas")
+          .select(`
+            id,
+            quota_number,
+            groups!inner (
+              id,
+              name,
+              description
+            )
+          `)
+          .eq("id", data.quota_id)
+          .single();
+
+        if (!quotaError) {
+          quotaData = quota;
+        }
+      }
+
+      // Buscar informações da faixa de crédito para campos de parcelas
+      let firstInstallmentValue: number | undefined;
+      let remainingInstallmentsValue: number | undefined;
+      let customInstallmentsText = "";
+      let groupName = quotaData?.groups?.name || "";
+
+      if (data.id_faixa_de_credito) {
+        const { data: creditRange } = await supabase
+          .from("faixas_de_credito")
+          .select("valor_primeira_parcela, valor_parcelas_restantes")
+          .eq("id", data.id_faixa_de_credito)
+          .single();
+
+        if (creditRange) {
+          firstInstallmentValue = creditRange.valor_primeira_parcela;
+          remainingInstallmentsValue = creditRange.valor_parcelas_restantes;
+        }
+
+        const { data: customInstallments } = await supabase
+          .from("condicoes_parcelas")
+          .select("numero_parcela, valor_parcela")
+          .eq("faixa_credito_id", data.id_faixa_de_credito)
+          .order("numero_parcela");
+
+        if (customInstallments && customInstallments.length > 0) {
+          const sortedCustom = customInstallments
+            .filter((c) => c.numero_parcela !== 1)
+            .sort((a, b) => a.numero_parcela - b.numero_parcela);
+
+          if (sortedCustom.length > 0) {
+            customInstallmentsText = sortedCustom
+              .map((c) => {
+                const formattedValue = new Intl.NumberFormat("pt-BR", {
+                  style: "currency",
+                  currency: "BRL",
+                }).format(c.valor_parcela);
+                return `${c.numero_parcela}ª: ${formattedValue}`;
+              })
+              .join(" | ");
+          }
+        }
+      }
+
       const contractData: ContractData = {
         id: data.id,
         contract_code:
           data.contract_code || data.contract_number || `CONT-${data.id}`,
+        contract_number: data.contract_number,
         total_value: parseFloat(data.total_value || data.credit_amount || "0"),
+        total_installments: data.total_installments || 0,
+        credit_amount: data.credit_amount
+          ? parseFloat(data.credit_amount)
+          : undefined,
+        id_faixa_de_credito: data.id_faixa_de_credito || null,
         status: data.status,
         created_at: data.created_at || new Date().toISOString(),
         contract_content: data.contract_content,
@@ -190,6 +321,25 @@ const ContractViewOnly: React.FC = () => {
           phone: data.clients?.phone,
           cpf_cnpj: data.clients?.cpf_cnpj,
           address: data.clients?.address,
+          city: data.clients?.address_city || "",
+          state: data.clients?.address_state || "",
+          zip_code: data.clients?.address_zip || "",
+          rg: data.clients?.rg,
+          birth_date: data.clients?.birth_date,
+          nationality: data.clients?.nationality,
+          marital_status: data.clients?.marital_status,
+          spouse_name: data.clients?.spouse_name,
+          spouse_phone: data.clients?.spouse_phone,
+          company: data.clients?.company,
+          salary: data.clients?.salary,
+          position: data.clients?.position,
+          reference_name: data.clients?.reference_name,
+          reference_address: data.clients?.reference_address,
+          reference_phone: data.clients?.reference_phone,
+          address_street: data.clients?.address_street,
+          address_number: data.clients?.address_number,
+          address_complement: data.clients?.address_complement,
+          address_neighborhood: data.clients?.address_neighborhood,
         },
         commission_table: {
           id: data.planos?.id || 0,
@@ -202,6 +352,25 @@ const ContractViewOnly: React.FC = () => {
           full_name: data.profiles?.full_name || "Representante não encontrado",
           email: data.profiles?.email || "",
           phone: data.profiles?.phone,
+        },
+        quota: quotaData
+          ? {
+              id: quotaData.id,
+              quota_number: quotaData.quota_number,
+              group: quotaData.groups
+                ? {
+                    id: quotaData.groups.id,
+                    name: quotaData.groups.name,
+                    description: quotaData.groups.description,
+                  }
+                : undefined,
+            }
+          : null,
+        mergeExtras: {
+          firstInstallmentValue,
+          remainingInstallmentsValue,
+          customInstallmentsText,
+          groupName,
         },
       };
 
@@ -298,12 +467,69 @@ const ContractViewOnly: React.FC = () => {
     if (!content) return content;
 
     // Aplicar mesclagem de campos primeiro
-    let processedContent = mergePlaceholders(content, {
-      client: contract?.client,
-      contract: contract,
-      representative: contract?.representative,
-      commission_table: contract?.commission_table
-    });
+    const mergeData: MergeData = {
+      client: contract?.client
+        ? {
+            full_name: contract.client.full_name,
+            email: contract.client.email || undefined,
+            phone: contract.client.phone || undefined,
+            cpf_cnpj: contract.client.cpf_cnpj || undefined,
+            address: contract.client.address || undefined,
+            city: contract.client.city,
+            state: contract.client.state,
+            zip_code: contract.client.zip_code,
+            rg: contract.client.rg || undefined,
+            birth_date: contract.client.birth_date
+              ? new Date(contract.client.birth_date).toLocaleDateString("pt-BR")
+              : undefined,
+            nationality: contract.client.nationality || undefined,
+            marital_status: contract.client.marital_status || undefined,
+            spouse_name: contract.client.spouse_name || undefined,
+            spouse_phone: contract.client.spouse_phone || undefined,
+            company: contract.client.company || undefined,
+            salary: contract.client.salary || undefined,
+            position: contract.client.position || undefined,
+            reference_name: contract.client.reference_name || undefined,
+            reference_address: contract.client.reference_address || undefined,
+            reference_phone: contract.client.reference_phone || undefined,
+            address_street: contract.client.address_street || undefined,
+            address_number: contract.client.address_number || undefined,
+            address_complement: contract.client.address_complement || undefined,
+            address_neighborhood:
+              contract.client.address_neighborhood || undefined,
+            address_city: contract.client.city,
+            address_state: contract.client.state,
+            address_zip: contract.client.zip_code,
+          }
+        : undefined,
+      contract: contract
+        ? {
+            value: contract.total_value,
+            installments: contract.total_installments,
+            number: contract.contract_code,
+            date: new Date(contract.created_at).toLocaleDateString("pt-BR"),
+            status: contract.status,
+            first_installment_value:
+              contract.mergeExtras?.firstInstallmentValue,
+            remaining_installments_value:
+              contract.mergeExtras?.remainingInstallmentsValue,
+            custom_installments: contract.mergeExtras?.customInstallmentsText,
+            group_name:
+              contract.mergeExtras?.groupName ||
+              contract.quota?.group?.name ||
+              "",
+          }
+        : undefined,
+      representative: contract?.representative
+        ? {
+            name: contract.representative.full_name,
+            email: contract.representative.email,
+            phone: contract.representative.phone || undefined,
+          }
+        : undefined,
+    };
+
+    let processedContent = mergePlaceholders(content, mergeData);
     const processedSignatureIds = new Set<string>();
 
     // Process shortcodes and replace with signature content

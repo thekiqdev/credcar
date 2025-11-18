@@ -40,6 +40,11 @@ export interface MergeData {
     start_date?: string;
     end_date?: string;
     status?: string;
+    // Novos campos de parcelas e grupo
+    first_installment_value?: number;
+    remaining_installments_value?: number;
+    custom_installments?: string; // String formatada com as parcelas personalizadas
+    group_name?: string;
   };
   representative?: {
     name?: string;
@@ -263,6 +268,30 @@ export const MERGE_FIELDS: MergeField[] = [
         example: "Ativo",
         description: "Status atual do contrato"
       },
+      { 
+        placeholder: "{contract_first_installment}", 
+        label: "Valor da Primeira Parcela", 
+        example: "R$ 883,00",
+        description: "Valor da primeira parcela do contrato"
+      },
+      { 
+        placeholder: "{contract_remaining_installments}", 
+        label: "Valor das Parcelas Restantes", 
+        example: "R$ 350,00",
+        description: "Valor das parcelas restantes (padrão)"
+      },
+      { 
+        placeholder: "{contract_custom_installments}", 
+        label: "Parcelas Personalizadas", 
+        example: "2ª: R$ 883,00 | 3ª: R$ 883,00",
+        description: "Lista formatada das parcelas com valores personalizados"
+      },
+      { 
+        placeholder: "{group_name}", 
+        label: "Nome do Grupo", 
+        example: "Grupo ABC - Consórcio Imobiliário",
+        description: "Nome do grupo de consórcio"
+      },
     ]
   },
   {
@@ -367,6 +396,20 @@ export function mergePlaceholders(template: string, data: MergeData): string {
     content = content.replace(/{contract_number}/g, data.contract.number || '');
     content = content.replace(/{contract_date}/g, data.contract.date || '');
     content = content.replace(/{contract_status}/g, data.contract.status || '');
+    
+    // Novos campos de parcelas e grupo
+    const formattedFirstInstallment = data.contract.first_installment_value 
+      ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(data.contract.first_installment_value)
+      : '';
+    content = content.replace(/{contract_first_installment}/g, formattedFirstInstallment);
+    
+    const formattedRemainingInstallments = data.contract.remaining_installments_value 
+      ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(data.contract.remaining_installments_value)
+      : '';
+    content = content.replace(/{contract_remaining_installments}/g, formattedRemainingInstallments);
+    
+    content = content.replace(/{contract_custom_installments}/g, data.contract.custom_installments || '');
+    content = content.replace(/{group_name}/g, data.contract.group_name || '');
   }
   
   // Representante

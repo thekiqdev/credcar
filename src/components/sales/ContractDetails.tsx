@@ -653,6 +653,9 @@ const ContractDetails: React.FC<{
         status: data.status,
         created_at: data.created_at || new Date().toISOString(),
         contract_content: data.contract_content,
+        id_faixa_de_credito: data.id_faixa_de_credito || null,
+        credit_amount: data.credit_amount || null,
+        contract_number: data.contract_number || null,
         client: {
           id: data.clients?.id || 0,
           full_name:
@@ -663,6 +666,29 @@ const ContractDetails: React.FC<{
           phone: data.clients?.phone,
           cpf_cnpj: data.clients?.cpf_cnpj,
           address: data.clients?.address,
+          city: data.clients?.address_city || "",
+          state: data.clients?.address_state || "",
+          zip_code: data.clients?.address_zip || "",
+          // Dados adicionais
+          rg: data.clients?.rg || "",
+          birth_date: data.clients?.birth_date || "",
+          nationality: data.clients?.nationality || "",
+          marital_status: data.clients?.marital_status || "",
+          spouse_name: data.clients?.spouse_name || "",
+          spouse_phone: data.clients?.spouse_phone || "",
+          company: data.clients?.company || "",
+          salary: data.clients?.salary || "",
+          position: data.clients?.position || "",
+          reference_name: data.clients?.reference_name || "",
+          reference_address: data.clients?.reference_address || "",
+          reference_phone: data.clients?.reference_phone || "",
+          address_street: data.clients?.address_street || "",
+          address_number: data.clients?.address_number || "",
+          address_complement: data.clients?.address_complement || "",
+          address_neighborhood: data.clients?.address_neighborhood || "",
+          address_city: data.clients?.address_city || "",
+          address_state: data.clients?.address_state || "",
+          address_zip: data.clients?.address_zip || "",
         },
         commission_table: {
           id: data.planos?.id || 0,
@@ -697,6 +723,51 @@ const ContractDetails: React.FC<{
       
       // Aplicar mesclagem automática no conteúdo do contrato
       if (contractData.contract_content) {
+        // Buscar dados adicionais para mesclagem
+        let firstInstallmentValue: number | undefined;
+        let remainingInstallmentsValue: number | undefined;
+        let customInstallmentsText = '';
+        let groupName = contractData.quota?.group?.name || '';
+        
+        // Buscar dados da faixa de crédito se disponível
+        if (data.id_faixa_de_credito) {
+          const { data: creditRange } = await supabase
+            .from('faixas_de_credito')
+            .select('valor_primeira_parcela, valor_parcelas_restantes')
+            .eq('id', data.id_faixa_de_credito)
+            .single();
+          
+          if (creditRange) {
+            firstInstallmentValue = creditRange.valor_primeira_parcela;
+            remainingInstallmentsValue = creditRange.valor_parcelas_restantes;
+          }
+          
+          // Buscar parcelas personalizadas
+          const { data: customInstallments } = await supabase
+            .from('condicoes_parcelas')
+            .select('numero_parcela, valor_parcela')
+            .eq('faixa_credito_id', data.id_faixa_de_credito)
+            .order('numero_parcela');
+          
+          if (customInstallments && customInstallments.length > 0) {
+            const sortedCustom = customInstallments
+              .filter(c => c.numero_parcela !== 1)
+              .sort((a, b) => a.numero_parcela - b.numero_parcela);
+            
+            if (sortedCustom.length > 0) {
+              customInstallmentsText = sortedCustom
+                .map(c => {
+                  const formattedValue = new Intl.NumberFormat('pt-BR', { 
+                    style: 'currency', 
+                    currency: 'BRL' 
+                  }).format(c.valor_parcela);
+                  return `${c.numero_parcela}ª: ${formattedValue}`;
+                })
+                .join(' | ');
+            }
+          }
+        }
+        
         const mergeData: MergeData = {
           client: contractData.client ? {
             full_name: contractData.client.full_name,
@@ -737,6 +808,11 @@ const ContractDetails: React.FC<{
             number: contractData.contract_code,
             date: new Date(contractData.created_at).toLocaleDateString('pt-BR'),
             status: contractData.status,
+            // Novos campos de parcelas e grupo
+            first_installment_value: firstInstallmentValue,
+            remaining_installments_value: remainingInstallmentsValue,
+            custom_installments: customInstallmentsText,
+            group_name: groupName,
           },
           representative: contractData.representative ? {
             name: contractData.representative.full_name,
@@ -774,8 +850,8 @@ const ContractDetails: React.FC<{
       setIsProcessing(true);
       console.log('💾 Starting to save contract content...');
 
-      const content = editorRef.current
-        ? editorRef.current.getContent()
+      const content = editorRef.current?.getData
+        ? editorRef.current.getData()
         : editedContent;
 
       console.log("Saving contract content:", {
@@ -823,8 +899,8 @@ const ContractDetails: React.FC<{
       console.error("Error saving contract content:", err);
 
       // Preserve the editor content on error
-      const currentContent = editorRef.current
-        ? editorRef.current.getContent()
+      const currentContent = editorRef.current?.getData
+        ? editorRef.current.getData()
         : editedContent;
       setEditedContent(currentContent);
 
@@ -899,64 +975,130 @@ const ContractDetails: React.FC<{
   };
 
   // Função para aplicar mesclagem no conteúdo atual
-  const handleApplyMerge = () => {
+  const handleApplyMerge = async () => {
     if (!contract || !editorRef.current) return;
     
-    const currentContent = editorRef.current.getContent();
-    
-    // Preparar dados do contrato existente para mesclagem
-    const mergeData: MergeData = {
-      client: contract.clients ? {
-        full_name: contract.clients.full_name,
-        email: contract.clients.email,
-        phone: contract.clients.phone,
-        cpf_cnpj: contract.clients.cpf_cnpj,
-        address: contract.clients.address,
-        city: contract.clients.city,
-        state: contract.clients.state,
-        zip_code: contract.clients.zip_code,
-        // Novos campos de identificação
-        rg: contract.clients.rg,
-        birth_date: contract.clients.birth_date,
-        nationality: contract.clients.nationality,
-        marital_status: contract.clients.marital_status,
-        spouse_name: contract.clients.spouse_name,
-        spouse_phone: contract.clients.spouse_phone,
-        // Novos campos profissionais
-        company: contract.clients.company,
-        salary: contract.clients.salary,
-        position: contract.clients.position,
-        // Novos campos de referências pessoais
-        reference_name: contract.clients.reference_name,
-        reference_address: contract.clients.reference_address,
-        reference_phone: contract.clients.reference_phone,
-        // Campos separados do endereço
-        address_street: contract.clients.address_street,
-        address_number: contract.clients.address_number,
-        address_complement: contract.clients.address_complement,
-        address_neighborhood: contract.clients.address_neighborhood,
-        address_city: contract.clients.address_city,
-        address_state: contract.clients.address_state,
-        address_zip: contract.clients.address_zip,
-      } : undefined,
-      contract: {
-        value: parseFloat(contract.credit_amount || '0'),
-        installments: contract.total_installments,
-        number: contract.contract_number,
-        date: new Date(contract.created_at).toLocaleDateString('pt-BR'),
-        status: contract.status,
-      },
-      representative: contract.representatives ? {
-        name: contract.representatives.full_name,
-        email: contract.representatives.email,
-        phone: contract.representatives.phone,
-      } : undefined,
-    };
-    
-    // Aplicar mesclagem
-    const mergedContent = mergePlaceholders(currentContent, mergeData);
-    editorRef.current.setContent(mergedContent);
-    setEditedContent(mergedContent);
+    try {
+      const currentContent = editorRef.current?.getData
+        ? editorRef.current.getData()
+        : editorRef.current?.getContent?.() || "";
+      
+      // Buscar dados da faixa de crédito e parcelas personalizadas
+      let firstInstallmentValue: number | undefined;
+      let remainingInstallmentsValue: number | undefined;
+      let customInstallmentsText = '';
+      let groupName = '';
+      
+      // Buscar nome do grupo da quota
+      if (contract.quota?.group?.name) {
+        groupName = contract.quota.group.name;
+      }
+      
+      // Buscar dados da faixa de crédito
+      if (contract.id_faixa_de_credito) {
+        const { data: creditRange, error: creditRangeError } = await supabase
+          .from('faixas_de_credito')
+          .select('valor_primeira_parcela, valor_parcelas_restantes')
+          .eq('id', contract.id_faixa_de_credito)
+          .single();
+        
+        if (!creditRangeError && creditRange) {
+          firstInstallmentValue = creditRange.valor_primeira_parcela;
+          remainingInstallmentsValue = creditRange.valor_parcelas_restantes;
+        }
+        
+        // Buscar parcelas personalizadas
+        const { data: customInstallments, error: customError } = await supabase
+          .from('condicoes_parcelas')
+          .select('numero_parcela, valor_parcela')
+          .eq('faixa_credito_id', contract.id_faixa_de_credito)
+          .order('numero_parcela');
+        
+        if (!customError && customInstallments && customInstallments.length > 0) {
+          const sortedCustom = customInstallments
+            .filter(c => c.numero_parcela !== 1) // Excluir primeira parcela
+            .sort((a, b) => a.numero_parcela - b.numero_parcela);
+          
+          if (sortedCustom.length > 0) {
+            customInstallmentsText = sortedCustom
+              .map(c => {
+                const formattedValue = new Intl.NumberFormat('pt-BR', { 
+                  style: 'currency', 
+                  currency: 'BRL' 
+                }).format(c.valor_parcela);
+                return `${c.numero_parcela}ª: ${formattedValue}`;
+              })
+              .join(' | ');
+          }
+        }
+      }
+      
+      // Preparar dados do contrato existente para mesclagem
+      const mergeData: MergeData = {
+        client: contract.client ? {
+          full_name: contract.client.full_name,
+          email: contract.client.email,
+          phone: contract.client.phone,
+          cpf_cnpj: contract.client.cpf_cnpj,
+          address: contract.client.address,
+          city: contract.client.city,
+          state: contract.client.state,
+          zip_code: contract.client.zip_code,
+          // Novos campos de identificação
+          rg: contract.client.rg,
+          birth_date: contract.client.birth_date,
+          nationality: contract.client.nationality,
+          marital_status: contract.client.marital_status,
+          spouse_name: contract.client.spouse_name,
+          spouse_phone: contract.client.spouse_phone,
+          // Novos campos profissionais
+          company: contract.client.company,
+          salary: contract.client.salary,
+          position: contract.client.position,
+          // Novos campos de referências pessoais
+          reference_name: contract.client.reference_name,
+          reference_address: contract.client.reference_address,
+          reference_phone: contract.client.reference_phone,
+          // Campos separados do endereço
+          address_street: contract.client.address_street,
+          address_number: contract.client.address_number,
+          address_complement: contract.client.address_complement,
+          address_neighborhood: contract.client.address_neighborhood,
+          address_city: contract.client.address_city,
+          address_state: contract.client.address_state,
+          address_zip: contract.client.address_zip,
+        } : undefined,
+        contract: {
+          value: parseFloat(contract.credit_amount || '0'),
+          installments: contract.total_installments,
+          number: contract.contract_number,
+          date: new Date(contract.created_at).toLocaleDateString('pt-BR'),
+          status: contract.status,
+          // Novos campos de parcelas e grupo
+          first_installment_value: firstInstallmentValue,
+          remaining_installments_value: remainingInstallmentsValue,
+          custom_installments: customInstallmentsText,
+          group_name: groupName,
+        },
+        representative: contract.representative ? {
+          name: contract.representative.full_name,
+          email: contract.representative.email,
+          phone: contract.representative.phone,
+        } : undefined,
+      };
+      
+      // Aplicar mesclagem
+      const mergedContent = mergePlaceholders(currentContent, mergeData);
+      if (editorRef.current?.setData) {
+        editorRef.current.setData(mergedContent);
+      } else if (editorRef.current?.setContent) {
+        editorRef.current.setContent(mergedContent);
+      }
+      setEditedContent(mergedContent);
+    } catch (error) {
+      console.error('Erro ao aplicar mesclagem:', error);
+      alert('Erro ao aplicar mesclagem. Tente novamente.');
+    }
   };
 
   const handleInsertTemplate = async () => {
@@ -2947,8 +3089,8 @@ const ContractDetails: React.FC<{
                         <Button
                           onClick={() => {
                             // Preserve content when canceling
-                            const currentContent = editorRef.current
-                              ? editorRef.current.getContent()
+                            const currentContent = editorRef.current?.getData
+                              ? editorRef.current.getData()
                               : editedContent;
                             console.log(
                               "Canceling edit, preserving content length:",
@@ -3017,8 +3159,8 @@ const ContractDetails: React.FC<{
                       <Button
                         onClick={() => {
                           // Preserve content when canceling
-                          const currentContent = editorRef.current
-                            ? editorRef.current.getContent()
+                          const currentContent = editorRef.current?.getData
+                            ? editorRef.current.getData()
                             : editedContent;
                           console.log(
                             "Canceling edit, preserving content length:",

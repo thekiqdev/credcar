@@ -160,7 +160,17 @@ const ClientRegistration: React.FC<ClientRegistrationProps> = ({
     // Update the full address string
     const updated = { ...addressComponents, [field]: value };
     const fullAddress = `${updated.street}, ${updated.number}${updated.complement ? ", " + updated.complement : ""}, ${updated.neighborhood}, ${updated.city} - ${updated.state}, ${updated.zip}`;
-    setClientData((prev) => ({ ...prev, address: fullAddress }));
+    setClientData((prev) => ({
+      ...prev,
+      address: fullAddress,
+      address_street: updated.street,
+      address_number: updated.number,
+      address_complement: updated.complement,
+      address_neighborhood: updated.neighborhood,
+      address_city: updated.city,
+      address_state: updated.state,
+      address_zip: updated.zip,
+    }));
   };
 
   const formatCpfCnpj = (value: string) => {

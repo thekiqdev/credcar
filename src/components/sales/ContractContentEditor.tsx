@@ -363,6 +363,32 @@ const ContractContentEditor: React.FC<ContractContentEditorProps> = ({
       if (template) {
         // **NOVO SISTEMA DE MESCLAGEM DE CAMPOS**
         // Preparar dados para mesclagem
+        
+        // Formatar parcelas personalizadas
+        let customInstallmentsText = '';
+        if (selectedCreditRange.customInstallments && selectedCreditRange.customInstallments.length > 0) {
+          const sortedCustom = [...selectedCreditRange.customInstallments]
+            .sort((a, b) => a.numero_parcela - b.numero_parcela)
+            .filter(c => c.numero_parcela !== 1); // Excluir primeira parcela
+          
+          if (sortedCustom.length > 0) {
+            customInstallmentsText = sortedCustom
+              .map(c => {
+                const formattedValue = new Intl.NumberFormat('pt-BR', { 
+                  style: 'currency', 
+                  currency: 'BRL' 
+                }).format(c.valor_parcela);
+                return `${c.numero_parcela}ª: ${formattedValue}`;
+              })
+              .join(' | ');
+          }
+        }
+        
+        const formattedBirthDate =
+          clientData.birth_date && !isNaN(new Date(clientData.birth_date).getTime())
+            ? new Date(clientData.birth_date).toLocaleDateString("pt-BR")
+            : clientData.birth_date;
+
         const mergeData: MergeData = {
           client: {
             full_name: clientData.full_name,
@@ -370,15 +396,43 @@ const ContractContentEditor: React.FC<ContractContentEditorProps> = ({
             phone: clientData.phone,
             cpf_cnpj: clientData.cpf_cnpj,
             address: clientData.address,
-            city: clientData.city,
-            state: clientData.state,
-            zip_code: clientData.zip_code,
+            city: clientData.address_city,
+            state: clientData.address_state,
+            zip_code: clientData.address_zip,
+            // Novos campos de identificação
+            rg: clientData.rg,
+            birth_date: formattedBirthDate,
+            nationality: clientData.nationality,
+            marital_status: clientData.marital_status,
+            spouse_name: clientData.spouse_name,
+            spouse_phone: clientData.spouse_phone,
+            // Novos campos profissionais
+            company: clientData.company,
+            salary: clientData.salary,
+            position: clientData.position,
+            // Novos campos de referências pessoais
+            reference_name: clientData.reference_name,
+            reference_address: clientData.reference_address,
+            reference_phone: clientData.reference_phone,
+            // Campos de endereço separados
+            address_street: clientData.address_street,
+            address_number: clientData.address_number,
+            address_complement: clientData.address_complement,
+            address_neighborhood: clientData.address_neighborhood,
+            address_city: clientData.address_city,
+            address_state: clientData.address_state,
+            address_zip: clientData.address_zip,
           },
           contract: {
             value: selectedCreditRange.valor_credito,
             installments: selectedCreditRange.numero_total_parcelas,
             number: `CONT-${Date.now()}`, // Gerar número único
             date: new Date().toLocaleDateString('pt-BR'),
+            // Novos campos de parcelas e grupo
+            first_installment_value: selectedCreditRange.valor_primeira_parcela,
+            remaining_installments_value: selectedCreditRange.valor_parcelas_restantes,
+            custom_installments: customInstallmentsText,
+            group_name: selectedGroup.name,
           },
         };
         
