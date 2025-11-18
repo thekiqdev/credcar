@@ -2403,7 +2403,7 @@ const ContractDetails: React.FC<{
                   Informações detalhadas do cliente associado ao contrato.
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-6">
+              <CardContent className="space-y-8">
                 <div className="grid gap-4 md:grid-cols-2">
                   <div>
                     <Label className="text-sm font-medium">Nome Completo</Label>
@@ -2441,19 +2441,239 @@ const ContractDetails: React.FC<{
                       </p>
                     </div>
                   )}
+                  {contract.client.rg && (
+                    <div>
+                      <Label className="text-sm font-medium">RG</Label>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {contract.client.rg}
+                      </p>
+                    </div>
+                  )}
+                  {contract.client.birth_date && (
+                    <div>
+                      <Label className="text-sm font-medium">
+                        Data de Nascimento
+                      </Label>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {new Date(contract.client.birth_date).toLocaleDateString(
+                          "pt-BR",
+                        )}
+                      </p>
+                    </div>
+                  )}
                 </div>
 
-                {contract.client.address && <Separator />}
+                {(contract.client.nationality ||
+                  contract.client.marital_status ||
+                  contract.client.spouse_name ||
+                  contract.client.spouse_phone) && <Separator />}
 
-                {contract.client.address && (
-                  <div>
-                    <Label className="text-sm font-medium flex items-center gap-2">
-                      <MapPin className="h-4 w-4" />
-                      Endereço
-                    </Label>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      {contract.client.address}
-                    </p>
+                {(contract.client.nationality ||
+                  contract.client.marital_status ||
+                  contract.client.spouse_name ||
+                  contract.client.spouse_phone) && (
+                  <div className="grid gap-4 md:grid-cols-2">
+                    {contract.client.nationality && (
+                      <div>
+                        <Label className="text-sm font-medium">
+                          Nacionalidade
+                        </Label>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {contract.client.nationality}
+                        </p>
+                      </div>
+                    )}
+                    {contract.client.marital_status && (
+                      <div>
+                        <Label className="text-sm font-medium">
+                          Estado Civil
+                        </Label>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {contract.client.marital_status}
+                        </p>
+                      </div>
+                    )}
+                    {contract.client.spouse_name && (
+                      <div>
+                        <Label className="text-sm font-medium">
+                          Nome do Cônjuge
+                        </Label>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {contract.client.spouse_name}
+                        </p>
+                      </div>
+                    )}
+                    {contract.client.spouse_phone && (
+                      <div>
+                        <Label className="text-sm font-medium">
+                          Telefone do Cônjuge
+                        </Label>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {contract.client.spouse_phone}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {(contract.client.company ||
+                  contract.client.position ||
+                  contract.client.salary) && <Separator />}
+
+                {(contract.client.company ||
+                  contract.client.position ||
+                  contract.client.salary) && (
+                  <div className="grid gap-4 md:grid-cols-3">
+                    {contract.client.company && (
+                      <div>
+                        <Label className="text-sm font-medium">Empresa</Label>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {contract.client.company}
+                        </p>
+                      </div>
+                    )}
+                    {contract.client.position && (
+                      <div>
+                        <Label className="text-sm font-medium">Cargo</Label>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {contract.client.position}
+                        </p>
+                      </div>
+                    )}
+                    {contract.client.salary && (
+                      <div>
+                        <Label className="text-sm font-medium">Salário</Label>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {contract.client.salary}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {(contract.client.reference_name ||
+                  contract.client.reference_phone ||
+                  contract.client.reference_address) && <Separator />}
+
+                {(contract.client.reference_name ||
+                  contract.client.reference_phone ||
+                  contract.client.reference_address) && (
+                  <div className="grid gap-4 md:grid-cols-3">
+                    {contract.client.reference_name && (
+                      <div>
+                        <Label className="text-sm font-medium">
+                          Referência
+                        </Label>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {contract.client.reference_name}
+                        </p>
+                      </div>
+                    )}
+                    {contract.client.reference_phone && (
+                      <div>
+                        <Label className="text-sm font-medium">
+                          Telefone da Referência
+                        </Label>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {contract.client.reference_phone}
+                        </p>
+                      </div>
+                    )}
+                    {contract.client.reference_address && (
+                      <div className="md:col-span-3">
+                        <Label className="text-sm font-medium">
+                          Endereço da Referência
+                        </Label>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {contract.client.reference_address}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {(contract.client.address ||
+                  contract.client.address_street ||
+                  contract.client.address_city) && <Separator />}
+
+                {(contract.client.address ||
+                  contract.client.address_street ||
+                  contract.client.address_city) && (
+                  <div className="space-y-4">
+                    {contract.client.address && (
+                      <div>
+                        <Label className="text-sm font-medium flex items-center gap-2">
+                          <MapPin className="h-4 w-4" />
+                          Endereço Completo
+                        </Label>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {contract.client.address}
+                        </p>
+                      </div>
+                    )}
+
+                    <div className="grid gap-4 md:grid-cols-2">
+                      {contract.client.address_street && (
+                        <div>
+                          <Label className="text-sm font-medium">
+                            Logradouro
+                          </Label>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            {contract.client.address_street}
+                          </p>
+                        </div>
+                      )}
+                      {contract.client.address_number && (
+                        <div>
+                          <Label className="text-sm font-medium">Número</Label>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            {contract.client.address_number}
+                          </p>
+                        </div>
+                      )}
+                      {contract.client.address_complement && (
+                        <div>
+                          <Label className="text-sm font-medium">
+                            Complemento
+                          </Label>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            {contract.client.address_complement}
+                          </p>
+                        </div>
+                      )}
+                      {contract.client.address_neighborhood && (
+                        <div>
+                          <Label className="text-sm font-medium">Bairro</Label>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            {contract.client.address_neighborhood}
+                          </p>
+                        </div>
+                      )}
+                      {contract.client.address_city && (
+                        <div>
+                          <Label className="text-sm font-medium">Cidade</Label>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            {contract.client.address_city}
+                          </p>
+                        </div>
+                      )}
+                      {contract.client.address_state && (
+                        <div>
+                          <Label className="text-sm font-medium">Estado</Label>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            {contract.client.address_state}
+                          </p>
+                        </div>
+                      )}
+                      {contract.client.address_zip && (
+                        <div>
+                          <Label className="text-sm font-medium">CEP</Label>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            {contract.client.address_zip}
+                          </p>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
               </CardContent>
