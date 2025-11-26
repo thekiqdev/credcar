@@ -316,7 +316,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     numero_total_parcelas: "80",
   });
 
-  // Dynamic installments state
+  // Custom installments batch creation state
+  const [customInstallmentsConfig, setCustomInstallmentsConfig] = useState({
+    quantidade: "",
+    valor: "",
+  });
+
+  // Dynamic installments state (kept for backward compatibility, but will be auto-generated)
   const [dynamicInstallments, setDynamicInstallments] = useState([]);
   const [nextInstallmentNumber, setNextInstallmentNumber] = useState(2);
 
@@ -2837,6 +2843,37 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   };
 
   // Dynamic installments functions
+  // Generate custom installments based on quantity and value
+  const generateCustomInstallments = (quantidade, valor) => {
+    if (!quantidade || !valor || parseInt(quantidade) <= 0 || parseFloat(valor) <= 0) {
+      return [];
+    }
+
+    const qty = parseInt(quantidade);
+    const value = parseFloat(valor);
+    const installments = [];
+
+    // Start from parcel 2 (since parcel 1 is always the first installment)
+    for (let i = 2; i <= qty + 1; i++) {
+      installments.push({
+        id: `auto-${i}`,
+        numero_parcela: i,
+        valor_parcela: value.toString(),
+      });
+    }
+
+    return installments;
+  };
+
+  // Update dynamic installments when config changes
+  useEffect(() => {
+    const generated = generateCustomInstallments(
+      customInstallmentsConfig.quantidade,
+      customInstallmentsConfig.valor
+    );
+    setDynamicInstallments(generated);
+  }, [customInstallmentsConfig.quantidade, customInstallmentsConfig.valor]);
+
   const addDynamicInstallment = () => {
     const newInstallment = {
       id: Date.now(),
@@ -2872,6 +2909,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const resetDynamicInstallments = () => {
     setDynamicInstallments([]);
     setNextInstallmentNumber(2);
+    setCustomInstallmentsConfig({
+      quantidade: "",
+      valor: "",
+    });
   };
 
   // Credit Range Management Functions
@@ -2888,14 +2929,44 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
         return;
       }
 
-      // Validate dynamic installments
+      // Validate custom installments config
+      // If user provided quantity or value, both must be provided and valid
+      if (
+        customInstallmentsConfig.quantidade ||
+        customInstallmentsConfig.valor
+      ) {
+        if (
+          !customInstallmentsConfig.quantidade ||
+          !customInstallmentsConfig.valor ||
+          parseInt(customInstallmentsConfig.quantidade) <= 0 ||
+          parseFloat(customInstallmentsConfig.valor) <= 0
+        ) {
+          alert(
+            "Por favor, informe uma quantidade e valor válidos para as parcelas personalizadas, ou deixe ambos em branco.",
+          );
+          return;
+        }
+
+        // Validate that quantity doesn't exceed available installments
+        const totalInstallments = parseInt(newCreditRange.numero_total_parcelas) || 80;
+        const customQuantity = parseInt(customInstallmentsConfig.quantidade);
+        // Maximum is total - 1 (since 1st installment is separate)
+        if (customQuantity >= totalInstallments) {
+          alert(
+            `A quantidade de parcelas personalizadas (${customQuantity}) não pode ser maior ou igual ao número total de parcelas (${totalInstallments}). O máximo permitido é ${totalInstallments - 1}.`,
+          );
+          return;
+        }
+      }
+
+      // Validate dynamic installments (generated from config)
       for (const installment of dynamicInstallments) {
         if (
           !installment.valor_parcela ||
           parseFloat(installment.valor_parcela) <= 0
         ) {
           alert(
-            `Por favor, informe um valor válido para a ${installment.numero_parcela}ª parcela`,
+            `Por favor, informe um valor válido para as parcelas personalizadas`,
           );
           return;
         }
@@ -2960,7 +3031,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
       const installmentMessage =
         dynamicInstallments.length > 0
-          ? ` com ${dynamicInstallments.length} parcela(s) customizada(s)`
+          ? ` com ${dynamicInstallments.length} parcela(s) personalizada(s) criada(s) automaticamente`
           : "";
       alert(`Faixa de crédito criada com sucesso${installmentMessage}!`);
     } catch (error) {
@@ -8715,59 +8786,89 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 />
               </div>
 
-              {/* Dynamic Installments Section */}
-              {dynamicInstallments.length > 0 && (
-                <div className="space-y-3">
-                  <Label className="text-sm font-medium text-gray-700">
-                    Parcelas Customizadas
+              {/* Custom Installments Batch Creation */}
+              <div className="space-y-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm font-semibold text-gray-700">
+                    Parcelas Personalizadas
                   </Label>
-                  {dynamicInstallments.map((installment) => (
-                    <div
-                      key={installment.id}
-                      className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg"
-                    >
-                      <Label className="text-sm font-medium min-w-[80px]">
-                        {installment.numero_parcela}ª Parcela:
-                      </Label>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        value={installment.valor_parcela}
-                        onChange={(e) =>
-                          updateDynamicInstallmentValue(
-                            installment.id,
-                            e.target.value,
-                          )
-                        }
-                        placeholder="Ex: 250.00"
-                        className="flex-1"
-                      />
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => removeDynamicInstallment(installment.id)}
-                        className="text-red-600 hover:text-red-700 border-red-200 hover:bg-red-50"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ))}
+                  {dynamicInstallments.length > 0 && (
+                    <Badge variant="outline" className="text-blue-600">
+                      {dynamicInstallments.length} parcela(s) configurada(s)
+                    </Badge>
+                  )}
                 </div>
-              )}
-
-              {/* Add Installment Button */}
-              <div className="flex justify-start">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={addDynamicInstallment}
-                  className="text-blue-600 hover:text-blue-700 border-blue-200 hover:bg-blue-50"
-                >
-                  <PlusCircle className="h-4 w-4 mr-2" />
-                  Adicionar Parcela
-                </Button>
+                <p className="text-xs text-gray-600">
+                  Informe a quantidade e o valor para criar múltiplas parcelas personalizadas de uma vez.
+                  As parcelas serão criadas a partir da 2ª parcela.
+                </p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="custom-installments-quantity">
+                      Quantidade de Parcelas Personalizadas
+                    </Label>
+                    <Input
+                      id="custom-installments-quantity"
+                      type="number"
+                      min="0"
+                      value={customInstallmentsConfig.quantidade}
+                      onChange={(e) =>
+                        setCustomInstallmentsConfig({
+                          ...customInstallmentsConfig,
+                          quantidade: e.target.value,
+                        })
+                      }
+                      placeholder="Ex: 5"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Número de parcelas a personalizar
+                    </p>
+                  </div>
+                  <div>
+                    <Label htmlFor="custom-installments-value">
+                      Valor das Parcelas Personalizadas
+                    </Label>
+                    <Input
+                      id="custom-installments-value"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={customInstallmentsConfig.valor}
+                      onChange={(e) =>
+                        setCustomInstallmentsConfig({
+                          ...customInstallmentsConfig,
+                          valor: e.target.value,
+                        })
+                      }
+                      placeholder="Ex: 883.00"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Valor aplicado a todas as parcelas personalizadas
+                    </p>
+                  </div>
+                </div>
+                {dynamicInstallments.length > 0 && (
+                  <div className="mt-3 p-3 bg-white rounded border border-gray-300">
+                    <p className="text-xs font-medium text-gray-700 mb-2">
+                      Parcelas que serão criadas:
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {dynamicInstallments.map((inst) => (
+                        <Badge
+                          key={inst.id}
+                          variant="outline"
+                          className="text-xs"
+                        >
+                          {inst.numero_parcela}ª:{" "}
+                          {new Intl.NumberFormat("pt-BR", {
+                            style: "currency",
+                            currency: "BRL",
+                          }).format(parseFloat(inst.valor_parcela) || 0)}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div>
@@ -8833,19 +8934,22 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         )}
                       </p>
                     )}
-                    {dynamicInstallments.map(
-                      (installment) =>
-                        installment.valor_parcela && (
-                          <p key={installment.id}>
-                            • {installment.numero_parcela}ª Parcela:{" "}
+                    {dynamicInstallments.length > 0 && (
+                      <p>
+                        • Parcelas Personalizadas ({dynamicInstallments.length}):{" "}
+                        {dynamicInstallments[0]?.valor_parcela && (
+                          <span>
                             {new Intl.NumberFormat("pt-BR", {
                               style: "currency",
                               currency: "BRL",
                             }).format(
-                              parseFloat(installment.valor_parcela) || 0,
-                            )}
-                          </p>
-                        ),
+                              parseFloat(dynamicInstallments[0].valor_parcela) || 0,
+                            )}{" "}
+                            cada (da {dynamicInstallments[0]?.numero_parcela}ª até a{" "}
+                            {dynamicInstallments[dynamicInstallments.length - 1]?.numero_parcela}ª)
+                          </span>
+                        )}
+                      </p>
                     )}
                     {newCreditRange.valor_parcelas_restantes && (
                       <p>

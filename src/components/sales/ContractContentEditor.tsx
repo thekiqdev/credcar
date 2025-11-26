@@ -335,7 +335,7 @@ const ContractContentEditor: React.FC<ContractContentEditorProps> = ({
       }
     } else {
       console.log("❌ Debug - editorRef.current não está disponível, usando fallback");
-      setContent(content + placeholder);
+    setContent(content + placeholder);
     }
   };
 

@@ -217,7 +217,7 @@ class AuthService {
         return false;
       }
       
-      return !!session;
+    return !!session;
     } catch (error) {
       console.error('❌ isAuthenticated error:', error);
       return false;

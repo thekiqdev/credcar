@@ -1058,9 +1058,9 @@ const ContractDetails: React.FC<{
       
       // Obter número da cota
       const quotaNumber = contract.quota?.quota_number?.toString() || '';
-      
-      // Preparar dados do contrato existente para mesclagem
-      const mergeData: MergeData = {
+    
+    // Preparar dados do contrato existente para mesclagem
+    const mergeData: MergeData = {
         client: contract.client ? {
           full_name: contract.client.full_name,
           email: contract.client.email,
@@ -1070,22 +1070,22 @@ const ContractDetails: React.FC<{
           city: contract.client.city,
           state: contract.client.state,
           zip_code: contract.client.zip_code,
-          // Novos campos de identificação
+        // Novos campos de identificação
           rg: contract.client.rg,
           birth_date: contract.client.birth_date,
           nationality: contract.client.nationality,
           marital_status: contract.client.marital_status,
           spouse_name: contract.client.spouse_name,
           spouse_phone: contract.client.spouse_phone,
-          // Novos campos profissionais
+        // Novos campos profissionais
           company: contract.client.company,
           salary: contract.client.salary,
           position: contract.client.position,
-          // Novos campos de referências pessoais
+        // Novos campos de referências pessoais
           reference_name: contract.client.reference_name,
           reference_address: contract.client.reference_address,
           reference_phone: contract.client.reference_phone,
-          // Campos separados do endereço
+        // Campos separados do endereço
           address_street: contract.client.address_street,
           address_number: contract.client.address_number,
           address_complement: contract.client.address_complement,
@@ -1093,13 +1093,13 @@ const ContractDetails: React.FC<{
           address_city: contract.client.address_city,
           address_state: contract.client.address_state,
           address_zip: contract.client.address_zip,
-        } : undefined,
-        contract: {
-          value: parseFloat(contract.credit_amount || '0'),
-          installments: contract.total_installments,
-          number: contract.contract_number,
-          date: new Date(contract.created_at).toLocaleDateString('pt-BR'),
-          status: contract.status,
+      } : undefined,
+      contract: {
+        value: parseFloat(contract.credit_amount || '0'),
+        installments: contract.total_installments,
+        number: contract.contract_number,
+        date: new Date(contract.created_at).toLocaleDateString('pt-BR'),
+        status: contract.status,
           // Novos campos de parcelas e grupo
           first_installment_value: firstInstallmentValue,
           remaining_installments_value: remainingInstallmentsValue,
@@ -1111,22 +1111,22 @@ const ContractDetails: React.FC<{
           custom_installments_count: customInstallmentsCount,
           // Número da cota
           quota_number: quotaNumber,
-        },
+      },
         representative: contract.representative ? {
           name: contract.representative.full_name,
           email: contract.representative.email,
           phone: contract.representative.phone,
-        } : undefined,
-      };
-      
-      // Aplicar mesclagem
-      const mergedContent = mergePlaceholders(currentContent, mergeData);
+      } : undefined,
+    };
+    
+    // Aplicar mesclagem
+    const mergedContent = mergePlaceholders(currentContent, mergeData);
       if (editorRef.current?.setData) {
         editorRef.current.setData(mergedContent);
       } else if (editorRef.current?.setContent) {
-        editorRef.current.setContent(mergedContent);
+    editorRef.current.setContent(mergedContent);
       }
-      setEditedContent(mergedContent);
+    setEditedContent(mergedContent);
     } catch (error) {
       console.error('Erro ao aplicar mesclagem:', error);
       alert('Erro ao aplicar mesclagem. Tente novamente.');
@@ -2632,15 +2632,15 @@ const ContractDetails: React.FC<{
                   contract.client.address_street ||
                   contract.client.address_city) && (
                   <div className="space-y-4">
-                    {contract.client.address && (
-                      <div>
-                        <Label className="text-sm font-medium flex items-center gap-2">
-                          <MapPin className="h-4 w-4" />
+                {contract.client.address && (
+                  <div>
+                    <Label className="text-sm font-medium flex items-center gap-2">
+                      <MapPin className="h-4 w-4" />
                           Endereço Completo
-                        </Label>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          {contract.client.address}
-                        </p>
+                    </Label>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {contract.client.address}
+                    </p>
                       </div>
                     )}
 

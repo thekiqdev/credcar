@@ -1124,7 +1124,6 @@ export const commissionPlansService = {
           .from("faixas_de_credito")
           .update({
             valor_parcelas_restantes: remainingInstallmentsValue,
-            updated_at: new Date().toISOString(),
           })
           .eq("id", rangeId);
 
