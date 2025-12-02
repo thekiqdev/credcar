@@ -62,15 +62,28 @@ const RepresentativeContractUpload: React.FC<RepresentativeContractUploadProps> 
 
       console.log('📁 Uploading contract to local server...');
 
+      // Determine base URL based on environment
+      const hostname = window.location.hostname;
+      const baseUrl = hostname === 'localhost' || hostname === '127.0.0.1'
+        ? 'http://localhost:3001'
+        : 'https://sistema.credcarmultimarcas.com.br';
+
       // Upload file to local server
-      const response = await fetch('http://localhost:3001/api/upload-representative-contract', {
+      const response = await fetch(`${baseUrl}/api/upload-representative-contract`, {
         method: 'POST',
         body: formData,
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Erro no upload');
+        let errorMessage = 'Erro no upload';
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorMessage;
+        } catch (e) {
+          // Se não conseguir parsear JSON, usar a mensagem de status
+          errorMessage = `Erro ${response.status}: ${response.statusText}`;
+        }
+        throw new Error(errorMessage);
       }
 
       const result = await response.json();
@@ -156,8 +169,14 @@ const RepresentativeContractUpload: React.FC<RepresentativeContractUploadProps> 
     try {
       console.log('🗑️ Deleting contract from local server...');
 
+      // Determine base URL based on environment
+      const hostname = window.location.hostname;
+      const baseUrl = hostname === 'localhost' || hostname === '127.0.0.1'
+        ? 'http://localhost:3001'
+        : 'https://sistema.credcarmultimarcas.com.br';
+
       // Delete file from local server
-      const response = await fetch('http://localhost:3001/api/delete-representative-contract', {
+      const response = await fetch(`${baseUrl}/api/delete-representative-contract`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',

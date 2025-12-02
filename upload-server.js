@@ -66,15 +66,7 @@ app.use(cors());
 app.use(helmet());
 app.use(morgan('combined'));
 app.use(express.json());
-
-// Middleware de tratamento de erros
-app.use((error, req, res, next) => {
-  console.error('❌ Erro no servidor:', error);
-  res.status(500).json({ 
-    error: error.message || 'Erro interno do servidor',
-    details: error.stack 
-  });
-});
+app.use(express.urlencoded({ extended: true }));
 
 // Configuração do multer para upload
 const storage = multer.diskStorage({
@@ -656,6 +648,7 @@ app.post('/api/upload-system-logo', upload.single('file'), async (req, res) => {
 // Rota para upload de contrato representante
 app.post('/api/upload-representative-contract', upload.single('file'), validateFile, (req, res) => {
   try {
+    console.log('📤 === UPLOAD CONTRATO REPRESENTANTE ===');
     console.log('📤 Recebendo upload de contrato representante...');
     console.log('📋 Body:', req.body);
     console.log('📁 File:', req.file);
@@ -3564,12 +3557,32 @@ app.get('/api/view-document', (req, res) => {
   }
 });
 
+// Rota 404 para rotas não encontradas
+app.use((req, res) => {
+  console.log(`❌ Rota não encontrada: ${req.method} ${req.path}`);
+  res.status(404).json({ 
+    error: 'Rota não encontrada',
+    method: req.method,
+    path: req.path
+  });
+});
+
+// Middleware de tratamento de erros (deve ser o último)
+app.use((error, req, res, next) => {
+  console.error('❌ Erro no servidor:', error);
+  res.status(500).json({ 
+    error: error.message || 'Erro interno do servidor',
+    details: error.stack 
+  });
+});
+
 app.listen(PORT, () => {
   console.log(`🚀 Servidor de upload rodando na porta ${PORT}`);
   console.log(`📁 Diretório de documentos: ${path.join(__dirname, 'documentos')}`);
   console.log(`🔗 Health check: http://localhost:${PORT}/api/health`);
   console.log(`🌐 ASAAS Proxy: http://localhost:${PORT}/api/proxy/asaas`);
   console.log(`📤 Upload endpoint: http://localhost:${PORT}/api/upload-document`);
+  console.log(`📤 Upload Representative Contract: http://localhost:${PORT}/api/upload-representative-contract`);
   console.log(`📋 List files: http://localhost:${PORT}/api/list-files`);
   console.log(`⬇️ Download: http://localhost:${PORT}/api/download-file`);
   console.log(`🗑️ Delete file: http://localhost:${PORT}/api/delete-file`);
