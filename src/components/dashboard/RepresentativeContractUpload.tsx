@@ -68,8 +68,13 @@ const RepresentativeContractUpload: React.FC<RepresentativeContractUploadProps> 
         ? 'http://localhost:3001'
         : 'https://sistema.credcarmultimarcas.com.br';
 
+      const uploadUrl = `${baseUrl}/api/upload-representative-contract`;
+      console.log('🌐 Upload URL:', uploadUrl);
+      console.log('🏠 Hostname:', hostname);
+      console.log('📦 FormData keys:', Array.from(formData.keys()));
+
       // Upload file to local server
-      const response = await fetch(`${baseUrl}/api/upload-representative-contract`, {
+      const response = await fetch(uploadUrl, {
         method: 'POST',
         body: formData,
       });

@@ -646,7 +646,20 @@ app.post('/api/upload-system-logo', upload.single('file'), async (req, res) => {
 });
 
 // Rota para upload de contrato representante
-app.post('/api/upload-representative-contract', upload.single('file'), validateFile, (req, res) => {
+app.post('/api/upload-representative-contract', (req, res, next) => {
+  console.log('📤 === ROTA UPLOAD CONTRATO REPRESENTANTE CHAMADA ===');
+  console.log('📤 Method:', req.method);
+  console.log('📤 Path:', req.path);
+  console.log('📤 Headers:', req.headers['content-type']);
+  next();
+}, upload.single('file'), (err, req, res, next) => {
+  // Tratamento de erro do multer
+  if (err) {
+    console.error('❌ Erro do multer:', err);
+    return res.status(400).json({ error: err.message || 'Erro no upload do arquivo' });
+  }
+  next();
+}, validateFile, (req, res) => {
   try {
     console.log('📤 === UPLOAD CONTRATO REPRESENTANTE ===');
     console.log('📤 Recebendo upload de contrato representante...');
