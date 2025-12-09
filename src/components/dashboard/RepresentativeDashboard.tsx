@@ -326,7 +326,7 @@ const RepresentativeDashboard: React.FC<RepresentativeDashboardProps> = ({
     try {
       setIsLoadingDocuments(true);
       const { documentService } = await import("../../lib/supabase");
-      const documents = await documentService.getByRepresentativeId(currentUser.id);
+      const documents = await documentService.getRepresentativeDocuments(currentUser.id);
       setRepresentativeDocuments(documents || []);
     } catch (error) {
       console.error("Error loading representative documents:", error);
