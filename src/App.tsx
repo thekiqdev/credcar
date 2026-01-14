@@ -70,13 +70,10 @@ function App() {
         />
 
         {/* Rotas Protegidas para Clientes */}
+        {/* ClientDashboard gerencia sua própria autenticação internamente */}
         <Route
           path="/cliente"
-          element={
-            <ProtectedRoute allowedRoles={['Cliente']}>
-              <ClientDashboard />
-            </ProtectedRoute>
-          }
+          element={<ClientDashboard />}
         />
 
         {/* Rotas de Vendas (Protegidas) */}

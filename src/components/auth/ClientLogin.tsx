@@ -54,21 +54,34 @@ const ClientLogin = ({ onLogin = () => {} }: ClientLoginProps) => {
       // Remove formatting from CPF for authentication
       const cleanCpf = cpf.replace(/\D/g, "");
 
-      // Try to authenticate as client using CPF
-      console.log("Attempting client login for CPF:", cleanCpf);
+      // Validar CPF básico
+      if (cleanCpf.length !== 11) {
+        setError("CPF inválido. Por favor, verifique o CPF informado.");
+        setIsLoading(false);
+        return;
+      }
 
-      // For now, we'll use a simple authentication check
-      // In a real implementation, this would check against the database
-      if (cleanCpf && password) {
-        // Create a mock client user for demonstration
+      // Validar senha
+      if (!password || password.length < 4) {
+        setError("Senha deve ter pelo menos 4 caracteres.");
+        setIsLoading(false);
+        return;
+      }
+
+      // Tentar autenticar cliente usando serviço real
+      console.log("Attempting client login for CPF:", cleanCpf);
+      const client = await clientService.authenticateWithCpf(cleanCpf, password);
+
+      if (client) {
+        // Criar objeto de usuário compatível com authService
         const clientUser = {
-          id: cleanCpf,
-          name: "Cliente",
-          full_name: "Cliente",
-          email: `${cleanCpf}@cliente.com`,
+          id: client.id.toString(),
+          name: client.full_name || client.name || "Cliente",
+          full_name: client.full_name || client.name || "Cliente",
+          email: client.email || `${cleanCpf}@cliente.com`,
           role: "Cliente",
           status: "Ativo" as const,
-          phone: "",
+          phone: client.phone || "",
           cnpj: "",
           company_name: "",
           razao_social: "",
@@ -77,12 +90,13 @@ const ClientLogin = ({ onLogin = () => {} }: ClientLoginProps) => {
           commission_code: "",
           total_sales: 0,
           contracts_count: 0,
-          created_at: new Date().toISOString(),
+          created_at: client.created_at || new Date().toISOString(),
         };
 
+        // Armazenar usuário no localStorage através do authService
         authService.setCurrentUser(clientUser);
         onLogin();
-        console.log("Client login successful");
+        console.log("Client login successful:", clientUser.name);
       } else {
         setError(
           "CPF ou senha incorretos. Verifique suas credenciais e tente novamente.",

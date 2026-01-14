@@ -1551,6 +1551,79 @@ export const contractService = {
       throw error;
     }
   },
+
+  // Get all contracts by client ID
+  async getByClientId(clientId: number) {
+    try {
+      const { data, error } = await supabase
+        .from("contracts")
+        .select(
+          `
+          *,
+          clients!inner (
+            id,
+            full_name,
+            name,
+            email,
+            phone,
+            cpf_cnpj,
+            address_street,
+            address_number,
+            address_complement,
+            address_neighborhood,
+            address_city,
+            address_state,
+            address_zip
+          ),
+          planos!inner (
+            id,
+            nome,
+            descricao,
+            comissao
+          ),
+          profiles!inner (
+            id,
+            full_name,
+            email,
+            phone,
+            commission_code
+          ),
+          quotas (
+            id,
+            quota_number,
+            groups (
+              id,
+              name,
+              description
+            )
+          ),
+          invoices (
+            id,
+            invoice_code,
+            value,
+            due_date,
+            status,
+            paid_at,
+            payment_link_pix,
+            payment_link_boleto,
+            installment_number
+          )
+        `,
+        )
+        .eq("client_id", clientId)
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        console.error("Error fetching contracts by client:", error);
+        throw error;
+      }
+
+      return data || [];
+    } catch (error) {
+      console.error("Error in contractService.getByClientId:", error);
+      throw error;
+    }
+  },
 };
 
 // Dashboard data service
@@ -3240,20 +3313,148 @@ export const clientService = {
     try {
       console.log("Attempting to authenticate client with CPF:", cpf);
 
+      // Import password utilities
+      const { hashPassword, verifyPassword } = await import("./password-utils");
+
       // Clean CPF (remove formatting)
       const cleanCpf = cpf.replace(/\D/g, "");
 
-      // Find client by CPF
-      const { data: client, error } = await supabase
-        .from("clients")
-        .select("*")
-        .eq("cpf_cnpj", cleanCpf)
-        .single();
+      // Validar CPF básico
+      if (cleanCpf.length !== 11 && cleanCpf.length !== 14) {
+        console.log("Invalid CPF/CNPJ length:", cleanCpf.length);
+        return null;
+      }
 
-      if (error) {
-        console.log("Client not found with CPF:", cleanCpf);
-        if (error.code === "PGRST116") return null; // Not found
-        throw error;
+      // Não logar CPF completo por segurança
+      console.log("Searching for client...");
+
+      // Find client by CPF
+      // Tentar primeiro sem password_hash para evitar erro 406 se campo não existir
+      let { data: client, error } = await supabase
+        .from("clients")
+        .select("id, full_name, name, email, phone, cpf_cnpj, created_at, updated_at, address, address_street, address_number, address_complement, address_neighborhood, address_city, address_state, address_zip")
+        .eq("cpf_cnpj", cleanCpf)
+        .maybeSingle(); // Usar maybeSingle() ao invés de single() para não lançar erro se não encontrar
+      
+      // Log mínimo para debug (sem dados sensíveis)
+      if (client) {
+        console.log("Client found in first query");
+      } else {
+        console.log("Client not found in first query, trying alternatives...");
+      }
+
+      // Se deu erro 406, tentar com password_hash incluído
+      if (error && error.code === "PGRST406") {
+        console.log("Retrying query with password_hash field...");
+        const retryResult = await supabase
+          .from("clients")
+          .select("id, full_name, name, email, phone, cpf_cnpj, password_hash, created_at, updated_at, address, address_street, address_number, address_complement, address_neighborhood, address_city, address_state, address_zip")
+          .eq("cpf_cnpj", cleanCpf)
+          .maybeSingle();
+        
+        if (!retryResult.error) {
+          client = retryResult.data;
+          error = null;
+        } else {
+          error = retryResult.error;
+        }
+      }
+
+      // Se ainda não encontrou, tentar buscar com LIKE para ver se há formatação diferente
+      if (!client && !error) {
+        console.log("Trying LIKE search...");
+        
+        // Tentar buscar com LIKE (sem formatação)
+        const likeResult = await supabase
+          .from("clients")
+          .select("id, full_name, name, email, phone, cpf_cnpj, password_hash, created_at, updated_at, address, address_street, address_number, address_complement, address_neighborhood, address_city, address_state, address_zip")
+          .ilike("cpf_cnpj", `%${cleanCpf}%`)
+          .maybeSingle();
+        
+        if (likeResult.data) {
+          console.log("Client found with LIKE search");
+          client = likeResult.data;
+        }
+        
+        if (likeResult.data) {
+          console.log("Found client with LIKE search:", likeResult.data.cpf_cnpj);
+          client = likeResult.data;
+        } else {
+          // Tentar buscar removendo formatação do banco também
+          console.log("Trying to find client by removing formatting from database CPFs...");
+          
+          // Tentar buscar todos e filtrar manualmente (sem logar dados sensíveis)
+          const allClientsResult = await supabase
+            .from("clients")
+            .select("id, full_name, name, email, phone, cpf_cnpj, created_at, updated_at, address, address_street, address_number, address_complement, address_neighborhood, address_city, address_state, address_zip");
+          
+          if (allClientsResult.data) {
+            const foundClient = allClientsResult.data.find(c => {
+              if (!c.cpf_cnpj) return false;
+              const dbCpf = c.cpf_cnpj.replace(/\D/g, "");
+              return dbCpf === cleanCpf;
+            });
+            
+            if (foundClient) {
+              console.log("Found client by manual filtering");
+              // Buscar password_hash separadamente se não foi incluído
+              if (!foundClient.password_hash) {
+                const passwordResult = await supabase
+                  .from("clients")
+                  .select("password_hash")
+                  .eq("id", foundClient.id)
+                  .maybeSingle();
+                
+                if (passwordResult.data) {
+                  foundClient.password_hash = passwordResult.data.password_hash;
+                }
+              }
+              client = foundClient;
+            } else {
+              console.log("Client not found even with manual filtering");
+            }
+          }
+        }
+      }
+      
+      // Se ainda não encontrou e deu erro
+      if (error && !client) {
+        console.log("Error fetching client:", error);
+        console.log("Error code:", error.code);
+        console.log("Error message:", error.message);
+        
+        if (error.code === "PGRST116") {
+          // Não logar CPF por segurança
+          console.log("Client not found");
+          return null; // Not found
+        }
+        
+        // Se for erro 406, pode ser problema de RLS ou campo não existente
+        if (error && error.code === "PGRST406") {
+          console.error("406 Error - Possible RLS issue or missing password_hash column");
+          console.error("Please check:");
+          console.error("1. If password_hash column exists in clients table");
+          console.error("2. If RLS policies allow reading clients");
+          // Tentar buscar sem password_hash como fallback
+          const fallbackResult = await supabase
+            .from("clients")
+            .select("id, full_name, name, email, phone, cpf_cnpj, created_at, updated_at")
+            .eq("cpf_cnpj", cleanCpf)
+            .maybeSingle();
+          
+          if (!fallbackResult.error && fallbackResult.data) {
+            client = fallbackResult.data;
+            // password_hash será null, mas podemos continuar com autenticação antiga
+            console.log("Using fallback query without password_hash");
+            error = null;
+          } else {
+            console.log("Fallback query also failed");
+            return null;
+          }
+        } else if (error && error.code !== "PGRST116") {
+          console.error("Unexpected error:", error);
+          throw error;
+        }
       }
 
       if (!client) {
@@ -3261,22 +3462,52 @@ export const clientService = {
         return null;
       }
 
-      console.log("Client found:", {
-        id: client.id,
-        name: client.full_name || client.name,
-        cpf: client.cpf_cnpj,
-      });
+      // Log mínimo (sem dados sensíveis)
+      console.log("Client found, verifying password...");
 
-      // For demo purposes, we'll check if password matches a simple pattern
-      // In production, implement proper password hashing and verification
-      const expectedPassword = `cliente${client.id}`; // Simple pattern: cliente + ID
-
-      if (password !== expectedPassword && password !== "123456") {
-        console.log("Password verification failed for client:", client.id);
-        return null;
+      // Buscar password_hash se não foi incluído na query inicial
+      if (!client.password_hash) {
+        console.log("Fetching password_hash separately...");
+        const passwordResult = await supabase
+          .from("clients")
+          .select("password_hash")
+          .eq("id", client.id)
+          .maybeSingle();
+        
+        if (passwordResult.data && passwordResult.data.password_hash) {
+          client.password_hash = passwordResult.data.password_hash;
+          console.log("Password hash retrieved");
+        } else {
+          console.log("No password_hash found in database");
+        }
       }
 
-      console.log("Client authenticated successfully:", client.id);
+      // Verificar senha usando hash
+      if (client.password_hash) {
+        // Se tem hash armazenado, verificar usando hash
+        console.log("Verifying password with hash...");
+        const isValid = await verifyPassword(password, client.password_hash);
+        if (!isValid) {
+          console.log("Password hash verification failed");
+          // Não logar dados sensíveis - apenas erro genérico
+          return null;
+        }
+        console.log("Password hash verification successful");
+      } else {
+        // Compatibilidade com sistema antigo: verificar padrões antigos
+        // Isso permite migração gradual
+        const expectedPassword = `cliente${client.id}`;
+        if (password !== expectedPassword && password !== "123456") {
+          // Não logar dados sensíveis - apenas erro genérico
+          console.log("Authentication failed: invalid credentials");
+          return null;
+        }
+        // Se autenticou com senha antiga, atualizar para hash
+        console.log("Migrating password to hash");
+        await this.updatePassword(client.id, password);
+      }
+
+      console.log("Authentication successful");
       return client;
     } catch (error) {
       console.error("Error in authenticateWithCpf:", error);
@@ -3287,17 +3518,49 @@ export const clientService = {
   // Update client password
   async updatePassword(clientId: number, newPassword: string) {
     try {
-      console.log("Updating password for client:", clientId);
+      console.log("Updating password for client ID:", clientId);
 
-      // For demo purposes, we'll store the password in localStorage
-      // In production, this should be properly hashed and stored in the database
-      const clientPasswords = JSON.parse(
-        localStorage.getItem("clientPasswords") || "{}",
-      );
-      clientPasswords[clientId] = newPassword;
-      localStorage.setItem("clientPasswords", JSON.stringify(clientPasswords));
+      // Import password utilities
+      const { hashPassword } = await import("./password-utils");
 
-      console.log("Client password updated successfully:", clientId);
+      // Criar hash da senha
+      const passwordHash = await hashPassword(newPassword);
+      console.log("Password hash created (first 10 chars):", passwordHash.substring(0, 10) + "...");
+
+      // Atualizar no banco de dados
+      const { data, error } = await supabase
+        .from("clients")
+        .update({
+          password_hash: passwordHash,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", clientId)
+        .select("id, password_hash")
+        .single();
+
+      if (error) {
+        console.error("Error updating password in database:", error);
+        throw error;
+      }
+
+      if (data && data.password_hash) {
+        console.log("Password hash saved successfully");
+        // Verificar se foi salvo corretamente
+        const verifyResult = await supabase
+          .from("clients")
+          .select("password_hash")
+          .eq("id", clientId)
+          .maybeSingle();
+        
+        if (verifyResult.data && verifyResult.data.password_hash) {
+          console.log("Password hash verified in database");
+        } else {
+          console.warn("Password hash not found after save - possible RLS issue");
+        }
+      } else {
+        console.warn("Password hash not returned in update response");
+      }
+
       return true;
     } catch (error) {
       console.error("Error updating client password:", error);
@@ -3530,17 +3793,7 @@ export const clientService = {
     try {
       const { data, error } = await supabase
         .from("clients")
-        .select(
-          `
-          *,
-          profiles!inner (
-            id,
-            full_name,
-            email,
-            commission_code
-          )
-        `,
-        )
+        .select("*")
         .eq("id", clientId)
         .single();
 
@@ -3691,6 +3944,372 @@ export const clientService = {
         totalClients: 0,
         newClientsThisMonth: 0,
       };
+    }
+  },
+};
+
+// Invoice service
+export const invoiceService = {
+  // Get all invoices by client ID (through contracts)
+  async getByClientId(clientId: number) {
+    try {
+      // Buscar todos os contratos do cliente primeiro
+      const contracts = await contractService.getByClientId(clientId);
+      const contractIds = contracts.map((c: any) => c.id);
+
+      if (contractIds.length === 0) {
+        return [];
+      }
+
+      // Buscar todas as faturas dos contratos do cliente
+      const { data, error } = await supabase
+        .from("invoices")
+        .select(`
+          *,
+          contracts!inner (
+            id,
+            contract_number,
+            client_id
+          )
+        `)
+        .in("contract_id", contractIds)
+        .order("due_date", { ascending: true });
+
+      if (error) {
+        console.error("Error fetching invoices by client:", error);
+        throw error;
+      }
+
+      return data || [];
+    } catch (error) {
+      console.error("Error in invoiceService.getByClientId:", error);
+      throw error;
+    }
+  },
+
+  // Get invoice by ID with full details
+  async getById(invoiceId: string) {
+    try {
+      const { data, error } = await supabase
+        .from("invoices")
+        .select(`
+          *,
+          contracts!inner (
+            id,
+            contract_number,
+            client_id,
+            clients (
+              id,
+              full_name,
+              name,
+              email,
+              cpf_cnpj
+            )
+          )
+        `)
+        .eq("id", invoiceId)
+        .single();
+
+      if (error) {
+        console.error("Error fetching invoice by ID:", error);
+        throw error;
+      }
+
+      return data;
+    } catch (error) {
+      console.error("Error in invoiceService.getById:", error);
+      throw error;
+    }
+  },
+
+  // Get invoices by contract ID
+  async getByContractId(contractId: number) {
+    try {
+      const { data, error } = await supabase
+        .from("invoices")
+        .select("*")
+        .eq("contract_id", contractId)
+        .order("installment_number", { ascending: true });
+
+      if (error) {
+        console.error("Error fetching invoices by contract:", error);
+        throw error;
+      }
+
+      return data || [];
+    } catch (error) {
+      console.error("Error in invoiceService.getByContractId:", error);
+      throw error;
+    }
+  },
+};
+
+// Anticipation service
+export const anticipationService = {
+  // Get all anticipations by client ID (through contracts)
+  async getByClientId(clientId: number) {
+    try {
+      // Buscar todos os contratos do cliente primeiro
+      const contracts = await contractService.getByClientId(clientId);
+      const contractIds = contracts.map((c: any) => c.id);
+
+      if (contractIds.length === 0) {
+        return [];
+      }
+
+      // Buscar todas as antecipações dos contratos do cliente
+      const { data, error } = await supabase
+        .from("anticipations")
+        .select(`
+          *,
+          contracts!inner (
+            id,
+            contract_number,
+            client_id
+          )
+        `)
+        .in("contract_id", contractIds)
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        console.error("Error fetching anticipations by client:", error);
+        throw error;
+      }
+
+      return data || [];
+    } catch (error) {
+      console.error("Error in anticipationService.getByClientId:", error);
+      throw error;
+    }
+  },
+
+  // Get anticipation by ID with full details
+  async getById(anticipationId: string) {
+    try {
+      const { data, error } = await supabase
+        .from("anticipations")
+        .select(`
+          *,
+          contracts!inner (
+            id,
+            contract_number,
+            client_id,
+            clients (
+              id,
+              full_name,
+              name,
+              email,
+              cpf_cnpj
+            )
+          )
+        `)
+        .eq("id", anticipationId)
+        .single();
+
+      if (error) {
+        console.error("Error fetching anticipation by ID:", error);
+        throw error;
+      }
+
+      return data;
+    } catch (error) {
+      console.error("Error in anticipationService.getById:", error);
+      throw error;
+    }
+  },
+
+  // Create anticipation request
+  async createRequest(
+    contractId: number,
+    data: {
+      installmentsCount: number;
+      reason?: string;
+      notes?: string;
+    }
+  ) {
+    try {
+      // Buscar contrato para obter informações necessárias
+      const contract = await contractService.getById(contractId);
+      if (!contract) {
+        throw new Error("Contrato não encontrado");
+      }
+
+      // Buscar faturas pendentes do contrato
+      const invoices = await invoiceService.getByContractId(contractId);
+      const pendingInvoices = invoices.filter(
+        (inv: any) => inv.status === "pending" || inv.status === "Pendente"
+      );
+
+      if (pendingInvoices.length < data.installmentsCount) {
+        throw new Error(
+          `Não há parcelas suficientes pendentes. Disponível: ${pendingInvoices.length}, Solicitado: ${data.installmentsCount}`
+        );
+      }
+
+      // Calcular valor original (soma das parcelas pendentes selecionadas)
+      const selectedInvoices = pendingInvoices.slice(0, data.installmentsCount);
+      const originalAmount = selectedInvoices.reduce(
+        (sum: number, inv: any) =>
+          sum + parseFloat(inv.value || inv.amount || "0"),
+        0
+      );
+
+      // Buscar condições de antecipação baseado na faixa de crédito do contrato
+      let discountPercentage = 0;
+      let discountAmount = 0;
+      let finalAmount = originalAmount;
+
+      try {
+        // Buscar faixa de crédito do contrato diretamente
+        if (contract.id_faixa_de_credito) {
+          const { data: creditRange, error: rangeError } = await supabase
+            .from("faixas_de_credito")
+            .select("*")
+            .eq("id", contract.id_faixa_de_credito)
+            .single();
+
+          if (!rangeError && creditRange) {
+            // Buscar condições de antecipação para esta faixa
+            const { data: conditions, error: conditionsError } = await supabase
+              .from("condicoes_antecipacao")
+              .select("*")
+              .eq("faixa_credito_id", creditRange.id)
+              .order("percentual", { ascending: false });
+
+            if (!conditionsError && conditions && conditions.length > 0) {
+              // Usar a condição com maior percentual disponível
+              const bestCondition = conditions[0];
+              discountPercentage = bestCondition.percentual || 0;
+              discountAmount = (originalAmount * discountPercentage) / 100;
+              finalAmount = originalAmount - discountAmount;
+            }
+          }
+        }
+      } catch (calcError) {
+        console.warn("Erro ao calcular desconto de antecipação, usando valor sem desconto:", calcError);
+        // Continua sem desconto se houver erro
+      }
+
+      // Gerar número da antecipação
+      const { data: lastAnticipation } = await supabase
+        .from("anticipations")
+        .select("anticipation_number")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .single();
+
+      let anticipationNumber = "ANT-000001";
+      if (lastAnticipation && lastAnticipation.anticipation_number) {
+        const lastNumber = parseInt(lastAnticipation.anticipation_number.replace("ANT-", ""));
+        anticipationNumber = `ANT-${String(lastNumber + 1).padStart(6, "0")}`;
+      }
+
+      // Criar solicitação de antecipação
+      const { data: anticipation, error: insertError } = await supabase
+        .from("anticipations")
+        .insert({
+          contract_id: contractId,
+          anticipation_number: anticipationNumber,
+          installments_count: data.installmentsCount,
+          original_amount: originalAmount,
+          discount_percentage: discountPercentage,
+          discount_amount: discountAmount,
+          final_amount: finalAmount,
+          status: "pending",
+          notes: data.reason || data.notes || "",
+        })
+        .select()
+        .single();
+
+      if (insertError) {
+        console.error("Error creating anticipation request:", insertError);
+        throw insertError;
+      }
+
+      return anticipation;
+    } catch (error) {
+      console.error("Error in anticipationService.createRequest:", error);
+      throw error;
+    }
+  },
+
+  // Calculate anticipation value (preview before creating)
+  async calculateAnticipationValue(
+    contractId: number,
+    installmentsCount: number
+  ) {
+    try {
+      // Buscar faturas pendentes do contrato
+      const invoices = await invoiceService.getByContractId(contractId);
+      const pendingInvoices = invoices.filter(
+        (inv: any) => inv.status === "pending" || inv.status === "Pendente"
+      );
+
+      if (pendingInvoices.length < installmentsCount) {
+        return {
+          available: pendingInvoices.length,
+          requested: installmentsCount,
+          canProceed: false,
+          originalAmount: 0,
+          discountPercentage: 0,
+          discountAmount: 0,
+          finalAmount: 0,
+        };
+      }
+
+      // Calcular valor original
+      const selectedInvoices = pendingInvoices.slice(0, installmentsCount);
+      const originalAmount = selectedInvoices.reduce(
+        (sum: number, inv: any) =>
+          sum + parseFloat(inv.value || inv.amount || "0"),
+        0
+      );
+
+      // Buscar condições de antecipação
+      let discountPercentage = 0;
+      let discountAmount = 0;
+      let finalAmount = originalAmount;
+
+      try {
+        const contract = await contractService.getById(contractId);
+        if (contract && contract.id_faixa_de_credito) {
+          const { data: creditRange, error: rangeError } = await supabase
+            .from("faixas_de_credito")
+            .select("*")
+            .eq("id", contract.id_faixa_de_credito)
+            .single();
+
+          if (!rangeError && creditRange) {
+            const { data: conditions, error: conditionsError } = await supabase
+              .from("condicoes_antecipacao")
+              .select("*")
+              .eq("faixa_credito_id", creditRange.id)
+              .order("percentual", { ascending: false });
+
+            if (!conditionsError && conditions && conditions.length > 0) {
+              const bestCondition = conditions[0];
+              discountPercentage = bestCondition.percentual || 0;
+              discountAmount = (originalAmount * discountPercentage) / 100;
+              finalAmount = originalAmount - discountAmount;
+            }
+          }
+        }
+      } catch (calcError) {
+        console.warn("Erro ao calcular desconto:", calcError);
+      }
+
+      return {
+        available: pendingInvoices.length,
+        requested: installmentsCount,
+        canProceed: true,
+        originalAmount,
+        discountPercentage,
+        discountAmount,
+        finalAmount,
+      };
+    } catch (error) {
+      console.error("Error in anticipationService.calculateAnticipationValue:", error);
+      throw error;
     }
   },
 };

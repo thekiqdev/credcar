@@ -132,6 +132,9 @@ import {
   Key,
   Copy,
   Pencil,
+  Lock,
+  EyeOff,
+  AlertCircle,
 } from "lucide-react";
 import ContractCreationFlow from "@/components/sales/ContractCreationFlow";
 import ContractTemplateManagement from "@/components/sales/ContractTemplateManagement";
@@ -608,6 +611,15 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [editingClient, setEditingClient] = useState(null);
   const [isSavingClient, setIsSavingClient] = useState(false);
   const [clientsSearch, setClientsSearch] = useState("");
+  
+  // Client password change state
+  const [newClientPassword, setNewClientPassword] = useState("");
+  const [confirmClientPassword, setConfirmClientPassword] = useState("");
+  const [showNewClientPassword, setShowNewClientPassword] = useState(false);
+  const [showConfirmClientPassword, setShowConfirmClientPassword] = useState(false);
+  const [clientPasswordError, setClientPasswordError] = useState<string | null>(null);
+  const [clientPasswordSuccess, setClientPasswordSuccess] = useState<string | null>(null);
+  const [isChangingClientPassword, setIsChangingClientPassword] = useState(false);
 
   // Global search state
   const [globalSearch, setGlobalSearch] = useState("");
@@ -1073,6 +1085,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const handleEditClient = (client: any) => {
     setEditingClient(client);
     setIsClientEditModalOpen(true);
+    // Limpar estados de senha ao abrir modal
+    setNewClientPassword("");
+    setConfirmClientPassword("");
+    setClientPasswordError(null);
+    setClientPasswordSuccess(null);
   };
 
   // Função para salvar alterações do cliente
@@ -1133,6 +1150,50 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       alert(error instanceof Error ? error.message : "Erro desconhecido");
     } finally {
       setIsSavingClient(false);
+    }
+  };
+
+  // Função para alterar senha do cliente
+  const handleChangeClientPassword = async () => {
+    if (!editingClient) return;
+
+    setClientPasswordError(null);
+    setClientPasswordSuccess(null);
+
+    // Validações
+    if (!newClientPassword || !confirmClientPassword) {
+      setClientPasswordError("Por favor, preencha todos os campos.");
+      return;
+    }
+
+    if (newClientPassword.length < 6) {
+      setClientPasswordError("A senha deve ter pelo menos 6 caracteres.");
+      return;
+    }
+
+    if (newClientPassword !== confirmClientPassword) {
+      setClientPasswordError("As senhas não coincidem.");
+      return;
+    }
+
+    setIsChangingClientPassword(true);
+
+    try {
+      await clientService.updatePassword(editingClient.id, newClientPassword);
+      
+      setClientPasswordSuccess("Senha alterada com sucesso!");
+      setNewClientPassword("");
+      setConfirmClientPassword("");
+
+      // Limpar mensagem de sucesso após 5 segundos
+      setTimeout(() => {
+        setClientPasswordSuccess(null);
+      }, 5000);
+    } catch (error) {
+      console.error("Error changing client password:", error);
+      setClientPasswordError("Erro ao alterar senha. Tente novamente.");
+    } finally {
+      setIsChangingClientPassword(false);
     }
   };
 
@@ -10625,6 +10686,112 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       placeholder="Endereço completo (gerado automaticamente)"
                     />
                   </div>
+                </div>
+
+                {/* Alteração de Senha */}
+                <div className="space-y-4 border-t pt-4">
+                  <div className="flex items-center gap-2">
+                    <Lock className="h-5 w-5 text-muted-foreground" />
+                    <h3 className="text-lg font-semibold">Alterar Senha</h3>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Defina uma nova senha para o cliente acessar o painel
+                  </p>
+
+                  {clientPasswordError && (
+                    <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <AlertCircle className="h-4 w-4 text-red-600" />
+                        <p className="text-sm text-red-800">{clientPasswordError}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {clientPasswordSuccess && (
+                    <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <CheckCircle className="h-4 w-4 text-green-600" />
+                        <p className="text-sm text-green-800">{clientPasswordSuccess}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="new-client-password">Nova Senha</Label>
+                      <div className="relative">
+                        <Input
+                          id="new-client-password"
+                          type={showNewClientPassword ? "text" : "password"}
+                          value={newClientPassword}
+                          onChange={(e) => setNewClientPassword(e.target.value)}
+                          className="pr-10"
+                          placeholder="Digite a nova senha (mínimo 6 caracteres)"
+                          minLength={6}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowNewClientPassword(!showNewClientPassword)}
+                          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                        >
+                          {showNewClientPassword ? (
+                            <EyeOff className="h-4 w-4" />
+                          ) : (
+                            <Eye className="h-4 w-4" />
+                          )}
+                        </button>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        A senha deve ter pelo menos 6 caracteres
+                      </p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="confirm-client-password">Confirmar Nova Senha</Label>
+                      <div className="relative">
+                        <Input
+                          id="confirm-client-password"
+                          type={showConfirmClientPassword ? "text" : "password"}
+                          value={confirmClientPassword}
+                          onChange={(e) => setConfirmClientPassword(e.target.value)}
+                          className="pr-10"
+                          placeholder="Confirme a nova senha"
+                          minLength={6}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowConfirmClientPassword(!showConfirmClientPassword)}
+                          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                        >
+                          {showConfirmClientPassword ? (
+                            <EyeOff className="h-4 w-4" />
+                          ) : (
+                            <Eye className="h-4 w-4" />
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <Button
+                    type="button"
+                    onClick={handleChangeClientPassword}
+                    disabled={isChangingClientPassword || !newClientPassword || !confirmClientPassword}
+                    variant="outline"
+                    className="w-full md:w-auto"
+                  >
+                    {isChangingClientPassword ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-current border-t-transparent mr-2"></div>
+                        Alterando...
+                      </>
+                    ) : (
+                      <>
+                        <Lock className="mr-2 h-4 w-4" />
+                        Alterar Senha
+                      </>
+                    )}
+                  </Button>
                 </div>
               </div>
             )}
