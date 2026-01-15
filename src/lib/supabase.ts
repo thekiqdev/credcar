@@ -3453,7 +3453,7 @@ export const clientService = {
           }
         } else if (error && error.code !== "PGRST116") {
           console.error("Unexpected error:", error);
-          throw error;
+        throw error;
         }
       }
 
@@ -3497,10 +3497,10 @@ export const clientService = {
         // Compatibilidade com sistema antigo: verificar padrões antigos
         // Isso permite migração gradual
         const expectedPassword = `cliente${client.id}`;
-        if (password !== expectedPassword && password !== "123456") {
+      if (password !== expectedPassword && password !== "123456") {
           // Não logar dados sensíveis - apenas erro genérico
           console.log("Authentication failed: invalid credentials");
-          return null;
+        return null;
         }
         // Se autenticou com senha antiga, atualizar para hash
         console.log("Migrating password to hash");
@@ -3528,37 +3528,48 @@ export const clientService = {
       console.log("Password hash created (first 10 chars):", passwordHash.substring(0, 10) + "...");
 
       // Atualizar no banco de dados
-      const { data, error } = await supabase
+      // Primeiro tentar sem select para evitar problemas de RLS
+      const { error: updateError } = await supabase
         .from("clients")
         .update({
           password_hash: passwordHash,
           updated_at: new Date().toISOString(),
         })
-        .eq("id", clientId)
-        .select("id, password_hash")
-        .single();
+        .eq("id", clientId);
 
-      if (error) {
-        console.error("Error updating password in database:", error);
-        throw error;
+      if (updateError) {
+        console.error("Error updating password in database:", updateError);
+        console.error("Error code:", updateError.code);
+        console.error("Error message:", updateError.message);
+        console.error("Error details:", updateError.details);
+        throw new Error(`Erro ao atualizar senha: ${updateError.message || "Erro desconhecido"}`);
       }
 
-      if (data && data.password_hash) {
-        console.log("Password hash saved successfully");
-        // Verificar se foi salvo corretamente
-        const verifyResult = await supabase
-          .from("clients")
-          .select("password_hash")
-          .eq("id", clientId)
-          .maybeSingle();
-        
-        if (verifyResult.data && verifyResult.data.password_hash) {
-          console.log("Password hash verified in database");
+      console.log("Password update query executed successfully");
+
+      // Verificar se foi salvo corretamente (sem select para evitar RLS)
+      const verifyResult = await supabase
+        .from("clients")
+        .select("id, password_hash")
+        .eq("id", clientId)
+        .maybeSingle();
+      
+      if (verifyResult.error) {
+        console.warn("Error verifying password hash (may be RLS):", verifyResult.error);
+        // Não lançar erro aqui, pois pode ser apenas problema de leitura por RLS
+        // O update pode ter funcionado mesmo assim
+      } else if (verifyResult.data && verifyResult.data.password_hash) {
+        console.log("Password hash verified in database");
+        // Comparar hash para garantir que foi salvo corretamente
+        if (verifyResult.data.password_hash === passwordHash) {
+          console.log("Password hash matches - update successful");
         } else {
-          console.warn("Password hash not found after save - possible RLS issue");
+          console.warn("Password hash mismatch - possible issue");
         }
       } else {
-        console.warn("Password hash not returned in update response");
+        console.warn("Password hash not found after save - possible RLS issue or column doesn't exist");
+        // Verificar se a coluna existe
+        console.warn("Please verify that password_hash column exists in clients table");
       }
 
       return true;

@@ -708,10 +708,10 @@ ${invoice.installmentNumber ? `Parcela: ${invoice.installmentNumber}ª` : ''}
       if (anticipation) {
         setAnticipationSuccess(
           `Solicitação de antecipação de ${quotas} cotas enviada com sucesso!`
-        );
-        setIsAnticipationDialogOpen(false);
-        setAnticipationQuotas("");
-        setAnticipationReason("");
+      );
+      setIsAnticipationDialogOpen(false);
+      setAnticipationQuotas("");
+      setAnticipationReason("");
         setAnticipationCalculation(null);
 
         // Recarregar antecipações
@@ -777,7 +777,7 @@ ${invoice.installmentNumber ? `Parcela: ${invoice.installmentNumber}ª` : ''}
         };
         setSelectedAnticipation(formattedAnticipation);
         setIsAnticipationModalOpen(true);
-      }
+    }
     } catch (error) {
       console.error("Error loading anticipation details:", error);
       // Se não conseguir buscar detalhes, usar dados da lista
@@ -1074,7 +1074,7 @@ ${invoice.installmentNumber ? `Parcela: ${invoice.installmentNumber}ª` : ''}
                 <div className="flex gap-2">
                   <Select value={invoiceFilter} onValueChange={(value: any) => handleFilterChange(value)}>
                     <SelectTrigger className="w-[180px]">
-                      <Filter className="mr-2 h-4 w-4" />
+                    <Filter className="mr-2 h-4 w-4" />
                       <SelectValue placeholder="Filtrar faturas" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1204,52 +1204,52 @@ ${invoice.installmentNumber ? `Parcela: ${invoice.installmentNumber}ª` : ''}
                         </TableRow>
                       ) : (
                         invoices.map((invoice) => (
-                          <TableRow key={invoice.id}>
-                            <TableCell className="font-medium">
-                              {invoice.invoiceNumber}
-                            </TableCell>
-                            <TableCell>{invoice.dueDate}</TableCell>
-                            <TableCell>
-                              R$ {invoice.value.toLocaleString("pt-BR")}
-                            </TableCell>
-                            <TableCell>
-                              <Badge
-                                variant="outline"
-                                className={
-                                  invoice.status === "paid"
-                                    ? "bg-green-500 text-white hover:bg-green-600 border-green-500"
-                                    : invoice.status === "overdue"
-                                      ? "bg-red-500 text-white hover:bg-red-600 border-red-500"
-                                      : "bg-yellow-500 text-white hover:bg-yellow-600 border-yellow-500"
-                                }
-                              >
-                                {invoice.status === "paid" && "PAGO"}
-                                {invoice.status === "pending" && "PENDENTE"}
-                                {invoice.status === "overdue" && "VENCIDO"}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>{invoice.paymentMethod || "-"}</TableCell>
-                            <TableCell className="text-right">
-                              <div className="flex gap-2 justify-end">
+                        <TableRow key={invoice.id}>
+                          <TableCell className="font-medium">
+                            {invoice.invoiceNumber}
+                          </TableCell>
+                          <TableCell>{invoice.dueDate}</TableCell>
+                          <TableCell>
+                            R$ {invoice.value.toLocaleString("pt-BR")}
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              variant="outline"
+                              className={
+                                invoice.status === "paid"
+                                  ? "bg-green-500 text-white hover:bg-green-600 border-green-500"
+                                  : invoice.status === "overdue"
+                                    ? "bg-red-500 text-white hover:bg-red-600 border-red-500"
+                                    : "bg-yellow-500 text-white hover:bg-yellow-600 border-yellow-500"
+                              }
+                            >
+                              {invoice.status === "paid" && "PAGO"}
+                              {invoice.status === "pending" && "PENDENTE"}
+                              {invoice.status === "overdue" && "VENCIDO"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{invoice.paymentMethod || "-"}</TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex gap-2 justify-end">
                                 <Button 
                                   variant="ghost" 
                                   size="sm"
                                   onClick={() => handleViewInvoice(invoice.id)}
                                   title="Visualizar fatura"
                                 >
-                                  <Eye className="h-4 w-4" />
-                                </Button>
+                                <Eye className="h-4 w-4" />
+                              </Button>
                                 <Button 
                                   variant="outline" 
                                   size="sm"
                                   onClick={() => handleDownloadInvoice(invoice)}
                                   title="Download da fatura"
                                 >
-                                  <Download className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            </TableCell>
-                          </TableRow>
+                                <Download className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
                         ))
                       )}
                     </TableBody>
@@ -1334,7 +1334,7 @@ ${invoice.installmentNumber ? `Parcela: ${invoice.installmentNumber}ª` : ''}
                                 </div>
                                 <div className="col-span-2 border-t pt-2">
                                   <span className="text-blue-700">Valor Final:</span>
-                                  <p className="text-lg font-bold text-blue-900">
+                          <p className="text-lg font-bold text-blue-900">
                                     R$ {anticipationCalculation.finalAmount.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                                   </p>
                                 </div>
@@ -1345,7 +1345,7 @@ ${invoice.installmentNumber ? `Parcela: ${invoice.installmentNumber}ª` : ''}
                                 <span className="text-blue-700">Valor Final:</span>
                                 <p className="text-lg font-bold text-blue-900">
                                   R$ {anticipationCalculation.finalAmount.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
-                                </p>
+                          </p>
                               </div>
                             )}
                           </div>

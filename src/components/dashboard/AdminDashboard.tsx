@@ -1179,19 +1179,24 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     setIsChangingClientPassword(true);
 
     try {
-      await clientService.updatePassword(editingClient.id, newClientPassword);
+      const result = await clientService.updatePassword(editingClient.id, newClientPassword);
       
-      setClientPasswordSuccess("Senha alterada com sucesso!");
-      setNewClientPassword("");
-      setConfirmClientPassword("");
+      if (result) {
+        setClientPasswordSuccess("Senha alterada com sucesso!");
+        setNewClientPassword("");
+        setConfirmClientPassword("");
 
-      // Limpar mensagem de sucesso após 5 segundos
-      setTimeout(() => {
-        setClientPasswordSuccess(null);
-      }, 5000);
-    } catch (error) {
+        // Limpar mensagem de sucesso após 5 segundos
+        setTimeout(() => {
+          setClientPasswordSuccess(null);
+        }, 5000);
+      } else {
+        setClientPasswordError("Erro ao alterar senha. Verifique se a coluna password_hash existe no banco de dados.");
+      }
+    } catch (error: any) {
       console.error("Error changing client password:", error);
-      setClientPasswordError("Erro ao alterar senha. Tente novamente.");
+      const errorMessage = error?.message || error?.toString() || "Erro desconhecido";
+      setClientPasswordError(`Erro ao alterar senha: ${errorMessage}. Verifique se a migração foi aplicada no Supabase.`);
     } finally {
       setIsChangingClientPassword(false);
     }
