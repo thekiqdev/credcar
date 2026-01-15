@@ -137,33 +137,8 @@ const DocumentApproval: React.FC<DocumentApprovalProps> = ({
         return;
       }
 
-      // Verificar se todos os documentos foram aprovados
-      const { data: allDocuments, error: fetchError } = await supabase
-        .from('representative_documents')
-        .select('status')
-        .eq('representative_id', representativeId);
-
-      if (fetchError) {
-        console.error('Error fetching documents for approval check:', fetchError);
-      } else {
-        // Verificar se todos os documentos enviados estão aprovados
-        const sentDocuments = allDocuments?.filter(doc => doc.status !== 'Pendente' || doc.status !== 'Reprovado');
-        const allApproved = sentDocuments?.every(doc => doc.status === 'Aprovado');
-        
-        if (allApproved && sentDocuments && sentDocuments.length > 0) {
-          // Atualizar status de documentos aprovados na tabela profiles
-          const { error: profileError } = await supabase
-            .from('profiles')
-            .update({ documents_approved: true })
-            .eq('id', representativeId);
-
-          if (profileError) {
-            console.error('Error updating profile documents_approved:', profileError);
-          } else {
-            console.log('✅ Todos os documentos aprovados - perfil atualizado');
-          }
-        }
-      }
+      // REMOVIDO: Aprovação automática do representante após aprovar documentos
+      // A aprovação do representante deve ser feita manualmente pelo admin através do botão "Aprovar Representante"
 
       await loadDocuments();
       onDocumentStatusChange?.();

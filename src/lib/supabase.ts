@@ -2022,7 +2022,9 @@ export const documentService = {
     }
   },
 
-  // Approve all documents for a representative and grant dashboard access
+  // Approve all documents for a representative
+  // NOTA: Esta função apenas aprova os documentos e marca documents_approved: true
+  // O status do representante deve ser alterado manualmente pelo admin através do botão "Aprovar Representante"
   async approveAllDocuments(representativeId: string, approvedBy: string) {
     try {
       // First, approve all documents
@@ -2039,14 +2041,15 @@ export const documentService = {
         throw docsError;
       }
 
-      // Then update the profile to mark documents as approved and change status to active
+      // Update the profile to mark documents as approved (but NOT change status to active)
+      // The representative status must be changed manually by admin through "Aprovar Representante" button
       const { data, error } = await supabase
         .from("profiles")
         .update({
           documents_approved: true,
           documents_approved_at: new Date().toISOString(),
           documents_approved_by: approvedBy,
-          status: "Ativo" as Database["public"]["Enums"]["user_status"],
+          // REMOVIDO: status: "Ativo" - não deve ser alterado automaticamente
         })
         .eq("id", representativeId)
         .select()
@@ -2058,8 +2061,9 @@ export const documentService = {
       }
 
       console.log(
-        "Documents approved and profile activated for:",
+        "Documents approved for representative:",
         representativeId,
+        "(Status must be changed manually by admin)"
       );
       return data;
     } catch (error) {

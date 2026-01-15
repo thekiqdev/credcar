@@ -1735,9 +1735,26 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   const handleApproveRepresentative = async (representative: any) => {
     try {
-      await representativeService.update(representative.id, {
-        status: "Ativo",
-      });
+      // Obter o admin logado para registrar quem aprovou
+      const currentUser = await authService.getCurrentUser();
+      const approvedBy = currentUser?.id || "admin";
+
+      // Atualizar status para "Ativo" e marcar documentos como aprovados
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          status: "Ativo" as Database["public"]["Enums"]["user_status"],
+          documents_approved: true,
+          documents_approved_at: new Date().toISOString(),
+          documents_approved_by: approvedBy,
+        })
+        .eq("id", representative.id);
+
+      if (error) {
+        console.error("Error approving representative:", error);
+        alert("Erro ao aprovar representante. Tente novamente.");
+        return;
+      }
 
       // Refresh both lists
       await loadRepresentatives();
@@ -1822,8 +1839,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
         return;
       }
 
-      // Check if all required documents are now approved for this representative
-      await checkAndUpdateRepresentativeStatus(document.representative_id);
+      // REMOVIDO: Verificação automática de status do representante
+      // A aprovação do representante deve ser feita manualmente pelo admin através do botão "Aprovar Representante"
 
       // Refresh documents
       await loadDocuments();
@@ -1835,64 +1852,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     }
   };
 
-  // Check if all required documents are approved and update representative status
-  const checkAndUpdateRepresentativeStatus = async (
-    representativeId: string,
-  ) => {
-    try {
-      const documents = representativeDocuments[representativeId] || [];
-      const requiredDocuments = [
-        // Documentos da Empresa
-        "cartilha de credenciamento preenchida",
-        "cartão cnpj",
-        "contrato social e última alteração",
-        "comprovante de endereço em nome da empresa",
-        "dados bancários para recebimento das comissões",
-        // Documentos do Sócio
-        "cartilha de credenciamento pf",
-        "comprovante de endereço em nome do sócio",
-        "certidão de antecedentes criminais",
-        "certidão negativa cível de 1º grau",
-        "certidão negativa criminal de 1º grau",
-        "foto de identidade ou cnh (frente)",
-        "foto de identidade ou cnh (verso)"
-      ];
-
-      // Check if all required documents are approved
-      const approvedDocs = documents.filter(
-        (doc) =>
-          doc.status === "Aprovado" &&
-          requiredDocuments.includes(doc.document_type),
-      );
-
-      if (approvedDocs.length === requiredDocuments.length) {
-        // All documents approved, update representative status to "Ativo"
-        const { error } = await supabase
-          .from("profiles")
-          .update({
-            status: "Ativo" as Database["public"]["Enums"]["user_status"],
-            documents_approved: true,
-            documents_approved_at: new Date().toISOString(),
-            documents_approved_by: "admin",
-          })
-          .eq("id", representativeId);
-
-        if (error) {
-          console.error("Error updating representative status:", error);
-        } else {
-          console.log(
-            "Representative status updated to Ativo:",
-            representativeId,
-          );
-          // Refresh representatives list
-          await loadRepresentatives();
-          await loadPendingRegistrations();
-        }
-      }
-    } catch (error) {
-      console.error("Error checking representative status:", error);
-    }
-  };
+  // REMOVIDO: Função checkAndUpdateRepresentativeStatus
+  // A aprovação do representante deve ser feita manualmente pelo admin através do botão "Aprovar Representante"
+  // Não há mais automação - o admin deve aprovar explicitamente mesmo se todos os documentos estiverem aprovados
 
   const handleRejectDocument = async () => {
     if (!selectedDocument || !documentRejectionReason.trim()) {
