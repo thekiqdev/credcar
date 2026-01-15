@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { authService, clientService, contractService, invoiceService, anticipationService } from "@/lib/supabase";
 import ClientLogin from "@/components/auth/ClientLogin";
@@ -155,11 +155,14 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({
   const [invoiceFilter, setInvoiceFilter] = useState<"all" | "paid" | "pending" | "overdue">("all");
   const [allInvoices, setAllInvoices] = useState<any[]>([]); // Todas as faturas (antes do filtro)
 
+  // Memoizar clientId para evitar re-renderizações desnecessárias
+  const clientIdParam = useMemo(() => searchParams.get("clientId"), [searchParams]);
+
   // Check authentication on component mount
   useEffect(() => {
     const checkAuth = async () => {
       const user = authService.getCurrentUser();
-      const clientId = searchParams.get("clientId");
+      const clientId = clientIdParam;
 
       // If user is logged in and is a client, or if accessed from admin/representative with clientId
       if (
@@ -190,7 +193,7 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({
     };
 
     checkAuth();
-  }, [searchParams]);
+  }, [clientIdParam]);
 
   // Função para aplicar filtro de faturas
   const applyInvoiceFilter = React.useCallback((invoicesList: any[], filter: "all" | "paid" | "pending" | "overdue") => {
@@ -307,7 +310,6 @@ ${invoice.installmentNumber ? `Parcela: ${invoice.installmentNumber}ª` : ''}
       try {
         // Determinar ID do cliente
         let clientId: number;
-        const clientIdParam = searchParams.get("clientId");
         
         if (clientIdParam) {
           // Se veio de admin/representante com clientId
@@ -508,7 +510,8 @@ ${invoice.installmentNumber ? `Parcela: ${invoice.installmentNumber}ª` : ''}
     };
 
     loadClientData();
-  }, [isAuthenticated, searchParams]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated]);
 
   // Função para formatar CPF/CNPJ
   const formatCpfCnpj = (cpfCnpj: string): string => {
@@ -717,8 +720,8 @@ ${invoice.installmentNumber ? `Parcela: ${invoice.installmentNumber}ª` : ''}
         // Recarregar antecipações
         const user = authService.getCurrentUser();
         if (user) {
-          const clientId = searchParams.get("clientId") 
-            ? parseInt(searchParams.get("clientId")!) 
+          const clientId = clientIdParam 
+            ? parseInt(clientIdParam) 
             : parseInt(user.id);
           const anticipations = await anticipationService.getByClientId(clientId);
           const formattedAnticipations = anticipations.map((ant: any) => ({
@@ -908,16 +911,14 @@ ${invoice.installmentNumber ? `Parcela: ${invoice.installmentNumber}ª` : ''}
 
         {/* Main Dashboard Content */}
         <main className="flex-1 overflow-y-auto p-6">
-          {isLoadingData && (
+          {isLoadingData ? (
             <div className="flex items-center justify-center py-12">
               <div className="text-center">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600 mx-auto mb-4"></div>
                 <p className="text-muted-foreground">Carregando dados...</p>
               </div>
             </div>
-          )}
-
-          {dataError && !isLoadingData && (
+          ) : dataError ? (
             <Alert className="mb-4 bg-red-50 border-red-200">
               <AlertCircle className="h-4 w-4 text-red-600" />
               <AlertDescription className="text-red-800">
@@ -933,7 +934,6 @@ ${invoice.installmentNumber ? `Parcela: ${invoice.installmentNumber}ª` : ''}
                     const loadClientData = async () => {
                       const user = authService.getCurrentUser();
                       if (user) {
-                        const clientIdParam = searchParams.get("clientId");
                         const clientId = clientIdParam ? parseInt(clientIdParam) : parseInt(user.id);
                         try {
                           const contracts = await contractService.getByClientId(clientId);
@@ -954,9 +954,9 @@ ${invoice.installmentNumber ? `Parcela: ${invoice.installmentNumber}ª` : ''}
                 </Button>
               </AlertDescription>
             </Alert>
-          )}
-
-          {!isLoadingData && activeTab === "overview" && (
+          ) : (
+            <>
+          {activeTab === "overview" && (
             <>
               {/* Consortium Summary */}
               <div className="mb-6">
@@ -1067,7 +1067,7 @@ ${invoice.installmentNumber ? `Parcela: ${invoice.installmentNumber}ª` : ''}
             </>
           )}
 
-          {!isLoadingData && activeTab === "invoices" && (
+          {activeTab === "invoices" && (
             <div className="space-y-6">
               <div className="flex items-center justify-between">
                 <h2 className="text-2xl font-bold">Faturas</h2>
@@ -1259,7 +1259,7 @@ ${invoice.installmentNumber ? `Parcela: ${invoice.installmentNumber}ª` : ''}
             </div>
           )}
 
-          {!isLoadingData && activeTab === "anticipation" && (
+          {activeTab === "anticipation" && (
             <div className="space-y-6">
               <div className="flex items-center justify-between">
                 <h2 className="text-2xl font-bold">Pedidos de Antecipação</h2>
@@ -1508,7 +1508,7 @@ ${invoice.installmentNumber ? `Parcela: ${invoice.installmentNumber}ª` : ''}
             </div>
           )}
 
-          {!isLoadingData && activeTab === "profile" && (
+          {activeTab === "profile" && (
             <div className="space-y-6">
               <div>
                 <h2 className="text-2xl font-bold mb-4">Meu Perfil</h2>
@@ -1726,6 +1726,8 @@ ${invoice.installmentNumber ? `Parcela: ${invoice.installmentNumber}ª` : ''}
                 </CardContent>
               </Card>
             </div>
+          )}
+            </>
           )}
         </main>
       </div>
