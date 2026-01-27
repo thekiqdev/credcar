@@ -32,6 +32,7 @@ interface DocumentNotificationProps {
   representativeId: string;
   representativeName?: string;
   representativeCpfCnpj?: string;
+  documentsApproved?: boolean | null; // Campo documents_approved da tabela profiles
   onClose?: () => void;
 }
 
@@ -39,6 +40,7 @@ export const DocumentNotification: React.FC<DocumentNotificationProps> = ({
   representativeId,
   representativeName = 'Representante',
   representativeCpfCnpj = '',
+  documentsApproved = false,
   onClose
 }) => {
   const navigate = useNavigate();
@@ -127,17 +129,19 @@ export const DocumentNotification: React.FC<DocumentNotificationProps> = ({
 
   const handleUploadComplete = () => {
     // Recarregar status dos documentos apenas uma vez
-    console.log('✅ Upload concluído - recarregando status dos documentos');
     loadDocumentStatus();
   };
 
-  const handleDismiss = () => {
-    // Função removida - notificação não pode ser dispensada
-    console.log('Notificação não pode ser dispensada - todos os documentos devem ser enviados');
-  };
-
-  // Não mostrar apenas se todos os documentos estão aprovados
-  if (getDocumentProgress() === 100) {
+  // Não mostrar apenas se:
+  // 1. O campo documents_approved da tabela profiles for true E
+  // 2. Todos os documentos individuais estão aprovados
+  // Isso garante que mesmo que todos os documentos estejam aprovados individualmente,
+  // a notificação ainda aparecerá se o admin não tiver aprovado o representante
+  const allDocumentsApproved = getDocumentProgress() === 100;
+  const profileDocumentsApproved = documentsApproved === true;
+  
+  // Só ocultar se ambos forem true (perfil aprovado E todos documentos aprovados)
+  if (profileDocumentsApproved && allDocumentsApproved) {
     return null;
   }
 

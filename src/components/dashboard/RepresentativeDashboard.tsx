@@ -70,6 +70,7 @@ import {
   authService,
   contractService,
   clientService,
+  supabase,
 } from "@/lib/supabase";
 import ContractCreationFlow from "@/components/sales/ContractCreationFlow";
 import ContractDetails from "@/components/sales/ContractDetails";
@@ -171,57 +172,95 @@ const RepresentativeDashboard: React.FC<RepresentativeDashboardProps> = ({
   // Check authentication on component mount
   useEffect(() => {
     const checkAuth = async () => {
-      console.log("🔍 RepresentativeDashboard: Iniciando verificação de autenticação");
-      
       // Primeiro tentar Supabase Auth (admins)
       let user = await authService.getCurrentUser();
-      console.log("🔍 Supabase Auth user:", user);
       
       // Se não encontrar, tentar localStorage (representantes)
       if (!user) {
-        console.log("🔍 Tentando localStorage...");
         const { authService: oldAuthService } = await import("../../lib/supabase");
         user = oldAuthService.getCurrentUser();
-        console.log("🔍 localStorage user:", user);
       }
       
       if (!user || user.role !== "Representante") {
-        console.log(
-          "❌ RepresentativeDashboard: User not authenticated or not representative, redirecting to login"
-        );
         navigate("/");
         return false;
       }
       
-      console.log("🔍 User encontrado:", user);
-      console.log("🔍 CPF/CNPJ:", user.cnpj);
-      
-      // Definir currentUser
-      setCurrentUser(user);
-      return true;
+      // Buscar dados atualizados do banco para garantir que documents_approved está correto
+      try {
+        const { data: freshUser, error: fetchError } = await supabase
+          .from("profiles")
+          .select("id, full_name, email, phone, cnpj, status, documents_approved, documents_approved_at, documents_approved_by")
+          .eq("id", user.id)
+          .single();
+        
+        if (!fetchError && freshUser) {
+          // Atualizar user com dados frescos do banco
+          // Garantir que documents_approved seja explicitamente false se null/undefined
+          const documentsApprovedValue = freshUser.documents_approved === true ? true : false;
+          const updatedUser = {
+            ...user,
+            ...freshUser,
+            documents_approved: documentsApprovedValue,
+          };
+          setCurrentUser(updatedUser);
+          // Atualizar também no localStorage
+          authService.setCurrentUser(updatedUser);
+          return updatedUser;
+        } else {
+          // Tentar buscar apenas documents_approved como fallback
+          try {
+            const { data: docStatus, error: docError } = await supabase
+              .from("profiles")
+              .select("documents_approved, status")
+              .eq("id", user.id)
+              .single();
+            
+            if (!docError && docStatus) {
+              const documentsApprovedValue = docStatus.documents_approved === true ? true : false;
+              const updatedUser = {
+                ...user,
+                documents_approved: documentsApprovedValue,
+                status: docStatus.status,
+              };
+              setCurrentUser(updatedUser);
+              authService.setCurrentUser(updatedUser);
+              return updatedUser;
+            } else {
+              // Se não conseguir buscar do banco, usar dados do localStorage
+              setCurrentUser(user);
+              return user;
+            }
+          } catch (fallbackError) {
+            // Se não conseguir buscar do banco, usar dados do localStorage
+            setCurrentUser(user);
+            return user;
+          }
+        }
+      } catch (error) {
+        // Em caso de erro, usar dados do localStorage
+        setCurrentUser(user);
+        return user;
+      }
     };
 
-    checkAuth().then((isAuthenticated) => {
-      if (!isAuthenticated) return;
+    checkAuth().then((user) => {
+      if (!user) return;
 
-    // Continue with existing data loading logic
-    const loadDashboardData = async () => {
-      if (!currentUser?.id) {
-        console.warn("No current user found");
-        setError("Usuário não encontrado. Faça login novamente.");
-        setIsLoading(false);
-        return;
-      }
+      // Continue with existing data loading logic
+      const loadDashboardData = async () => {
+        if (!user?.id) {
+          setError("Usuário não encontrado. Faça login novamente.");
+          setIsLoading(false);
+          return;
+        }
 
-      try {
-        console.log("Loading dashboard data for user:", currentUser.id);
-        setIsLoading(true);
-        setError(null);
+        try {
+          setIsLoading(true);
+          setError(null);
 
         const dashboardData =
-          await dashboardService.getRepresentativeDashboardData(currentUser.id);
-
-        console.log("Dashboard data loaded successfully:", dashboardData);
+          await dashboardService.getRepresentativeDashboardData(user.id);
 
         if (dashboardData) {
           setPerformanceData(
@@ -241,29 +280,20 @@ const RepresentativeDashboard: React.FC<RepresentativeDashboardProps> = ({
 
         // Load clients data
         try {
-          const clients = await clientService.getByRepresentative(
-            currentUser.id,
-          );
-          console.log("Clients loaded for representative:", clients);
+          const clients = await clientService.getByRepresentative(user.id);
           setMyClients(clients || []);
         } catch (clientError) {
-          console.error("Error loading clients:", clientError);
           setMyClients([]);
         }
 
         // Load client statistics
         try {
-          const stats = await clientService.getRepresentativeClientStats(
-            currentUser.id,
-          );
-          console.log("Client stats loaded:", stats);
+          const stats = await clientService.getRepresentativeClientStats(user.id);
           setClientStats(stats || { totalClients: 0, newClientsThisMonth: 0 });
         } catch (statsError) {
-          console.error("Error loading client stats:", statsError);
           setClientStats({ totalClients: 0, newClientsThisMonth: 0 });
         }
       } catch (err) {
-        console.error("Error loading dashboard data:", err);
         const errorMessage =
           err instanceof Error ? err.message : "Erro desconhecido";
         setError(`Erro ao carregar dados: ${errorMessage}`);
@@ -307,15 +337,12 @@ const RepresentativeDashboard: React.FC<RepresentativeDashboardProps> = ({
   const availableBalance = performanceData.pendingCommission;
 
   const handleLogout = async () => {
-    console.log("🔓 Representative logout clicked");
-    
     // Limpar AMBOS os sistemas
     await authService.logout(); // Supabase Auth (caso exista)
     
     const { authService: oldAuthService } = await import("../../lib/supabase");
     oldAuthService.logout(); // localStorage (representantes)
     
-    console.log("✅ Logout complete, navigating to home");
     navigate("/", { replace: true });
   };
 
@@ -329,7 +356,6 @@ const RepresentativeDashboard: React.FC<RepresentativeDashboardProps> = ({
       const documents = await documentService.getRepresentativeDocuments(currentUser.id);
       setRepresentativeDocuments(documents || []);
     } catch (error) {
-      console.error("Error loading representative documents:", error);
       setRepresentativeDocuments([]);
     } finally {
       setIsLoadingDocuments(false);
@@ -521,6 +547,15 @@ const RepresentativeDashboard: React.FC<RepresentativeDashboardProps> = ({
   };
 
   const handleStartSimulation = () => {
+    // Verificar se documentos estão aprovados antes de permitir criar contrato
+    if (currentUser && !currentUser.documents_approved) {
+      // Mostrar alerta de documentos não aprovados
+      alert(
+        "Você não pode criar contratos porque seus documentos ainda não foram aprovados pelo administrador.\n\n" +
+        "Por favor, aguarde a aprovação dos seus documentos ou entre em contato com o administrador do sistema."
+      );
+      return;
+    }
     setShowContractFlow(true);
   };
 
@@ -708,21 +743,22 @@ const RepresentativeDashboard: React.FC<RepresentativeDashboardProps> = ({
         {/* Main Dashboard Content */}
         <main className="flex-1 overflow-y-auto p-6">
           {/* Document Notification - Fixa até todos documentos aprovados */}
-          {currentUser && !currentUser.documents_approved && (
-            <>
-              {console.log('🔍 Current User:', currentUser)}
-              {console.log('🔍 CPF/CNPJ:', currentUser.cnpj)}
-              {console.log('🔍 Documents Approved:', currentUser.documents_approved)}
-              <DocumentNotification 
-                representativeId={currentUser.id}
-                representativeName={currentUser.name || currentUser.full_name || 'Representante'}
-                representativeCpfCnpj={currentUser.cnpj || ''}
-                onClose={() => {
-                  // Notificação não pode ser fechada - sempre visível até documentos aprovados
-                  console.log('Notificação obrigatória - não pode ser fechada');
-                }}
-              />
-            </>
+          {/* Mostrar sempre que documents_approved for false, null ou undefined, independente do status ou outras condições */}
+          {currentUser && (
+            currentUser.documents_approved === false || 
+            currentUser.documents_approved === null || 
+            currentUser.documents_approved === undefined ||
+            !currentUser.documents_approved
+          ) && (
+            <DocumentNotification 
+              representativeId={currentUser.id}
+              representativeName={currentUser.name || currentUser.full_name || 'Representante'}
+              representativeCpfCnpj={currentUser.cnpj || ''}
+              documentsApproved={currentUser.documents_approved}
+              onClose={() => {
+                // Notificação não pode ser fechada - sempre visível até documentos aprovados
+              }}
+            />
           )}
           
           {showContractFlow && (

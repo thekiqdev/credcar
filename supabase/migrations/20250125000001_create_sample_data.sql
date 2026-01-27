@@ -27,11 +27,11 @@ WHERE NOT EXISTS (
 
 -- Function to create sample contracts for a representative
 CREATE OR REPLACE FUNCTION create_sample_contracts_for_rep(rep_id TEXT)
-RETURNS void AS $
+RETURNS void AS $$
 DECLARE
     client_ids INTEGER[];
     commission_table_ids INTEGER[];
-    contract_statuses TEXT[] := ARRAY['Ativo', 'Concluído', 'Pendente', 'Cancelado'];
+    contract_statuses contract_status[] := ARRAY['Ativo'::contract_status, 'Concluído'::contract_status, 'Pendente'::contract_status, 'Cancelado'::contract_status];
     i INTEGER;
 BEGIN
     -- Get client IDs
@@ -56,7 +56,7 @@ BEGIN
         ) VALUES (
             'CT-2025-' || LPAD(i::text, 3, '0'),
             client_ids[i],
-            rep_id,
+            rep_id::UUID,
             commission_table_ids[((i-1) % array_length(commission_table_ids, 1)) + 1], -- Cycle through commission tables
             (RANDOM() * 50000 + 20000)::INTEGER, -- Random value between 20k-70k
             (RANDOM() * 30000 + 10000)::INTEGER, -- Random remaining value

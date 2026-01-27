@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { supabase, authService, representativeService } from "@/lib/supabase";
 import CommissionTableSelection from "./CommissionTableSelection";
 import CreditValueSelection from "./CreditValueSelection";
@@ -6,6 +6,8 @@ import QuotaSelection from "./QuotaSelection";
 import ClientRegistration from "./ClientRegistration";
 import ContractContentEditor from "./ContractContentEditor";
 import RepresentativeSelection from "./RepresentativeSelection";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
 
 interface CommissionPlan {
   id: number;
@@ -74,6 +76,50 @@ const ContractCreationFlow: React.FC<ContractCreationFlowProps> = ({
   const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
   const [clientData, setClientData] = useState<ClientData | null>(null);
   const [contractContent, setContractContent] = useState<string>("");
+  const [documentsApproved, setDocumentsApproved] = useState<boolean | null>(null);
+  const [isCheckingDocuments, setIsCheckingDocuments] = useState<boolean>(true);
+
+  // Verificar documentos aprovados no início (apenas para representantes, não admin)
+  useEffect(() => {
+    const checkDocumentsApproved = async () => {
+      if (isAdminMode) {
+        // Admin sempre pode criar contratos
+        setDocumentsApproved(true);
+        setIsCheckingDocuments(false);
+        return;
+      }
+
+      try {
+        const currentUser = await authService.getCurrentUser();
+        if (!currentUser) {
+          setDocumentsApproved(false);
+          setIsCheckingDocuments(false);
+          return;
+        }
+
+        const { data: representative, error } = await supabase
+          .from("profiles")
+          .select("documents_approved, status")
+          .eq("id", currentUser.id)
+          .single();
+
+        if (error) {
+          console.error("Error checking documents approval:", error);
+          setDocumentsApproved(false);
+        } else {
+          const approved = representative?.documents_approved === true && representative?.status === "Ativo";
+          setDocumentsApproved(approved);
+        }
+      } catch (error) {
+        console.error("Error in checkDocumentsApproved:", error);
+        setDocumentsApproved(false);
+      } finally {
+        setIsCheckingDocuments(false);
+      }
+    };
+
+    checkDocumentsApproved();
+  }, [isAdminMode]);
 
   const handleRepresentativeSelect = (representative: any) => {
     setSelectedRepresentative(representative);
@@ -452,6 +498,50 @@ const ContractCreationFlow: React.FC<ContractCreationFlowProps> = ({
           >
             Voltar ao Dashboard
           </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Bloqueio: Verificar documentos aprovados antes de permitir qualquer ação
+  if (!isAdminMode && !isCheckingDocuments && documentsApproved === false) {
+    return (
+      <div className="w-full p-6">
+        <Alert variant="destructive" className="mb-6">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle className="text-lg font-semibold">
+            Documentos Não Aprovados
+          </AlertTitle>
+          <AlertDescription className="mt-2">
+            <p className="mb-4">
+              Você não pode criar contratos porque seus documentos ainda não foram aprovados pelo administrador.
+            </p>
+            <p className="mb-4 font-medium">
+              Por favor, aguarde a aprovação dos seus documentos ou entre em contato com o administrador do sistema.
+            </p>
+            <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-sm text-red-800">
+                <strong>Status atual:</strong> Seus documentos estão pendentes de aprovação.
+              </p>
+              <p className="text-sm text-red-800 mt-2">
+                Você será notificado assim que seus documentos forem aprovados.
+              </p>
+            </div>
+          </AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
+
+  // Mostrar loading enquanto verifica documentos
+  if (!isAdminMode && isCheckingDocuments) {
+    return (
+      <div className="w-full p-6">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600 mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Verificando permissões...</p>
+          </div>
         </div>
       </div>
     );

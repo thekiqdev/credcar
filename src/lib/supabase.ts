@@ -1669,10 +1669,6 @@ export const dashboardService = {
   // Get representative dashboard data
   async getRepresentativeDashboardData(representativeId: string) {
     try {
-      console.log(
-        "Fetching dashboard data for representative:",
-        representativeId,
-      );
 
       // Validate representative ID
       if (!representativeId) {
@@ -1703,39 +1699,58 @@ export const dashboardService = {
         console.log("Continuing with empty contracts due to error");
       }
 
-      // If no contracts exist, create sample data for demo
+      // If no contracts exist, create sample data for demo (only if documents are approved)
       if (!contracts || contracts.length === 0) {
-        console.log("No contracts found, creating sample data...");
-        await this.createSampleContractsForRep(representativeId);
+        // Verificar se o representante tem documentos aprovados antes de criar contratos de exemplo
+        const { data: representative, error: repCheckError } = await supabase
+          .from("profiles")
+          .select("documents_approved, status")
+          .eq("id", representativeId)
+          .single();
 
-        // Retry fetching contracts after creating sample data
-        const { data: newContracts, error: newContractsError } = await supabase
-          .from("contracts")
-          .select(
-            `
-            *,
-            clients(full_name, name),
-            planos(nome, descricao, comissao, "commission-percentage")
-          `,
-          )
-          .eq("representative_id", representativeId);
+        if (repCheckError) {
+          console.error("Error checking representative documents approval:", repCheckError);
+          console.log("Skipping sample contracts creation due to error");
+        } else if (representative?.documents_approved === true) {
+          console.log("No contracts found, creating sample data...");
+          await this.createSampleContractsForRep(representativeId);
 
-        if (newContractsError) {
-          console.error("Error fetching new contracts:", newContractsError);
+          // Retry fetching contracts after creating sample data
+          const { data: newContracts, error: newContractsError } = await supabase
+            .from("contracts")
+            .select(
+              `
+              *,
+              clients(full_name, name),
+              planos(nome, descricao, comissao, "commission-percentage")
+            `,
+            )
+            .eq("representative_id", representativeId);
+
+          if (newContractsError) {
+            console.error("Error fetching new contracts:", newContractsError);
+            console.log(
+              "Continuing with empty contracts after sample data creation failed",
+            );
+          } else if (newContracts) {
+            console.log(
+              "Successfully fetched contracts after creating sample data:",
+              newContracts.length,
+            );
+          }
+        } else {
           console.log(
-            "Continuing with empty contracts after sample data creation failed",
-          );
-        } else if (newContracts) {
-          console.log(
-            "Successfully fetched contracts after creating sample data:",
-            newContracts.length,
+            "Skipping sample contracts creation: documents not approved",
+            {
+              documents_approved: representative?.documents_approved,
+              status: representative?.status,
+            },
           );
         }
       }
 
       // Ensure contracts is an array
       const validContracts = Array.isArray(contracts) ? contracts : [];
-      console.log("Valid contracts count:", validContracts.length);
 
       // Calculate performance metrics
       const totalSales = validContracts.reduce((sum, contract) => {
@@ -2443,8 +2458,6 @@ export const administratorService = {
     password?: string;
   }) {
     try {
-      console.log("Creating administrator with data:", adminData);
-
       // Check if email already exists
       const existingAdmin = await this.getByEmail(adminData.email);
       if (existingAdmin) {
@@ -3471,7 +3484,6 @@ export const clientService = {
 
       // Buscar password_hash se não foi incluído na query inicial
       if (!client.password_hash) {
-        console.log("Fetching password_hash separately...");
         const passwordResult = await supabase
           .from("clients")
           .select("password_hash")
@@ -3661,8 +3673,6 @@ export const clientService = {
   // Get all clients with representative information (for admin)
   async getAllWithRepresentative() {
     try {
-      console.log("Fetching all clients with representative information...");
-
       // First, get all clients from the clients table
       const { data: clientsData, error: clientsError } = await supabase
         .from("clients")
