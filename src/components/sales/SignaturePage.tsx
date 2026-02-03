@@ -17,8 +17,9 @@ import {
   Trash2,
 } from "lucide-react";
 import SignatureCanvas from "@/components/ui/signature-canvas";
-import { supabase, electronicSignatureService } from "@/lib/supabase";
+import { supabase, electronicSignatureService, generalSettingsService } from "@/lib/supabase";
 import { storageService } from "@/lib/storage";
+import { Building, MapPin, Phone, Mail } from "lucide-react";
 
 interface ContractData {
   id: number;
@@ -38,6 +39,17 @@ interface SignatureData {
   signature_data_url: string;
 }
 
+interface GeneralSettings {
+  system_name: string;
+  company_name: string;
+  company_address: string;
+  company_phone: string;
+  company_email: string;
+  company_cnpj: string;
+  logo_url: string;
+  logo_file_path: string;
+}
+
 const SignaturePage: React.FC = () => {
   const { id: contractId, signatureId } = useParams<{
     id: string;
@@ -47,6 +59,7 @@ const SignaturePage: React.FC = () => {
 
   const [contract, setContract] = useState<ContractData | null>(null);
   const [signatureField, setSignatureField] = useState<any>(null);
+  const [generalSettings, setGeneralSettings] = useState<GeneralSettings | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -72,6 +85,7 @@ const SignaturePage: React.FC = () => {
   }>({});
 
   useEffect(() => {
+    loadGeneralSettings();
     if (contractId) {
       if (signatureId) {
         // Load electronic signature data
@@ -85,6 +99,42 @@ const SignaturePage: React.FC = () => {
       setIsLoading(false);
     }
   }, [contractId, signatureId]);
+
+  const loadGeneralSettings = async () => {
+    try {
+      const settings = await generalSettingsService.getSettings();
+      setGeneralSettings(settings);
+    } catch (error) {
+      console.error("Error loading general settings:", error);
+      // Use default settings if loading fails
+      setGeneralSettings({
+        system_name: "CredCar",
+        company_name: "CredCar Soluções Financeiras",
+        company_address: "Rua das Empresas, 123 - Centro - São Paulo/SP",
+        company_phone: "(11) 3000-0000",
+        company_email: "contato@credcar.com.br",
+        company_cnpj: "12.345.678/0001-90",
+        logo_url: "",
+        logo_file_path: "",
+      });
+    }
+  };
+
+  const getLogoUrl = () => {
+    if (!generalSettings) return null;
+    
+    // Usar logo_url diretamente como caminho relativo
+    if (generalSettings.logo_url && generalSettings.logo_url.trim() !== '') {
+      return `/${generalSettings.logo_url}`;
+    }
+    
+    // Fallback para logo_file_path
+    if (generalSettings.logo_file_path && generalSettings.logo_file_path.trim() !== '') {
+      return `/${generalSettings.logo_file_path}`;
+    }
+    
+    return null;
+  };
 
   const loadElectronicSignatureData = async () => {
     try {
@@ -607,7 +657,7 @@ const SignaturePage: React.FC = () => {
   };
 
   const renderContractWithPlaceholders = (content: string) => {
-    if (!content) return <p>Conteúdo do contrato não disponível.</p>;
+    if (!content) return "<p>Conteúdo do contrato não disponível.</p>";
 
     // Replace placeholders with interactive components
     let processedContent = content;
@@ -754,12 +804,12 @@ const SignaturePage: React.FC = () => {
       },
     );
 
-    return (
-      <div
-        className="prose max-w-none"
-        dangerouslySetInnerHTML={{ __html: processedContent }}
-      />
-    );
+    return processedContent;
+  };
+
+  const renderContractContentWithHTML = (content: string) => {
+    const htmlContent = renderContractWithPlaceholders(content);
+    return { __html: htmlContent };
   };
 
   if (isLoading) {
@@ -849,20 +899,175 @@ const SignaturePage: React.FC = () => {
     signatureData.signature_data_url;
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background">
+      {/* CSS para garantir consistência com TinyMCE e responsividade */}
+      <style>{`
+        .contract-content table {
+          border-collapse: collapse !important;
+          width: 100% !important;
+          min-width: 100% !important;
+          max-width: 100% !important;
+          table-layout: fixed !important;
+          font-size: clamp(10px, 2vw, 14px);
+          margin: 1em 0 !important;
+        }
+        .contract-content table td, 
+        .contract-content table th {
+          border: 1px solid #ddd !important;
+          padding: clamp(6px, 1.5vw, 12px) !important;
+          word-wrap: break-word !important;
+          min-width: 100px !important;
+          width: auto !important;
+          box-sizing: border-box !important;
+        }
+        .contract-content table th {
+          background-color: #f2f2f2 !important;
+          font-weight: bold !important;
+        }
+        .contract-content table tr:nth-child(even) {
+          background-color: #f9f9f9 !important;
+        }
+        .contract-content table tr:hover {
+          background-color: #f5f5f5 !important;
+        }
+        .contract-content p {
+          margin: 0 0 1em 0;
+          word-wrap: break-word;
+          hyphens: auto;
+        }
+        .contract-content h1, 
+        .contract-content h2, 
+        .contract-content h3, 
+        .contract-content h4, 
+        .contract-content h5, 
+        .contract-content h6 {
+          word-wrap: break-word;
+          margin-top: 1.5em;
+          margin-bottom: 0.5em;
+        }
+        .contract-content ul, 
+        .contract-content ol {
+          padding-left: clamp(16px, 4vw, 24px);
+        }
+        .contract-content li {
+          margin-bottom: 0.5em;
+          word-wrap: break-word;
+        }
+        @media (max-width: 640px) {
+          .contract-content {
+            font-size: 14px !important;
+            line-height: 1.5 !important;
+          }
+          .contract-content table {
+            font-size: 12px !important;
+            width: 100% !important;
+            table-layout: fixed !important;
+          }
+          .contract-content table td, 
+          .contract-content table th {
+            padding: 6px 4px !important;
+            border: 1px solid #ddd !important;
+          }
+        }
+        @media print {
+          .contract-content {
+            font-size: 12px !important;
+            line-height: 1.4 !important;
+          }
+          .contract-content table {
+            font-size: 10px !important;
+            width: 100% !important;
+            table-layout: fixed !important;
+          }
+          .contract-content table td, 
+          .contract-content table th {
+            padding: 4px 2px !important;
+            border: 1px solid #ddd !important;
+          }
+          .contract-content h1, 
+          .contract-content h2, 
+          .contract-content h3, 
+          .contract-content h4, 
+          .contract-content h5, 
+          .contract-content h6 {
+            margin-top: 1em;
+            margin-bottom: 0.5em;
+            page-break-after: avoid;
+          }
+          .contract-content p {
+            margin-bottom: 0.8em;
+            orphans: 3;
+            widows: 3;
+          }
+        }
+      `}</style>
+
+      {/* Company Header */}
+      {generalSettings && (
+        <div className="bg-white border-b print:border-b-2 print:border-gray-300">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 print:py-4 print:px-0">
+            <div className="flex items-center justify-center gap-8 sm:gap-12 lg:gap-16 print:gap-4 print:justify-between">
+              {/* Logo - Esquerda */}
+              <div className="flex-shrink-0 print:w-1/2 print:flex print:justify-center print:items-center">
+                {getLogoUrl() ? (
+                  <img
+                    src={getLogoUrl()!}
+                    alt="Logo da empresa"
+                    className="h-16 sm:h-20 lg:h-24 print:h-32 print:w-auto print:max-w-full object-contain"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = "none";
+                    }}
+                  />
+                ) : (
+                  <div className="h-16 sm:h-20 lg:h-24 print:h-32 print:w-32 rounded-md bg-red-600 flex items-center justify-center">
+                    <Building className="h-8 sm:h-10 lg:h-12 print:h-16 print:w-16 text-white" />
+                  </div>
+                )}
+              </div>
+              
+              {/* Informações da empresa - Direita */}
+              <div className="text-left print:w-1/2 print:flex print:flex-col print:justify-center">
+                <div className="text-xs sm:text-sm print:text-sm text-gray-600 space-y-1 sm:space-y-2 print:space-y-2">
+                  <p className="font-semibold text-sm sm:text-base lg:text-lg print:text-base print:font-bold">
+                    {generalSettings.company_name}
+                  </p>
+                  <p className="text-xs sm:text-sm print:text-sm">CNPJ: {generalSettings.company_cnpj}</p>
+                  <div className="flex flex-col gap-1 text-xs sm:text-sm print:text-sm print:gap-2">
+                    <span className="flex items-center gap-1">
+                      <MapPin className="h-3 w-3 sm:h-4 sm:w-4 print:h-4 print:w-4" />
+                      <span>{generalSettings.company_address}</span>
+                    </span>
+                  </div>
+                  <div className="flex flex-col gap-1 text-xs sm:text-sm print:text-sm print:gap-2">
+                    <span className="flex items-center gap-1">
+                      <Phone className="h-3 w-3 sm:h-4 sm:w-4 print:h-4 print:w-4" />
+                      {generalSettings.company_phone}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <Mail className="h-3 w-3 sm:h-4 sm:w-4 print:h-4 print:w-4" />
+                      {generalSettings.company_email}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
-      <header className="bg-white border-b shadow-sm">
-        <div className="max-w-4xl mx-auto px-4 py-6">
+      <header className="bg-white border-b shadow-sm print:hidden">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
           <div className="flex items-center gap-3">
-            <FileText className="h-8 w-8 text-red-600" />
+            <FileText className="h-6 w-6 sm:h-8 sm:w-8 text-red-600" />
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
                 {signatureId
                   ? "Assinatura Eletrônica"
                   : "Assinatura do Contrato"}{" "}
                 {contract.contract_code}
               </h1>
-              <p className="text-sm text-gray-600">
+              <p className="text-xs sm:text-sm text-gray-600">
                 {signatureId && signatureField ? (
                   <>Assinante: {signatureField.signer_name}</>
                 ) : (
@@ -874,7 +1079,7 @@ const SignaturePage: React.FC = () => {
         </div>
       </header>
 
-      <div className="max-w-4xl mx-auto px-4 py-8 space-y-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6 sm:space-y-8">
         {/* Instructions */}
         <Alert>
           <AlertCircle className="h-4 w-4" />
@@ -886,17 +1091,24 @@ const SignaturePage: React.FC = () => {
         </Alert>
 
         {/* Contract Content */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+        <Card className="print:border-0 print:shadow-none">
+          <CardHeader className="print:hidden">
+            <CardTitle className="flex items-center gap-2 text-sm sm:text-base lg:text-lg">
               <FileText className="h-5 w-5" />
               Conteúdo do Contrato
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="bg-white border rounded-lg p-6">
-              {renderContractWithPlaceholders(contract.contract_content)}
-            </div>
+          <CardContent className="print:p-0">
+            <div
+              className="contract-content prose prose-sm sm:prose-base lg:prose-lg max-w-none p-4 sm:p-6 rounded-md bg-white print:p-0 print:bg-transparent"
+              style={{
+                fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif",
+                fontSize: "clamp(12px, 2.5vw, 16px)",
+                lineHeight: "1.6",
+                color: "#333"
+              }}
+              dangerouslySetInnerHTML={renderContractContentWithHTML(contract.contract_content)}
+            />
           </CardContent>
         </Card>
 

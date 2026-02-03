@@ -254,8 +254,17 @@ const ContractDetails: React.FC<{
     // Create simple shortcode instead of complex HTML
     const signatureShortcode = `[SIGNATURE id="${signatureId}" name="${signerName}" cpf="${cleanCPF}"]`;
 
-    // Insert the shortcode into the editor
-    editorRef.current.insertContent(signatureShortcode);
+    // Insert the shortcode into the editor using CKEditor 5 API
+    try {
+      editorRef.current.model.change(writer => {
+        const textNode = writer.createText(signatureShortcode);
+        editorRef.current.model.insertContent(textNode);
+      });
+    } catch (error) {
+      console.error("Erro ao inserir assinatura no editor:", error);
+      alert("Erro ao inserir campo de assinatura. Por favor, tente novamente.");
+      return;
+    }
 
     // Reset form and close modal
     setSignatureBlockData({ signatoryName: "" });
