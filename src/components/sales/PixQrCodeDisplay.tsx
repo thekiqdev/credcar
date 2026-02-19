@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { Button } from "@/components/ui/button";
-import { Copy, Check } from "lucide-react";
+import { Copy, Check, Smartphone } from "lucide-react";
 
 interface PixQrCodeDisplayProps {
   /** String PIX copia e cola (EMV) */
@@ -14,10 +14,11 @@ interface PixQrCodeDisplayProps {
 
 /**
  * Exibe QR Code e botão Copiar para pagamento PIX (código copia e cola).
+ * Design profissional para uso em faturas (admin, cliente, página avulsa).
  */
 const PixQrCodeDisplay: React.FC<PixQrCodeDisplayProps> = ({
   pixCopiaECola,
-  size = 200,
+  size = 220,
   className = "",
 }) => {
   const [copied, setCopied] = useState(false);
@@ -28,7 +29,6 @@ const PixQrCodeDisplay: React.FC<PixQrCodeDisplayProps> = ({
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      // fallback: select + execCommand
       const ta = document.createElement("textarea");
       ta.value = pixCopiaECola;
       ta.style.position = "fixed";
@@ -46,13 +46,29 @@ const PixQrCodeDisplay: React.FC<PixQrCodeDisplayProps> = ({
   };
 
   return (
-    <div className={`pix-qr-code-display rounded-lg border bg-muted/30 p-4 ${className}`}>
-      <p className="text-sm font-medium text-muted-foreground mb-3">
-        Código PIX copia e cola
-      </p>
-      <div className="flex flex-col sm:flex-row items-center gap-4">
+    <div
+      className={`
+        pix-qr-code-display
+        rounded-xl border border-border/80 bg-gradient-to-b from-muted/40 to-muted/20
+        shadow-sm overflow-hidden
+        ${className}
+      `}
+    >
+      <div className="px-4 pt-4 pb-1">
+        <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/15 text-emerald-600">
+            <Smartphone className="h-4 w-4" />
+          </span>
+          Pagamento via PIX
+        </div>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Escaneie o QR Code no app do seu banco ou copie o código abaixo
+        </p>
+      </div>
+
+      <div className="p-4 pt-2 flex flex-col sm:flex-row items-center gap-6">
         <div
-          className="flex-shrink-0 rounded-md border border-border bg-white p-2 print:border-gray-300"
+          className="flex-shrink-0 rounded-xl border-2 border-white bg-white p-3 shadow-md print:border-gray-200"
           aria-hidden
         >
           <QRCodeSVG
@@ -60,22 +76,26 @@ const PixQrCodeDisplay: React.FC<PixQrCodeDisplayProps> = ({
             size={size}
             level="M"
             bgColor="#ffffff"
-            fgColor="#000000"
+            fgColor="#0f172a"
             includeMargin={false}
           />
         </div>
-        <div className="flex-1 min-w-0 space-y-2">
+
+        <div className="flex-1 min-w-0 w-full sm:w-auto space-y-3">
+          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+            Código PIX copia e cola
+          </p>
           <Button
             type="button"
             variant="outline"
-            size="sm"
+            size="default"
             onClick={handleCopy}
-            className="print:hidden"
+            className="w-full sm:w-auto print:hidden border-emerald-200 bg-white hover:bg-emerald-50 hover:border-emerald-300 hover:text-emerald-700"
           >
             {copied ? (
               <>
-                <Check className="mr-2 h-4 w-4 text-green-600" />
-                Copiado!
+                <Check className="mr-2 h-4 w-4 text-emerald-600" />
+                Copiado! Cole no app do banco
               </>
             ) : (
               <>
@@ -84,8 +104,8 @@ const PixQrCodeDisplay: React.FC<PixQrCodeDisplayProps> = ({
               </>
             )}
           </Button>
-          <p className="text-xs text-muted-foreground">
-            Escaneie o QR Code ou copie o código e cole no app do seu banco para pagar com PIX.
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            Após copiar, abra o app do seu banco, escolha Pagar com PIX e cole o código na opção &quot;Copia e cola&quot;.
           </p>
         </div>
       </div>

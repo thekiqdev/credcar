@@ -35,8 +35,7 @@ const InvoiceViewOnly: React.FC = () => {
         }
         const statusLower = String((data as any)?.status ?? "").toLowerCase();
         const isPaid = statusLower === "paid" || statusLower === "pago";
-        const hasPix = !!(data as any)?.payment_link_pix;
-        if (isPaid || hasPix) {
+        if (isPaid) {
           setInvoice(data as InvoiceViewData);
           return;
         }
@@ -44,7 +43,8 @@ const InvoiceViewOnly: React.FC = () => {
         const r = await ensureInvoiceInAsaas(invoiceId);
         if (cancelled) return;
         if (r.success) {
-          setInvoice(r.invoice as InvoiceViewData);
+          // Mesclar com dados já carregados para manter contrato e cliente
+          setInvoice({ ...(data as object), ...(r.invoice as object) } as InvoiceViewData);
         } else {
           setError(getEnsureAsaasErrorMessage(r.code, r.error));
         }

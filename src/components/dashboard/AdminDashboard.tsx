@@ -37,7 +37,7 @@ function generateUUID(): string {
 }
 import { authService } from "@/lib/auth.service";
 import { uploadService } from "../../lib/upload.service";
-import { ensureInvoiceInAsaas, getEnsureAsaasErrorMessage } from "@/lib/invoice-asaas.client";
+import { ensureInvoiceInAsaas, getEnsureAsaasErrorMessage, confirmInvoicePayment } from "@/lib/invoice-asaas.client";
 import { Database } from "../../types/supabase";
 import {
   Card,
@@ -295,6 +295,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [isInvoiceViewOpen, setIsInvoiceViewOpen] = useState(false);
   const [ensuringAsaas, setEnsuringAsaas] = useState(false);
   const [ensureAsaasError, setEnsureAsaasError] = useState<string | null>(null);
+  const [confirmingPayment, setConfirmingPayment] = useState(false);
   // Commission Plans State
   const [commissionPlans, setCommissionPlans] = useState([]);
   const [creditRanges, setCreditRanges] = useState([]);
@@ -970,13 +971,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     }
   };
 
-  // Garantir fatura no ASAAS ao abrir modal (quando ainda não tem PIX/ASAAS)
+  // Garantir fatura no ASAAS e sincronizar status ao abrir modal (quando não está paga)
   useEffect(() => {
     if (!isInvoiceViewOpen || !selectedInvoiceForView) return;
     const inv = selectedInvoiceForView;
     const statusLower = String(inv?.status ?? "").toLowerCase();
     if (statusLower === "paid" || statusLower === "pago") return;
-    if (inv.payment_link_pix || inv.invoice_code) return;
 
     let cancelled = false;
     setEnsureAsaasError(null);
@@ -10348,6 +10348,45 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     </p>
                   </div>
                 )}
+                {!ensuringAsaas &&
+                  (() => {
+                    const statusLower = String(selectedInvoiceForView?.status ?? "").toLowerCase();
+                    const isPaid = statusLower === "paid" || statusLower === "pago";
+                    return !isPaid ? (
+                      <div className="flex flex-wrap items-center gap-2 rounded-md border border-emerald-200 bg-emerald-50/80 p-3 print:hidden">
+                        <Button
+                          type="button"
+                          size="sm"
+                          disabled={confirmingPayment}
+                          onClick={async () => {
+                            if (!selectedInvoiceForView?.id) return;
+                            setConfirmingPayment(true);
+                            try {
+                              const r = await confirmInvoicePayment(String(selectedInvoiceForView.id));
+                              if (r.success) {
+                                setSelectedInvoiceForView(r.invoice);
+                              } else {
+                                alert(r.error || "Erro ao confirmar pagamento.");
+                              }
+                            } finally {
+                              setConfirmingPayment(false);
+                            }
+                          }}
+                          className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                        >
+                          {confirmingPayment ? (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          ) : (
+                            <CheckCircle className="mr-2 h-4 w-4" />
+                          )}
+                          {confirmingPayment ? "Confirmando…" : "Confirmar pagamento"}
+                        </Button>
+                        <span className="text-xs text-muted-foreground">
+                          Marca a fatura como paga no sistema (pagamento recebido fora do ASAAS ou já confirmado).
+                        </span>
+                      </div>
+                    ) : null;
+                  })()}
                 <InvoiceView
                   invoice={selectedInvoiceForView}
                   showCompanyHeader={false}

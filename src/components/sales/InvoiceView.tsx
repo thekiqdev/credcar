@@ -119,11 +119,6 @@ const InvoiceView: React.FC<InvoiceViewProps> = ({
 
   const invoiceNumber =
     invoice.invoiceNumber ?? invoice.invoice_code ?? `FAT-${invoice.id}`;
-  const contractNumber =
-    invoice.contractNumber ??
-    invoice.contracts?.contract_number ??
-    invoice.contract_number ??
-    "N/A";
   const dueDate = invoice.dueDate ?? (invoice.due_date ? new Date(invoice.due_date).toLocaleDateString("pt-BR") : "N/A");
   const value = invoice.value ?? invoice.amount ?? 0;
   const status =
@@ -134,17 +129,46 @@ const InvoiceView: React.FC<InvoiceViewProps> = ({
         : "pending";
   const paymentDate = invoice.paymentDate ?? (invoice.paid_at ? new Date(invoice.paid_at).toLocaleDateString("pt-BR") : undefined);
   const paymentMethod = invoice.paymentMethod ?? invoice.payment_method;
-  const paymentLinkPix = invoice.paymentLinkPix ?? invoice.payment_link_pix;
+  const rawPix =
+    invoice.paymentLinkPix ??
+    invoice.payment_link_pix ??
+    (invoice.invoiceData as Record<string, unknown> | undefined)?.payment_link_pix;
+  // ASAAS pode retornar PIX como string (copia e cola) ou objeto { payload, copyPaste, ... }
+  const paymentLinkPix =
+    typeof rawPix === "string"
+      ? rawPix
+      : rawPix && typeof rawPix === "object"
+        ? (rawPix as Record<string, unknown>)?.payload ??
+          (rawPix as Record<string, unknown>)?.copyPaste ??
+          (rawPix as Record<string, unknown>)?.copyAndPaste ??
+          ""
+        : "";
   const paymentLinkBoleto = invoice.paymentLinkBoleto ?? invoice.payment_link_boleto;
   const installmentNumber = invoice.installmentNumber ?? invoice.installment_number;
 
-  /** PIX copia e cola (EMV): string longa que não é URL */
+  /** PIX copia e cola (EMV): string longa que não é URL (mín. 30 caracteres típico do payload) */
   const isPixCopiaECola = (s: string | undefined): boolean =>
-    typeof s === "string" && s.length > 50 && !s.toLowerCase().startsWith("http");
+    typeof s === "string" && s.trim().length >= 30 && !s.toLowerCase().startsWith("http");
   const pixAsCopiaECola = paymentLinkPix && isPixCopiaECola(paymentLinkPix) ? paymentLinkPix : null;
   const pixAsUrl = paymentLinkPix && !isPixCopiaECola(paymentLinkPix) ? paymentLinkPix : null;
-  const client = invoice.contracts?.clients;
-  const clientName = client?.full_name ?? client?.name ?? "—";
+  // Contrato pode vir como relation (contracts/contract) ou campo direto; Supabase pode retornar objeto ou array
+  const invAny = invoice as Record<string, unknown>;
+  const contractRelation = invoice.contracts ?? invAny.contract;
+  const contractObj = Array.isArray(contractRelation) ? contractRelation[0] : contractRelation;
+  const contractRecord = contractObj && typeof contractObj === "object" ? (contractObj as Record<string, unknown>) : null;
+  const client = contractRecord?.clients ?? (invoice as any).contracts?.clients ?? invAny.contract?.clients;
+  const clientName = client?.full_name ?? client?.name ?? (client as any)?.full_name ?? "—";
+  const contractNumber =
+    invoice.contractNumber ??
+    invAny.contractNumber ??
+    contractRecord?.contract_number ??
+    contractRecord?.contract_code ??
+    invoice.contracts?.contract_number ??
+    (invoice.contracts as any)?.contract_code ??
+    invoice.contract_number ??
+    invoice.contract_code ??
+    (invAny.contract_number ?? invAny.contract_code) ??
+    (invoice.contract_id ? `#${invoice.contract_id}` : "N/A");
 
   const statusLabel =
     status === "paid" ? "PAGO" : status === "overdue" ? "VENCIDO" : "PENDENTE";

@@ -260,13 +260,12 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({
     }
   };
 
-  // Garantir fatura no ASAAS ao abrir modal (quando ainda não tem PIX/ASAAS)
+  // Garantir fatura no ASAAS e sincronizar status ao abrir modal (quando não está paga)
   useEffect(() => {
     if (!isInvoiceModalOpen || !selectedInvoice?.id) return;
     const inv = selectedInvoice;
     const isPaid = inv.status === "paid";
-    const hasAsaas = inv.paymentLinkPix ?? inv.payment_link_pix ?? inv.invoiceData?.invoice_code;
-    if (isPaid || hasAsaas) return;
+    if (isPaid) return;
 
     let cancelled = false;
     setEnsureAsaasError(null);

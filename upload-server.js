@@ -134,9 +134,12 @@ async function updateInvoiceStatus(paymentData, eventType) {
     switch (eventType) {
       case 'PAYMENT_RECEIVED':
         newStatus = 'paid';
+        const paymentDateStr = paymentData.paymentDate || new Date().toISOString().split('T')[0];
+        const paidAtIso = paymentData.paymentDate ? `${paymentData.paymentDate}T12:00:00.000Z` : new Date().toISOString();
         updateData = {
           status: newStatus,
-          payment_date: paymentData.paymentDate || new Date().toISOString().split('T')[0]
+          payment_date: paymentDateStr,
+          paid_at: paidAtIso
         };
         break;
         
@@ -2010,10 +2013,48 @@ async function createInvoiceInAsaasInline(invoice) {
     // 0. Verificar se a fatura já tem invoice_code (já foi criada no ASAAS)
     if (invoice.invoice_code) {
       console.log(`✅ [ASAAS] Fatura ${invoice.id} já possui invoice_code: ${invoice.invoice_code}. Pulando criação.`);
+      let pixQrCode = invoice.payment_link_pix;
+      // Se não tem PIX salvo, tentar obter via API (listar por externalReference e GET pixQrCode)
+      if (!pixQrCode) {
+        try {
+          const { data: configs } = await supabase.from('system_config').select('key, value').in('key', ['asaas.api.key', 'asaas.environment']);
+          const cfg = {};
+          (configs || []).forEach(c => { cfg[c.key] = c.value; });
+          const env = cfg['asaas.environment'] || 'sandbox';
+          const asaasUrl = env === 'sandbox' ? 'https://sandbox.asaas.com/api/v3' : 'https://www.asaas.com/api/v3';
+          const token = cfg['asaas.api.key'];
+          if (token) {
+            const listRes = await fetch(`${asaasUrl}/payments?externalReference=invoice_${invoice.id}&limit=1`, {
+              method: 'GET',
+              headers: { 'access_token': token }
+            });
+            if (listRes.ok) {
+              const listData = await listRes.json();
+              const payId = listData.data && listData.data[0] && listData.data[0].id;
+              if (payId) {
+                const pixRes = await fetch(`${asaasUrl}/payments/${payId}/pixQrCode`, {
+                  method: 'GET',
+                  headers: { 'access_token': token }
+                });
+                if (pixRes.ok) {
+                  const pixData = await pixRes.json();
+                  pixQrCode = pixData.payload || pixData.copyPaste || pixData.copyAndPaste || null;
+                  if (pixQrCode) {
+                    console.log(`✅ [ASAAS] Payload PIX obtido para fatura existente (invoice_${invoice.id})`);
+                    await supabase.from('invoices').update({ payment_link_pix: pixQrCode }).eq('id', invoice.id);
+                  }
+                }
+              }
+            }
+          }
+        } catch (e) {
+          console.warn('⚠️ [ASAAS] Erro ao buscar PIX para fatura existente:', e.message);
+        }
+      }
       return {
         success: true,
         asaasInvoiceId: invoice.invoice_code,
-        pixQrCode: invoice.payment_link_pix,
+        pixQrCode: pixQrCode || invoice.payment_link_pix,
         bankSlipUrl: invoice.payment_link_boleto,
         message: 'Fatura já existe no ASAAS',
         errors: []
@@ -2150,6 +2191,16 @@ async function createInvoiceInAsaasInline(invoice) {
     }
 
     // 4. Criar fatura no ASAAS
+    // ASAAS não aceita dueDate no passado; usar hoje quando o vencimento já passou
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const rawDue = invoice.due_date ? String(invoice.due_date) : '';
+    const dueDateOnly = rawDue.includes('-') ? rawDue.slice(0, 10) : (new Date(rawDue).toISOString().slice(0, 10));
+    const isPast = dueDateOnly < todayStr;
+    const dueDateForAsaas = isPast ? todayStr : dueDateOnly;
+    if (isPast) {
+      console.log(`⚠️ [ASAAS] Vencimento original ${invoice.due_date} já passou; usando hoje (${dueDateForAsaas}) na cobrança ASAAS.`);
+    }
+
     console.log(`📋 [ASAAS] Dados da fatura local:`, {
       id: invoice.id,
       amount: invoice.amount,
@@ -2161,7 +2212,7 @@ async function createInvoiceInAsaasInline(invoice) {
       customer: customerId,
       billingType: 'PIX',
       value: invoice.amount,
-      dueDate: invoice.due_date,
+      dueDate: dueDateForAsaas,
       description: `Parcela ${invoice.installment_number} - ${invoice.notes}`,
       externalReference: `invoice_${invoice.id}`,
       installmentNumber: invoice.installment_number
@@ -2169,7 +2220,7 @@ async function createInvoiceInAsaasInline(invoice) {
     
     console.log(`📋 [ASAAS] Dados para ASAAS:`, invoiceData);
     
-    const invoiceResponse = await fetch(`${asaasUrl}/payments`, {
+    let invoiceResponse = await fetch(`${asaasUrl}/payments`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -2177,32 +2228,114 @@ async function createInvoiceInAsaasInline(invoice) {
       },
       body: JSON.stringify(invoiceData)
     });
-    
+
+    // Se o ASAAS retornar "invalid_customer" (ex.: cliente criado no sandbox, API em produção), recriar cliente no ambiente atual e tentar de novo
     if (!invoiceResponse.ok) {
       const errorText = await invoiceResponse.text();
-      console.error(`❌ [ASAAS] API retornou erro ${invoiceResponse.status}:`, errorText);
+      let errJson = null;
+      try { errJson = JSON.parse(errorText); } catch (_) {}
+      const isInvalidCustomer = invoiceResponse.status === 400 &&
+        (errJson?.errors || []).some(e => (e.code || '').toString().toLowerCase() === 'invalid_customer');
+      if (isInvalidCustomer && customerId) {
+        console.log(`⚠️ [ASAAS] Cliente ${customerId} inválido neste ambiente (ex.: criado em outro). Recriando cliente no ASAAS...`);
+        const customerData = {
+          name: client.full_name,
+          email: client.email,
+          cpfCnpj: client.cpf_cnpj,
+          phone: client.phone || '',
+          externalReference: `client_${client.id}`
+        };
+        const customerResponse = await fetch(`${asaasUrl}/customers`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'access_token': asaasConfig['asaas.api.key']
+          },
+          body: JSON.stringify(customerData)
+        });
+        if (!customerResponse.ok) {
+          const custErr = await customerResponse.text();
+          console.error('❌ [ASAAS] Erro ao recriar cliente:', custErr);
+          return {
+            success: false,
+            errors: [`Cliente inválido neste ambiente. Erro ao recriar no ASAAS: ${custErr}`]
+          };
+        }
+        const customerResult = await customerResponse.json();
+        customerId = customerResult.id;
+        const { error: updateErr } = await supabase
+          .from('clients')
+          .update({ asaas_customer_id: customerId })
+          .eq('id', client.id);
+        if (updateErr) {
+          console.error('❌ [ASAAS] Erro ao atualizar asaas_customer_id:', updateErr);
+        } else {
+          console.log(`✅ [ASAAS] Cliente recriado no ASAAS: ${customerId}`);
+          client.asaas_customer_id = customerId;
+        }
+        invoiceData.customer = customerId;
+        invoiceResponse = await fetch(`${asaasUrl}/payments`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'access_token': asaasConfig['asaas.api.key']
+          },
+          body: JSON.stringify(invoiceData)
+        });
+      }
+    }
+
+    if (!invoiceResponse.ok) {
+      const finalErrorText = await invoiceResponse.text();
+      console.error(`❌ [ASAAS] API retornou erro ${invoiceResponse.status}:`, finalErrorText);
       return {
         success: false,
-        errors: [`Erro ao criar fatura no ASAAS: ${invoiceResponse.status} - ${errorText}`]
+        errors: [`Erro ao criar fatura no ASAAS: ${invoiceResponse.status} - ${finalErrorText}`]
       };
     }
-    
+
     const invoiceResult = await invoiceResponse.json();
-    
+    // Conforme doc ASAAS (https://docs.asaas.com/reference/get-qr-code-for-pix-payments),
+    // o payload PIX (copia e cola) vem do endpoint GET /payments/{id}/pixQrCode, não na resposta do POST
+    let pixValue = null;
+    if (invoiceResult.id && (invoiceResult.billingType === 'PIX' || invoiceData.billingType === 'PIX')) {
+      try {
+        const pixRes = await fetch(`${asaasUrl}/payments/${invoiceResult.id}/pixQrCode`, {
+          method: 'GET',
+          headers: { 'access_token': asaasConfig['asaas.api.key'] }
+        });
+        if (pixRes.ok) {
+          const pixData = await pixRes.json();
+          pixValue = pixData.payload || pixData.copyPaste || pixData.copyAndPaste || null;
+          if (pixValue) console.log(`✅ [ASAAS] Payload PIX obtido via GET /payments/{id}/pixQrCode`);
+        } else {
+          const errText = await pixRes.text();
+          console.warn(`⚠️ [ASAAS] GET pixQrCode falhou (${pixRes.status}):`, errText);
+        }
+      } catch (pixErr) {
+        console.warn('⚠️ [ASAAS] Erro ao buscar pixQrCode:', pixErr.message);
+      }
+    }
+    // Fallback: resposta do POST às vezes traz pixQrCode (string ou objeto)
+    if (!pixValue && invoiceResult.pixQrCode != null) {
+      pixValue = typeof invoiceResult.pixQrCode === 'string'
+        ? invoiceResult.pixQrCode
+        : (invoiceResult.pixQrCode.payload || invoiceResult.pixQrCode.copyPaste || invoiceResult.pixQrCode.copyAndPaste || invoiceResult.pixTransaction?.payload || invoiceResult.pixTransaction?.copyAndPaste || '');
+    }
+
     console.log(`✅ [ASAAS] Fatura criada no ASAAS:`, {
-      id: invoiceResult.id, // pay_xxx (para referência)
-      invoiceNumber: invoiceResult.invoiceNumber, // 11559883 (ID correto para API)
-      pixQrCode: invoiceResult.pixQrCode ? 'Disponível' : 'N/A',
+      id: invoiceResult.id,
+      invoiceNumber: invoiceResult.invoiceNumber,
+      pixQrCode: pixValue ? 'Disponível' : 'N/A',
       bankSlipUrl: invoiceResult.bankSlipUrl ? 'Disponível' : 'N/A'
     });
 
     // 5. Atualizar fatura local com dados do ASAAS
-    // Usar invoiceNumber ao invés de id para operações futuras na API
     const { error: updateInvoiceError } = await supabase
       .from('invoices')
       .update({
-        invoice_code: invoiceResult.invoiceNumber, // Usar invoiceNumber (11559883) ao invés de id (pay_xxx)
-        payment_link_pix: invoiceResult.pixQrCode,
+        invoice_code: invoiceResult.invoiceNumber,
+        payment_link_pix: pixValue || invoiceResult.pixQrCode,
         payment_link_boleto: invoiceResult.bankSlipUrl
       })
       .eq('id', invoice.id);
@@ -2219,10 +2352,10 @@ async function createInvoiceInAsaasInline(invoice) {
 
     return {
       success: true,
-      asaasInvoiceId: invoiceResult.invoiceNumber, // Usar invoiceNumber para operações futuras
-      pixQrCode: invoiceResult.pixQrCode,
+      asaasInvoiceId: invoiceResult.invoiceNumber,
+      pixQrCode: pixValue || invoiceResult.pixQrCode,
       bankSlipUrl: invoiceResult.bankSlipUrl,
-      fullResponse: invoiceResult, // Para debug
+      fullResponse: invoiceResult,
       errors: []
     };
 
@@ -2232,6 +2365,99 @@ async function createInvoiceInAsaasInline(invoice) {
       success: false,
       errors: [error instanceof Error ? error.message : 'Erro desconhecido']
     };
+  }
+}
+
+// Sincroniza status da fatura com o ASAAS (GET payment). Se no ASAAS estiver RECEIVED/CONFIRMED, atualiza local para pago.
+// Retorna { didUpdate: boolean } para o caller refetch se quiser.
+async function syncInvoiceStatusFromAsaas(invoice) {
+  if (!invoice || !invoice.id) return { didUpdate: false };
+  const invoiceCode = invoice.invoice_code;
+  if (!invoiceCode) return { didUpdate: false };
+
+  try {
+    const { data: configs } = await supabase.from('system_config').select('key, value').in('key', ['asaas.api.key', 'asaas.environment']);
+    const cfg = {};
+    (configs || []).forEach(c => { cfg[c.key] = c.value; });
+    const env = cfg['asaas.environment'] || 'sandbox';
+    const asaasUrl = env === 'sandbox' ? 'https://sandbox.asaas.com/api/v3' : 'https://www.asaas.com/api/v3';
+    const token = cfg['asaas.api.key'];
+    if (!token) return { didUpdate: false };
+
+    const listRes = await fetch(`${asaasUrl}/payments?externalReference=invoice_${invoice.id}&limit=1`, {
+      method: 'GET',
+      headers: { 'access_token': token }
+    });
+    if (!listRes.ok) return { didUpdate: false };
+    const listData = await listRes.json();
+    const payId = listData.data && listData.data[0] && listData.data[0].id;
+    if (!payId) return { didUpdate: false };
+
+    const payRes = await fetch(`${asaasUrl}/payments/${payId}`, {
+      method: 'GET',
+      headers: { 'access_token': token }
+    });
+    if (!payRes.ok) return { didUpdate: false };
+    const payment = await payRes.json();
+    const status = (payment.status || '').toUpperCase();
+    if (status !== 'RECEIVED' && status !== 'CONFIRMED') return { didUpdate: false };
+
+    const updateResult = await updateInvoiceStatus(payment, 'PAYMENT_RECEIVED');
+    return { didUpdate: updateResult && updateResult.success === true };
+  } catch (e) {
+    console.warn('⚠️ [syncInvoiceStatusFromAsaas] Erro:', e.message);
+    return { didUpdate: false };
+  }
+}
+
+// Coloca contract_number e contract_code no nível superior da fatura (a partir da relação contracts) para o front exibir
+function ensureContractNumberOnInvoice(invoice) {
+  if (!invoice || invoice.contract_number) return;
+  const c = invoice.contracts;
+  const contract = Array.isArray(c) ? c[0] : c;
+  if (contract && typeof contract === 'object') {
+    if (contract.contract_number) invoice.contract_number = contract.contract_number;
+    if (contract.contract_code) invoice.contract_code = contract.contract_code;
+    if (!invoice.contract_number && contract.contract_code) invoice.contract_number = contract.contract_code;
+  }
+}
+
+// Após confirmação manual de pagamento: deleta a cobrança no ASAAS (evita cobrança pendente lá).
+// Ref: https://docs.asaas.com/reference/delete-payment-with-summary-data
+async function syncAsaasOnManualPaymentConfirm(invoice) {
+  if (!invoice || !invoice.id) return { asaasAction: 'none', reason: 'no_invoice' };
+  try {
+    const { data: configs } = await supabase.from('system_config').select('key, value').in('key', ['asaas.api.key', 'asaas.environment']);
+    const cfg = {};
+    (configs || []).forEach(c => { cfg[c.key] = c.value; });
+    const env = cfg['asaas.environment'] || 'sandbox';
+    const asaasUrl = env === 'sandbox' ? 'https://sandbox.asaas.com/api/v3' : 'https://www.asaas.com/api/v3';
+    const token = cfg['asaas.api.key'];
+    if (!token) return { asaasAction: 'none', reason: 'no_api_key' };
+
+    const listRes = await fetch(`${asaasUrl}/payments?externalReference=invoice_${invoice.id}&limit=1`, {
+      method: 'GET',
+      headers: { 'access_token': token }
+    });
+    if (!listRes.ok) return { asaasAction: 'none', reason: 'list_failed' };
+    const listData = await listRes.json();
+    const payId = listData.data && listData.data[0] && listData.data[0].id;
+    if (!payId) return { asaasAction: 'none', reason: 'payment_not_found' };
+
+    const delRes = await fetch(`${asaasUrl}/lean/payments/${payId}`, {
+      method: 'DELETE',
+      headers: { 'access_token': token }
+    });
+    if (delRes.ok) {
+      console.log(`✅ [confirm-payment] ASAAS: cobrança ${payId} removida.`);
+      return { asaasAction: 'deleted', paymentId: payId };
+    }
+    const delErr = await delRes.text();
+    console.warn(`⚠️ [confirm-payment] ASAAS delete falhou (${delRes.status}):`, delErr);
+    return { asaasAction: 'failed', paymentId: payId, deleteError: delErr };
+  } catch (e) {
+    console.warn('⚠️ [confirm-payment] syncAsaasOnManualPaymentConfirm erro:', e.message);
+    return { asaasAction: 'error', error: e.message };
   }
 }
 
@@ -2245,9 +2471,24 @@ app.post('/api/invoices/:invoiceId/ensure-asaas', async (req, res) => {
       return res.status(400).json({ success: false, error: 'invoiceId é obrigatório', code: 'MISSING_INVOICE_ID' });
     }
 
+    const invoiceSelect = `
+      *,
+      contracts (
+        id,
+        contract_number,
+        client_id,
+        clients (
+          id,
+          full_name,
+          name,
+          email,
+          cpf_cnpj
+        )
+      )
+    `;
     const { data: invoice, error: invoiceError } = await supabase
       .from('invoices')
-      .select('*')
+      .select(invoiceSelect)
       .eq('id', invoiceId)
       .single();
 
@@ -2262,6 +2503,7 @@ app.post('/api/invoices/:invoiceId/ensure-asaas', async (req, res) => {
     // Fatura já paga: retornar dados atuais sem chamar ASAAS
     const statusLower = (invoice.status || '').toLowerCase();
     if (statusLower === 'paid' || statusLower === 'pago') {
+      ensureContractNumberOnInvoice(invoice);
       return res.json({
         success: true,
         invoice,
@@ -2285,26 +2527,34 @@ app.post('/api/invoices/:invoiceId/ensure-asaas', async (req, res) => {
       });
     }
 
-    // Rebuscar fatura para devolver com payment_link_pix e payment_link_boleto atualizados
-    const { data: updatedInvoice, error: refetchError } = await supabase
+    // Rebuscar fatura com contrato e cliente para o front exibir número e dados
+    let { data: updatedInvoice, error: refetchError } = await supabase
       .from('invoices')
-      .select('*')
+      .select(invoiceSelect)
       .eq('id', invoiceId)
       .single();
 
     if (refetchError || !updatedInvoice) {
-      return res.json({
-        success: true,
-        invoice: {
-          ...invoice,
-          invoice_code: asaasResult.asaasInvoiceId,
-          payment_link_pix: asaasResult.pixQrCode,
-          payment_link_boleto: asaasResult.bankSlipUrl
-        },
-        message: asaasResult.message || 'Fatura garantida no ASAAS'
-      });
+      updatedInvoice = {
+        ...invoice,
+        invoice_code: asaasResult.asaasInvoiceId,
+        payment_link_pix: asaasResult.pixQrCode,
+        payment_link_boleto: asaasResult.bankSlipUrl
+      };
     }
 
+    // Sincronizar status com ASAAS: se o pagamento já estiver pago no ASAAS, atualizar no sistema
+    const syncResult = await syncInvoiceStatusFromAsaas(updatedInvoice);
+    if (syncResult.didUpdate) {
+      const { data: refetchedAfterSync } = await supabase
+        .from('invoices')
+        .select(invoiceSelect)
+        .eq('id', invoiceId)
+        .single();
+      if (refetchedAfterSync) updatedInvoice = refetchedAfterSync;
+    }
+
+    ensureContractNumberOnInvoice(updatedInvoice);
     return res.json({
       success: true,
       invoice: updatedInvoice,
@@ -2316,6 +2566,107 @@ app.post('/api/invoices/:invoiceId/ensure-asaas', async (req, res) => {
       success: false,
       error: err instanceof Error ? err.message : 'Erro ao garantir fatura no ASAAS',
       code: 'INTERNAL_ERROR'
+    });
+  }
+});
+
+// Confirmar pagamento manual (admin) — marca a fatura como paga no sistema
+const invoiceSelectForConfirm = `
+  *,
+  contracts (
+    id,
+    contract_number,
+    client_id,
+    clients (
+      id,
+      full_name,
+      name,
+      email,
+      cpf_cnpj
+    )
+  )
+`;
+app.post('/api/invoices/:invoiceId/confirm-payment', async (req, res) => {
+  try {
+    const invoiceId = req.params.invoiceId;
+    if (!invoiceId) {
+      return res.status(400).json({ success: false, error: 'invoiceId é obrigatório' });
+    }
+
+    const { data: invoice, error: fetchError } = await supabase
+      .from('invoices')
+      .select('id, status')
+      .eq('id', invoiceId)
+      .single();
+
+    if (fetchError || !invoice) {
+      return res.status(404).json({ success: false, error: 'Fatura não encontrada' });
+    }
+
+    const statusLower = (invoice.status || '').toLowerCase();
+    if (statusLower === 'paid' || statusLower === 'pago') {
+      const { data: current } = await supabase
+        .from('invoices')
+        .select(invoiceSelectForConfirm)
+        .eq('id', invoiceId)
+        .single();
+      ensureContractNumberOnInvoice(current || invoice);
+      return res.json({
+        success: true,
+        invoice: current || invoice,
+        message: 'Fatura já está paga'
+      });
+    }
+
+    const today = new Date().toISOString().split('T')[0];
+    const paidAt = new Date().toISOString();
+
+    const { error: updateError } = await supabase
+      .from('invoices')
+      .update({
+        status: 'paid',
+        payment_date: today,
+        paid_at: paidAt
+      })
+      .eq('id', invoiceId);
+
+    if (updateError) {
+      return res.status(500).json({
+        success: false,
+        error: updateError.message || 'Erro ao atualizar fatura'
+      });
+    }
+
+    const { data: updatedInvoice, error: refetchError } = await supabase
+      .from('invoices')
+      .select(invoiceSelectForConfirm)
+      .eq('id', invoiceId)
+      .single();
+
+    if (refetchError || !updatedInvoice) {
+      return res.json({
+        success: true,
+        invoice: { ...invoice, status: 'paid', payment_date: today, paid_at: paidAt },
+        message: 'Pagamento confirmado'
+      });
+    }
+
+    ensureContractNumberOnInvoice(updatedInvoice);
+
+    // Sincronizar com ASAAS: confirmar recebimento em dinheiro ou, se não for possível, deletar a cobrança
+    const asaasSync = await syncAsaasOnManualPaymentConfirm(updatedInvoice);
+
+    return res.json({
+      success: true,
+      invoice: updatedInvoice,
+      message: 'Pagamento confirmado com sucesso',
+      asaasSync
+    });
+  } catch (err) {
+    console.error('❌ [confirm-payment] Erro:', err);
+    return res.status(500).json({
+      success: false,
+      error: err instanceof Error ? err.message : 'Erro ao confirmar pagamento'
     });
   }
 });

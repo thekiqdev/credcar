@@ -105,3 +105,44 @@ export async function ensureInvoiceInAsaas(invoiceId: string): Promise<EnsureAsa
     };
   }
 }
+
+/**
+ * Confirma pagamento manual (admin). Marca a fatura como paga no sistema.
+ * Retorna a fatura atualizada.
+ */
+export async function confirmInvoicePayment(
+  invoiceId: string
+): Promise<{ success: true; invoice: Record<string, unknown> } | { success: false; error: string }> {
+  const baseUrl = getUploadApiBaseUrl();
+  const url = `${baseUrl}/invoices/${encodeURIComponent(String(invoiceId))}/confirm-payment`;
+
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+    });
+
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok) {
+      return {
+        success: false,
+        error: (data?.error as string) ?? `Erro ${res.status}`,
+      };
+    }
+
+    if (data?.success === true && data?.invoice) {
+      return { success: true, invoice: data.invoice };
+    }
+
+    return {
+      success: false,
+      error: (data?.error as string) ?? "Resposta inválida",
+    };
+  } catch (err) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : "Erro de conexão.",
+    };
+  }
+}
