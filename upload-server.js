@@ -2180,6 +2180,7 @@ async function createInvoiceInAsaasInline(invoice) {
     
     if (!invoiceResponse.ok) {
       const errorText = await invoiceResponse.text();
+      console.error(`❌ [ASAAS] API retornou erro ${invoiceResponse.status}:`, errorText);
       return {
         success: false,
         errors: [`Erro ao criar fatura no ASAAS: ${invoiceResponse.status} - ${errorText}`]
