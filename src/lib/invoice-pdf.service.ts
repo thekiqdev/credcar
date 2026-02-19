@@ -12,6 +12,8 @@ export interface CompanyInfoForPdf {
   company_address: string;
   company_phone: string;
   company_email: string;
+  /** URL completa do logo (ex.: origin + /path/to/logo.png) para incluir no cabeçalho do PDF */
+  logo_url?: string;
 }
 
 const FONT_SIZE_TITLE = 16;
@@ -78,12 +80,35 @@ export async function generateInvoicePdf(
   const companyAddress = company?.company_address ?? "";
   const companyPhone = company?.company_phone ?? "";
   const companyEmail = company?.company_email ?? "";
+  const logoW = 35;
+  const logoH = 12;
 
-  // --- Cabeçalho da empresa ---
+  // --- Logo (se disponível) ---
+  if (company?.logo_url) {
+    try {
+      const resp = await fetch(company.logo_url);
+      if (resp.ok) {
+        const blob = await resp.blob();
+        const dataUrl = await new Promise<string>((res, rej) => {
+          const r = new FileReader();
+          r.onload = () => res(r.result as string);
+          r.onerror = rej;
+          r.readAsDataURL(blob);
+        });
+        doc.addImage(dataUrl, "PNG", MARGIN, y, logoW, logoH);
+      }
+    } catch (_) {
+      /* segue sem logo */
+    }
+  }
+
+  // --- Cabeçalho da empresa (nome à direita do logo ou na primeira linha) ---
+  const textX = company?.logo_url ? MARGIN + logoW + 4 : MARGIN;
   doc.setFontSize(FONT_SIZE_TITLE);
   doc.setFont("helvetica", "bold");
-  doc.text(companyName, MARGIN, y);
-  y += LINE_HEIGHT + 2;
+  doc.text(companyName, textX, y + 4);
+  y += company?.logo_url ? logoH : LINE_HEIGHT + 2;
+  y += 2;
 
   doc.setFontSize(FONT_SIZE_SMALL);
   doc.setFont("helvetica", "normal");

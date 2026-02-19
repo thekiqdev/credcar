@@ -223,10 +223,15 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({
       const invoice = await invoiceService.getById(invoiceId);
       if (invoice) {
         // Formatar dados da fatura para exibição
+        const contractNumber =
+          invoice.contracts?.contract_number ??
+          invoice.contract_number ??
+          (invoice.contract_id != null ? String(invoice.contract_id) : "N/A");
         const formattedInvoice = {
           id: invoice.id.toString(),
           invoiceNumber: invoice.invoice_code || `FAT-${invoice.id}`,
-          contractNumber: invoice.contracts?.contract_number || "N/A",
+          contractNumber,
+          contract_id: invoice.contract_id,
           dueDate: invoice.due_date ? new Date(invoice.due_date).toLocaleDateString("pt-BR") : "N/A",
           value: parseFloat(invoice.value || invoice.amount || "0"),
           status: invoice.status === "Pago" || invoice.status === "paid" 
@@ -291,49 +296,6 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({
       cancelled = true;
     };
   }, [isInvoiceModalOpen, selectedInvoice?.id]);
-
-  // Handler para download de fatura
-  const handleDownloadInvoice = async (invoice: any) => {
-    try {
-      // Se tem link de pagamento, pode usar para gerar PDF
-      if (invoice.paymentLinkBoleto || invoice.payment_link_boleto) {
-        window.open(invoice.paymentLinkBoleto || invoice.payment_link_boleto, '_blank');
-        return;
-      }
-      
-      if (invoice.paymentLinkPix || invoice.payment_link_pix) {
-        window.open(invoice.paymentLinkPix || invoice.payment_link_pix, '_blank');
-        return;
-      }
-
-      // Gerar arquivo de texto básico da fatura
-      const invoiceData = invoice.invoiceData || invoice;
-      const invoiceContent = `
-FATURA - ${invoice.invoiceNumber || invoice.invoice_code || `FAT-${invoice.id}`}
-Contrato: ${invoice.contractNumber || invoice.contracts?.contract_number || 'N/A'}
-Data de Vencimento: ${invoice.dueDate || (invoice.due_date ? new Date(invoice.due_date).toLocaleDateString("pt-BR") : "N/A")}
-Valor: R$ ${(invoice.value || invoice.amount || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-Status: ${invoice.status === 'paid' || invoice.status === 'Pago' ? 'PAGO' : invoice.status === 'overdue' || invoice.status === 'Vencido' ? 'VENCIDO' : 'PENDENTE'}
-${invoice.paymentDate ? `Data de Pagamento: ${invoice.paymentDate}` : ''}
-${invoice.paymentMethod ? `Método de Pagamento: ${invoice.paymentMethod}` : ''}
-${invoice.installmentNumber ? `Parcela: ${invoice.installmentNumber}ª` : ''}
-      `.trim();
-
-      // Criar blob e fazer download
-      const blob = new Blob([invoiceContent], { type: 'text/plain;charset=utf-8' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `Fatura-${invoice.invoiceNumber || invoice.invoice_code || invoice.id}.txt`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error("Error downloading invoice:", error);
-      alert("Erro ao fazer download da fatura. Tente novamente.");
-    }
-  };
 
   // Load client data from database when authenticated
   useEffect(() => {
@@ -1276,16 +1238,8 @@ ${invoice.installmentNumber ? `Parcela: ${invoice.installmentNumber}ª` : ''}
                                   onClick={() => handleViewInvoice(invoice.id)}
                                   title="Visualizar fatura"
                                 >
-                                <Eye className="h-4 w-4" />
-                              </Button>
-                                <Button 
-                                  variant="outline" 
-                                  size="sm"
-                                  onClick={() => handleDownloadInvoice(invoice)}
-                                  title="Download da fatura"
-                                >
-                                <Download className="h-4 w-4" />
-                              </Button>
+                                  <Eye className="h-4 w-4" />
+                                </Button>
                             </div>
                           </TableCell>
                         </TableRow>
@@ -1799,7 +1753,6 @@ ${invoice.installmentNumber ? `Parcela: ${invoice.installmentNumber}ª` : ''}
               <InvoiceView
                 invoice={selectedInvoice}
                 showCompanyHeader={true}
-                onDownload={handleDownloadInvoice}
                 hidePrintButton={false}
                 compact
                 showPublicLink

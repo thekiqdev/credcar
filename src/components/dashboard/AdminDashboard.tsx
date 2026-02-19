@@ -544,10 +544,24 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     }
   }, [activeSection]);
 
-  // Carregar todas as faturas quando a seção de invoices for ativada
+  // Carregar todas as faturas e todos os contratos ativos quando a seção de invoices for ativada
+  const loadActiveContractsForInvoices = async () => {
+    try {
+      setIsLoadingActiveContracts(true);
+      const list = await contractService.getActiveForInvoices();
+      setActiveContractsForInvoices(list);
+    } catch (e) {
+      console.error("Erro ao carregar contratos ativos para faturas:", e);
+      setActiveContractsForInvoices([]);
+    } finally {
+      setIsLoadingActiveContracts(false);
+    }
+  };
+
   useEffect(() => {
     if (activeSection === "invoices") {
       loadAllInvoices();
+      loadActiveContractsForInvoices();
     }
   }, [activeSection]);
 
@@ -594,6 +608,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   // Contracts state
   const [allContracts, setAllContracts] = useState([]);
+  const [activeContractsForInvoices, setActiveContractsForInvoices] = useState<any[]>([]);
+  const [isLoadingActiveContracts, setIsLoadingActiveContracts] = useState(false);
   const [isLoadingContracts, setIsLoadingContracts] = useState(true);
   const [contractsFilter, setContractsFilter] = useState("all");
   const [contractsSearch, setContractsSearch] = useState("");
@@ -1018,9 +1034,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   };
 
   const calculatePaidAmount = (contractId: number): number => {
-    return invoices
+    return allInvoices
       .filter(inv => inv.contract_id === contractId && inv.status === 'paid')
-      .reduce((total, inv) => total + inv.amount, 0);
+      .reduce((total, inv) => total + (inv.amount ?? 0), 0);
   };
 
   const loadAllContracts = async (page: number = contractsPage, search: string = contractsSearch) => {
@@ -5179,13 +5195,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       </CardHeader>
                       <CardContent className="p-0">
                         <div className="max-h-96 overflow-y-auto">
-                          {allContracts
-                            .filter(
-                              (contract: any) =>
-                                contract.status === "Aprovado" ||
-                                contract.status === "Ativo",
-                            )
-                            .map((contract: any) => (
+                          {isLoadingActiveContracts ? (
+                            <div className="flex items-center justify-center py-8">
+                              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600" />
+                            </div>
+                          ) : (
+                          activeContractsForInvoices.map((contract: any) => (
                               <div
                                 key={contract.id}
                                 className={`p-4 border-b cursor-pointer hover:bg-gray-50 transition-colors ${
@@ -5279,12 +5294,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                   </Badge>
                                 </div>
                               </div>
-                            ))}
-                          {allContracts.filter(
-                            (contract: any) =>
-                              contract.status === "Aprovado" ||
-                              contract.status === "Ativo",
-                          ).length === 0 && (
+                            )))}
+                          {!isLoadingActiveContracts && activeContractsForInvoices.length === 0 && (
                             <div className="p-8 text-center text-muted-foreground">
                               <FileText className="h-12 w-12 mx-auto mb-2" />
                               <p className="text-sm">

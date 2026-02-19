@@ -14,6 +14,12 @@ function getUploadApiBaseUrl(): string {
   return `${typeof window !== "undefined" ? window.location.protocol : "https:"}//${hostname}/api`;
 }
 
+/** Base URL do upload-server (sem /api), para rotas como view-document e download-document. */
+export function getUploadServerBaseUrl(): string {
+  const api = getUploadApiBaseUrl();
+  return api.replace(/\/api\/?$/, "") || api;
+}
+
 export interface EnsureAsaasSuccess {
   success: true;
   invoice: Record<string, unknown>;

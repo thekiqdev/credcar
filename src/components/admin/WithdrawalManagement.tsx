@@ -38,6 +38,7 @@ import {
   Download,
 } from "lucide-react";
 import { withdrawalService, WithdrawalRequest } from "../../lib/withdrawal.service";
+import { getUploadServerBaseUrl } from "@/lib/invoice-asaas.client";
 
 interface WithdrawalManagementProps {
   onClose?: () => void;
@@ -170,8 +171,7 @@ const WithdrawalManagement: React.FC<WithdrawalManagementProps> = ({ onClose }) 
     }
     
     try {
-      // Construir URL completa do servidor Node.js
-      const serverUrl = 'http://localhost:3001'; // URL do upload-server
+      const serverUrl = getUploadServerBaseUrl();
       const fullUrl = `${serverUrl}/api/view-document?filePath=${encodeURIComponent(invoiceUrl)}`;
       
       console.log('📄 Abrindo visualização:', fullUrl);
@@ -196,8 +196,7 @@ const WithdrawalManagement: React.FC<WithdrawalManagementProps> = ({ onClose }) 
     }
 
     try {
-      // Construir URL completa do servidor Node.js
-      const serverUrl = 'http://localhost:3001'; // URL do upload-server
+      const serverUrl = getUploadServerBaseUrl();
       const fullUrl = `${serverUrl}/api/download-document?filePath=${encodeURIComponent(invoiceUrl)}`;
       
       console.log('📥 Iniciando download:', fullUrl);

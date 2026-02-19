@@ -37,6 +37,7 @@ export interface GeneralSettings {
 /** Invoice data from API (invoiceService.getById) or formatted for display */
 export interface InvoiceViewData {
   id: string | number;
+  contract_id?: number | string;
   invoice_code?: string;
   invoiceNumber?: string;
   contract_number?: string;
@@ -158,6 +159,7 @@ const InvoiceView: React.FC<InvoiceViewProps> = ({
   const contractRecord = contractObj && typeof contractObj === "object" ? (contractObj as Record<string, unknown>) : null;
   const client = contractRecord?.clients ?? (invoice as any).contracts?.clients ?? invAny.contract?.clients;
   const clientName = client?.full_name ?? client?.name ?? (client as any)?.full_name ?? "—";
+  const contractIdRaw = invoice.contract_id ?? invAny.contract_id;
   const contractNumber =
     invoice.contractNumber ??
     invAny.contractNumber ??
@@ -168,7 +170,7 @@ const InvoiceView: React.FC<InvoiceViewProps> = ({
     invoice.contract_number ??
     invoice.contract_code ??
     (invAny.contract_number ?? invAny.contract_code) ??
-    (invoice.contract_id ? `#${invoice.contract_id}` : "N/A");
+    (contractIdRaw != null && contractIdRaw !== "" ? String(contractIdRaw) : "N/A");
 
   const statusLabel =
     status === "paid" ? "PAGO" : status === "overdue" ? "VENCIDO" : "PENDENTE";
@@ -176,6 +178,7 @@ const InvoiceView: React.FC<InvoiceViewProps> = ({
   const handleDownloadPdf = async () => {
     try {
       setIsGeneratingPdf(true);
+      const logoPath = getLogoUrl();
       const company = generalSettings
         ? {
             company_name: generalSettings.company_name,
@@ -183,6 +186,10 @@ const InvoiceView: React.FC<InvoiceViewProps> = ({
             company_address: generalSettings.company_address,
             company_phone: generalSettings.company_phone,
             company_email: generalSettings.company_email,
+            logo_url:
+              typeof window !== "undefined" && logoPath
+                ? `${window.location.origin}${logoPath.startsWith("/") ? "" : "/"}${logoPath}`
+                : undefined,
           }
         : null;
       await downloadInvoicePdf(invoice, company);
@@ -202,10 +209,27 @@ const InvoiceView: React.FC<InvoiceViewProps> = ({
         : "bg-yellow-500 text-white hover:bg-yellow-600 border-yellow-500";
 
   return (
-    <div className={`invoice-view-root ${compact ? "space-y-4" : "min-h-screen bg-background"}`}>
-      {/* Estilos de impressão */}
+    <div
+      id="invoice-print-area"
+      className={`invoice-view-root ${compact ? "space-y-4" : "min-h-screen bg-background"}`}
+    >
+      {/* Estilos de impressão: mesmo conteúdo do PDF (cabeçalho + fatura); só esta área é impressa */}
       <style>{`
         @media print {
+          body * {
+            visibility: hidden;
+          }
+          #invoice-print-area,
+          #invoice-print-area * {
+            visibility: visible;
+          }
+          #invoice-print-area {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            background: #fff;
+          }
           .invoice-view-root {
             background: #fff !important;
           }

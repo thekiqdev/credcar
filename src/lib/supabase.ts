@@ -1441,12 +1441,37 @@ export const contractService = {
   // Get all contracts for admin view with pagination
   async getAll(page: number = 1, limit: number = 20, search?: string) {
     try {
-      // If search is provided, we need to search across all data first
+      // Busca: filtrar no servidor por nome do cliente (via client_id), id/código do contrato e representante
       if (search && search.trim()) {
-        const searchTerm = search.toLowerCase();
-        
-        // First, get all contracts that match the search criteria
-        const { data: allData, error: searchError } = await supabase
+        const term = search.trim();
+        // Valor entre aspas para o .or() do PostgREST preservar espaços e vírgulas no termo
+        const termForIlike = '"%' + term.replace(/"/g, '""') + '%"';
+
+        // 1) IDs de clientes cujo nome contém o termo (full_name ou name)
+        const { data: clientsByName } = await supabase
+          .from("clients")
+          .select("id")
+          .or(`full_name.ilike.${termForIlike},name.ilike.${termForIlike}`);
+
+        const clientIds = (clientsByName || []).map((c: { id: number }) => c.id);
+
+        // 2) IDs de representantes cujo nome contém o termo
+        const { data: profilesByName } = await supabase
+          .from("profiles")
+          .select("id")
+          .ilike("full_name", `%${term}%`);
+
+        const profileIds = (profilesByName || []).map((p: { id: string }) => p.id);
+
+        // 3) Contratos: client_id in (...), ou representative_id in (...), ou id/código do contrato
+        const orParts: string[] = [];
+        if (clientIds.length > 0) orParts.push(`client_id.in.(${clientIds.join(",")})`);
+        if (profileIds.length > 0) orParts.push(`representative_id.in.("${profileIds.join('","')}")`);
+        orParts.push(`contract_number.ilike.${termForIlike}`);
+        orParts.push(`contract_code.ilike.${termForIlike}`);
+        if (/^\d+$/.test(term)) orParts.push(`id.eq.${term}`);
+
+        const { data: contractData, error: contractError, count } = await supabase
           .from("contracts")
           .select(
             `
@@ -1455,37 +1480,25 @@ export const contractService = {
             profiles!inner (full_name, email),
             planos!inner (nome, comissao)
           `,
-            { count: 'exact' }
+            { count: "exact" }
           )
-          .order("created_at", { ascending: false });
+          .or(orParts.join(","))
+          .order("created_at", { ascending: false })
+          .range((page - 1) * limit, page * limit - 1);
 
-        if (searchError) {
-          console.error("Error fetching contracts for search:", searchError);
-          throw searchError;
+        if (contractError) {
+          console.error("Error fetching contracts for search:", contractError);
+          throw contractError;
         }
 
-        // Filter the results client-side
-        const filteredData = (allData || []).filter((contract: any) => {
-          return (
-            contract.contract_number?.toLowerCase().includes(searchTerm) ||
-            contract.contract_code?.toLowerCase().includes(searchTerm) ||
-            contract.clients?.full_name?.toLowerCase().includes(searchTerm) ||
-            contract.clients?.name?.toLowerCase().includes(searchTerm) ||
-            contract.profiles?.full_name?.toLowerCase().includes(searchTerm)
-          );
-        });
-
-        // Apply pagination to filtered results
-        const from = (page - 1) * limit;
-        const to = from + limit;
-        const paginatedData = filteredData.slice(from, to);
+        const totalFromCount = count ?? 0;
 
         return {
-          data: paginatedData,
-          total: filteredData.length,
+          data: contractData || [],
+          total: totalFromCount,
           page,
           limit,
-          totalPages: Math.ceil(filteredData.length / limit)
+          totalPages: Math.ceil(totalFromCount / limit) || 1
         };
       }
 
@@ -1548,6 +1561,34 @@ export const contractService = {
       return data || [];
     } catch (error) {
       console.error("Error in contractService.getAllLegacy:", error);
+      throw error;
+    }
+  },
+
+  // Get all active/aprovado contracts (sem paginação) para a lista "Contratos Aprovados" na Gestão de Faturas
+  async getActiveForInvoices() {
+    try {
+      const { data, error } = await supabase
+        .from("contracts")
+        .select(
+          `
+          *,
+          clients(full_name, name),
+          profiles!inner (full_name, email),
+          planos!inner (nome, comissao)
+        `,
+        )
+        .in("status", ["Aprovado", "Ativo"])
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        console.error("Error fetching active contracts for invoices:", error);
+        throw error;
+      }
+
+      return data || [];
+    } catch (error) {
+      console.error("Error in contractService.getActiveForInvoices:", error);
       throw error;
     }
   },
