@@ -12,6 +12,7 @@ import {
   commissionPlansService,
   administratorService,
   generalSettingsService,
+  invoiceService,
 } from "../../lib/supabase";
 import { systemConfigService } from "../../lib/system-config.service";
 import { asaasService } from "../../lib/asaas.service";
@@ -36,6 +37,7 @@ function generateUUID(): string {
 }
 import { authService } from "@/lib/auth.service";
 import { uploadService } from "../../lib/upload.service";
+import { ensureInvoiceInAsaas, getEnsureAsaasErrorMessage } from "@/lib/invoice-asaas.client";
 import { Database } from "../../types/supabase";
 import {
   Card,
@@ -135,10 +137,12 @@ import {
   Lock,
   EyeOff,
   AlertCircle,
+  Loader2,
 } from "lucide-react";
 import ContractCreationFlow from "@/components/sales/ContractCreationFlow";
 import ContractTemplateManagement from "@/components/sales/ContractTemplateManagement";
 import ContractDetails from "@/components/sales/ContractDetails";
+import InvoiceView from "@/components/sales/InvoiceView";
 
 interface AdminDashboardProps {
   userName?: string;
@@ -287,6 +291,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   ]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [allInvoices, setAllInvoices] = useState<Invoice[]>([]); // Todas as faturas para contadores globais
+  const [selectedInvoiceForView, setSelectedInvoiceForView] = useState<any>(null);
+  const [isInvoiceViewOpen, setIsInvoiceViewOpen] = useState(false);
+  const [ensuringAsaas, setEnsuringAsaas] = useState(false);
+  const [ensureAsaasError, setEnsureAsaasError] = useState<string | null>(null);
   // Commission Plans State
   const [commissionPlans, setCommissionPlans] = useState([]);
   const [creditRanges, setCreditRanges] = useState([]);
@@ -947,6 +955,45 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       console.error('Erro ao carregar faturas:', error);
     }
   };
+
+  const handleViewInvoice = async (invoiceId: string) => {
+    try {
+      setEnsureAsaasError(null);
+      const invoice = await invoiceService.getById(invoiceId);
+      if (invoice) {
+        setSelectedInvoiceForView(invoice);
+        setIsInvoiceViewOpen(true);
+      }
+    } catch (error) {
+      console.error("Erro ao carregar fatura:", error);
+      alert("Erro ao carregar fatura. Tente novamente.");
+    }
+  };
+
+  // Garantir fatura no ASAAS ao abrir modal (quando ainda não tem PIX/ASAAS)
+  useEffect(() => {
+    if (!isInvoiceViewOpen || !selectedInvoiceForView) return;
+    const inv = selectedInvoiceForView;
+    const statusLower = String(inv?.status ?? "").toLowerCase();
+    if (statusLower === "paid" || statusLower === "pago") return;
+    if (inv.payment_link_pix || inv.invoice_code) return;
+
+    let cancelled = false;
+    setEnsureAsaasError(null);
+    setEnsuringAsaas(true);
+    ensureInvoiceInAsaas(String(inv.id))
+      .then((r) => {
+        if (cancelled) return;
+        if (r.success) setSelectedInvoiceForView(r.invoice as any);
+        else setEnsureAsaasError(getEnsureAsaasErrorMessage(r.code, r.error));
+      })
+      .finally(() => {
+        if (!cancelled) setEnsuringAsaas(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isInvoiceViewOpen, selectedInvoiceForView?.id]);
 
   // Função para carregar todas as faturas (para contadores globais)
   const loadAllInvoices = async () => {
@@ -5460,7 +5507,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                         </TableCell>
                                         <TableCell className="text-right">
                                           <div className="flex gap-2 justify-end">
-                                            <Button variant="outline" size="sm">
+                                            <Button
+                                              variant="outline"
+                                              size="sm"
+                                              onClick={() => handleViewInvoice(invoice.id.toString())}
+                                              title="Visualizar fatura"
+                                            >
                                               <Eye className="h-4 w-4" />
                                             </Button>
                                             {/* Botão de confirmar pagamento removido - pagamentos confirmados automaticamente via ASAAS */}
@@ -10268,6 +10320,43 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 Fechar
               </Button>
             </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Modal de Visualização de Fatura */}
+        <Dialog open={isInvoiceViewOpen} onOpenChange={setIsInvoiceViewOpen}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Detalhes da Fatura</DialogTitle>
+              <DialogDescription>
+                Informações completas da fatura selecionada
+              </DialogDescription>
+            </DialogHeader>
+            {selectedInvoiceForView && (
+              <div className="mt-2 space-y-3">
+                {ensuringAsaas && (
+                  <div className="flex items-center gap-2 rounded-md border border-muted bg-muted/50 p-4 text-sm text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin shrink-0" />
+                    <span>Preparando pagamento…</span>
+                  </div>
+                )}
+                {!ensuringAsaas && ensureAsaasError && (
+                  <div className="rounded-md border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">
+                    {ensureAsaasError}
+                    <p className="mt-2 text-muted-foreground">
+                      Você ainda pode usar o link de pagamento enviado por e-mail, se houver.
+                    </p>
+                  </div>
+                )}
+                <InvoiceView
+                  invoice={selectedInvoiceForView}
+                  showCompanyHeader={false}
+                  hidePrintButton={false}
+                  compact
+                  showPublicLink
+                />
+              </div>
+            )}
           </DialogContent>
         </Dialog>
 

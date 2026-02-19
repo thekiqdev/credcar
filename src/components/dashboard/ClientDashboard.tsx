@@ -39,6 +39,7 @@ import {
   Settings,
   Lock,
   EyeOff,
+  Loader2,
 } from "lucide-react";
 import {
   Dialog,
@@ -60,6 +61,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import InvoiceView from "@/components/sales/InvoiceView";
+import { ensureInvoiceInAsaas, getEnsureAsaasErrorMessage } from "@/lib/invoice-asaas.client";
 
 interface ClientDashboardProps {
   clientName?: string;
@@ -152,6 +155,8 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({
   // Estados para visualização de fatura
   const [selectedInvoice, setSelectedInvoice] = useState<any>(null);
   const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
+  const [ensuringAsaas, setEnsuringAsaas] = useState(false);
+  const [ensureAsaasError, setEnsureAsaasError] = useState<string | null>(null);
   const [invoiceFilter, setInvoiceFilter] = useState<"all" | "paid" | "pending" | "overdue">("all");
   const [allInvoices, setAllInvoices] = useState<any[]>([]); // Todas as faturas (antes do filtro)
 
@@ -214,6 +219,7 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({
   // Handler para visualizar fatura
   const handleViewInvoice = async (invoiceId: string) => {
     try {
+      setEnsureAsaasError(null);
       const invoice = await invoiceService.getById(invoiceId);
       if (invoice) {
         // Formatar dados da fatura para exibição
@@ -244,6 +250,7 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({
       }
     } catch (error) {
       console.error("Error loading invoice details:", error);
+      setEnsureAsaasError(null);
       // Se não conseguir buscar detalhes, usar dados da lista
       const invoiceFromList = allInvoices.find((inv) => inv.id === invoiceId);
       if (invoiceFromList) {
@@ -252,6 +259,39 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({
       }
     }
   };
+
+  // Garantir fatura no ASAAS ao abrir modal (quando ainda não tem PIX/ASAAS)
+  useEffect(() => {
+    if (!isInvoiceModalOpen || !selectedInvoice?.id) return;
+    const inv = selectedInvoice;
+    const isPaid = inv.status === "paid";
+    const hasAsaas = inv.paymentLinkPix ?? inv.payment_link_pix ?? inv.invoiceData?.invoice_code;
+    if (isPaid || hasAsaas) return;
+
+    let cancelled = false;
+    setEnsureAsaasError(null);
+    setEnsuringAsaas(true);
+    ensureInvoiceInAsaas(String(inv.id))
+      .then((r) => {
+        if (cancelled) return;
+        if (r.success && r.invoice) {
+          setSelectedInvoice((prev: any) => ({
+            ...prev,
+            paymentLinkPix: r.invoice.payment_link_pix ?? prev?.paymentLinkPix,
+            paymentLinkBoleto: r.invoice.payment_link_boleto ?? prev?.paymentLinkBoleto,
+            invoiceData: { ...prev?.invoiceData, ...r.invoice },
+          }));
+        } else {
+          setEnsureAsaasError(getEnsureAsaasErrorMessage(r.code, r.error));
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setEnsuringAsaas(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isInvoiceModalOpen, selectedInvoice?.id]);
 
   // Handler para download de fatura
   const handleDownloadInvoice = async (invoice: any) => {
@@ -1734,115 +1774,43 @@ ${invoice.installmentNumber ? `Parcela: ${invoice.installmentNumber}ª` : ''}
 
       {/* Modal de Visualização de Fatura */}
       <Dialog open={isInvoiceModalOpen} onOpenChange={setIsInvoiceModalOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Detalhes da Fatura</DialogTitle>
             <DialogDescription>
               Informações completas da fatura selecionada
             </DialogDescription>
           </DialogHeader>
-          
           {selectedInvoice && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-sm font-medium text-muted-foreground">Número da Fatura</Label>
-                  <p className="text-sm font-medium">{selectedInvoice.invoiceNumber || selectedInvoice.invoice_code || `FAT-${selectedInvoice.id}`}</p>
-                </div>
-                <div>
-                  <Label className="text-sm font-medium text-muted-foreground">Contrato</Label>
-                  <p className="text-sm font-medium">{selectedInvoice.contractNumber || selectedInvoice.contracts?.contract_number || "N/A"}</p>
-                </div>
-                <div>
-                  <Label className="text-sm font-medium text-muted-foreground">Data de Vencimento</Label>
-                  <p className="text-sm font-medium">{selectedInvoice.dueDate || (selectedInvoice.due_date ? new Date(selectedInvoice.due_date).toLocaleDateString("pt-BR") : "N/A")}</p>
-                </div>
-                <div>
-                  <Label className="text-sm font-medium text-muted-foreground">Valor</Label>
-                  <p className="text-sm font-medium text-lg">
-                    R$ {(selectedInvoice.value || selectedInvoice.amount || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
-                  </p>
-                </div>
-                <div>
-                  <Label className="text-sm font-medium text-muted-foreground">Status</Label>
-                  <Badge
-                    variant="outline"
-                    className={
-                      (selectedInvoice.status === "paid" || selectedInvoice.status === "Pago")
-                        ? "bg-green-500 text-white hover:bg-green-600 border-green-500"
-                        : (selectedInvoice.status === "overdue" || selectedInvoice.status === "Vencido")
-                          ? "bg-red-500 text-white hover:bg-red-600 border-red-500"
-                          : "bg-yellow-500 text-white hover:bg-yellow-600 border-yellow-500"
-                    }
-                  >
-                    {(selectedInvoice.status === "paid" || selectedInvoice.status === "Pago") && "PAGO"}
-                    {(selectedInvoice.status === "pending" || selectedInvoice.status === "Pendente") && "PENDENTE"}
-                    {(selectedInvoice.status === "overdue" || selectedInvoice.status === "Vencido") && "VENCIDO"}
-                  </Badge>
-                </div>
-                {selectedInvoice.paymentDate && (
-                  <div>
-                    <Label className="text-sm font-medium text-muted-foreground">Data de Pagamento</Label>
-                    <p className="text-sm font-medium">{selectedInvoice.paymentDate}</p>
-                  </div>
-                )}
-                {selectedInvoice.paymentMethod && (
-                  <div>
-                    <Label className="text-sm font-medium text-muted-foreground">Método de Pagamento</Label>
-                    <p className="text-sm font-medium">{selectedInvoice.paymentMethod}</p>
-                  </div>
-                )}
-                {selectedInvoice.installmentNumber && (
-                  <div>
-                    <Label className="text-sm font-medium text-muted-foreground">Parcela</Label>
-                    <p className="text-sm font-medium">{selectedInvoice.installmentNumber}ª parcela</p>
-                  </div>
-                )}
-              </div>
-
-              {/* Links de Pagamento */}
-              {(selectedInvoice.paymentLinkPix || selectedInvoice.paymentLinkBoleto || selectedInvoice.payment_link_pix || selectedInvoice.payment_link_boleto) && (
-                <div className="border-t pt-4">
-                  <Label className="text-sm font-medium mb-2 block">Links de Pagamento</Label>
-                  <div className="flex gap-2">
-                    {(selectedInvoice.paymentLinkPix || selectedInvoice.payment_link_pix) && (
-                      <Button
-                        variant="outline"
-                        onClick={() => window.open(selectedInvoice.paymentLinkPix || selectedInvoice.payment_link_pix, '_blank')}
-                      >
-                        <CreditCard className="mr-2 h-4 w-4" />
-                        Pagar com PIX
-                      </Button>
-                    )}
-                    {(selectedInvoice.paymentLinkBoleto || selectedInvoice.payment_link_boleto) && (
-                      <Button
-                        variant="outline"
-                        onClick={() => window.open(selectedInvoice.paymentLinkBoleto || selectedInvoice.payment_link_boleto, '_blank')}
-                      >
-                        <FileText className="mr-2 h-4 w-4" />
-                        Ver Boleto
-                      </Button>
-                    )}
-                  </div>
+            <div className="space-y-3">
+              {ensuringAsaas && (
+                <div className="flex items-center gap-2 rounded-md border border-muted bg-muted/50 p-4 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin shrink-0" />
+                  <span>Preparando pagamento…</span>
                 </div>
               )}
+              {!ensuringAsaas && ensureAsaasError && (
+                <div className="rounded-md border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">
+                  {ensureAsaasError}
+                  <p className="mt-2 text-muted-foreground">
+                    Você ainda pode usar o link de pagamento enviado por e-mail, se houver.
+                  </p>
+                </div>
+              )}
+              <InvoiceView
+                invoice={selectedInvoice}
+                showCompanyHeader={true}
+                onDownload={handleDownloadInvoice}
+                hidePrintButton={false}
+                compact
+                showPublicLink
+              />
             </div>
           )}
-
-          <DialogFooter>
+          <DialogFooter className="print:hidden">
             <Button variant="outline" onClick={() => setIsInvoiceModalOpen(false)}>
               Fechar
             </Button>
-            {selectedInvoice && (
-              <Button
-                onClick={() => {
-                  handleDownloadInvoice(selectedInvoice);
-                }}
-              >
-                <Download className="mr-2 h-4 w-4" />
-                Download
-              </Button>
-            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>

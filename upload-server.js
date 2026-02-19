@@ -2234,6 +2234,91 @@ async function createInvoiceInAsaasInline(invoice) {
   }
 }
 
+// Garantir fatura no ASAAS (criar cobrança se ainda não existir) — usado ao visualizar fatura.
+// Permissões: atualmente aberto; o frontend chama apenas ao abrir fatura já carregada (admin, cliente ou link público).
+// Para restringir: validar JWT/sessão e garantir que o usuário seja admin ou dono do contrato da fatura.
+app.post('/api/invoices/:invoiceId/ensure-asaas', async (req, res) => {
+  try {
+    const invoiceId = req.params.invoiceId;
+    if (!invoiceId) {
+      return res.status(400).json({ success: false, error: 'invoiceId é obrigatório', code: 'MISSING_INVOICE_ID' });
+    }
+
+    const { data: invoice, error: invoiceError } = await supabase
+      .from('invoices')
+      .select('*')
+      .eq('id', invoiceId)
+      .single();
+
+    if (invoiceError || !invoice) {
+      return res.status(404).json({
+        success: false,
+        error: 'Fatura não encontrada',
+        code: 'INVOICE_NOT_FOUND'
+      });
+    }
+
+    // Fatura já paga: retornar dados atuais sem chamar ASAAS
+    const statusLower = (invoice.status || '').toLowerCase();
+    if (statusLower === 'paid' || statusLower === 'pago') {
+      return res.json({
+        success: true,
+        invoice,
+        message: 'Fatura já paga'
+      });
+    }
+
+    const asaasResult = await createInvoiceInAsaasInline(invoice);
+
+    if (!asaasResult.success) {
+      const message = asaasResult.errors && asaasResult.errors.length > 0
+        ? asaasResult.errors.join(' ')
+        : 'Não foi possível gerar o pagamento no ASAAS';
+      const code = !invoice.invoice_code && message.includes('Cliente')
+        ? 'CLIENT_NO_ASAAS'
+        : 'ASAAS_ERROR';
+      return res.status(422).json({
+        success: false,
+        error: message,
+        code
+      });
+    }
+
+    // Rebuscar fatura para devolver com payment_link_pix e payment_link_boleto atualizados
+    const { data: updatedInvoice, error: refetchError } = await supabase
+      .from('invoices')
+      .select('*')
+      .eq('id', invoiceId)
+      .single();
+
+    if (refetchError || !updatedInvoice) {
+      return res.json({
+        success: true,
+        invoice: {
+          ...invoice,
+          invoice_code: asaasResult.asaasInvoiceId,
+          payment_link_pix: asaasResult.pixQrCode,
+          payment_link_boleto: asaasResult.bankSlipUrl
+        },
+        message: asaasResult.message || 'Fatura garantida no ASAAS'
+      });
+    }
+
+    return res.json({
+      success: true,
+      invoice: updatedInvoice,
+      message: asaasResult.message || 'Fatura garantida no ASAAS'
+    });
+  } catch (err) {
+    console.error('❌ [ensure-asaas] Erro:', err);
+    return res.status(500).json({
+      success: false,
+      error: err instanceof Error ? err.message : 'Erro ao garantir fatura no ASAAS',
+      code: 'INTERNAL_ERROR'
+    });
+  }
+});
+
 // Endpoint para testar integração ASAAS diretamente
 app.get('/api/test/test-asaas-integration/:invoiceId', async (req, res) => {
   try {

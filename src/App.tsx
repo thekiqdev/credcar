@@ -24,6 +24,7 @@ import SalesSimulator from './components/sales/SalesSimulator';
 import ContractDetails from './components/sales/ContractDetails';
 import SignaturePage from './components/sales/SignaturePage';
 import ContractViewOnly from './components/sales/ContractViewOnly';
+import InvoiceViewOnly from './components/sales/InvoiceViewOnly';
 
 function App() {
   return (
@@ -100,6 +101,7 @@ function App() {
         <Route path="/sign/:id" element={<SignaturePage />} />
         <Route path="/sign/:id/:signatureId" element={<SignaturePage />} />
         <Route path="/view/:id" element={<ContractViewOnly />} />
+        <Route path="/invoice/:id" element={<InvoiceViewOnly />} />
       </Routes>
     </Suspense>
   );
