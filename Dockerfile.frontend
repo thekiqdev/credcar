@@ -1,17 +1,17 @@
 # Frontend CredCar (Vite/React) para Easypanel / Docker
 # Build do app e serviço dos arquivos estáticos com Nginx
-# Builder usa node:20-slim (Debian/glibc) para evitar erro do Rollup no Alpine (musl)
+# Workaround: não usar package-lock no build Docker para o npm instalar as optionalDependencies do Rollup para Linux.
 
 # Estágio 1: build
 FROM node:20-slim AS builder
 
 WORKDIR /app
 
-COPY package.json package-lock.json* ./
-RUN npm ci 2>/dev/null || npm install
+# Sem package-lock: npm install resolve optional deps para a plataforma atual (Linux)
+COPY package.json ./
+RUN npm install
 
 COPY . .
-# Build args para variáveis em tempo de build (configure no Easypanel se precisar)
 ARG VITE_SUPABASE_URL
 ARG VITE_SUPABASE_ANON_KEY
 ENV VITE_SUPABASE_URL=$VITE_SUPABASE_URL
