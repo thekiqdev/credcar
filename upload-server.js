@@ -68,6 +68,19 @@ app.use(morgan('combined'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Raiz e favicon primeiro (evitar 404 ao acessar a URL do backend no navegador)
+app.get('/', (req, res) => {
+  res.json({
+    name: 'CredCar API',
+    status: 'running',
+    health: '/api/health',
+    docs: 'Use o frontend do sistema para acessar as funcionalidades.'
+  });
+});
+app.get('/favicon.ico', (req, res) => {
+  res.status(204).end();
+});
+
 // Configuração do multer para upload
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
