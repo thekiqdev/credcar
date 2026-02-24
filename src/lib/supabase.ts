@@ -2951,34 +2951,20 @@ export const electronicSignatureService = {
     }
   },
 
-  // Save signature fields to database
+  // Save signature fields to database (upsert para evitar 409 quando o campo já existe)
   async saveSignatureFields(signatureFields: any[]) {
     try {
       if (signatureFields.length === 0) return [];
 
-      // Filter out fields with null contract_id (temp fields)
       const validFields = signatureFields.filter((f) => f.contract_id !== null);
       if (validFields.length === 0) return [];
 
-      // First, check if any fields already exist and remove duplicates
-      const existingFields = await supabase
-        .from("electronic_signature_fields")
-        .select("signature_id")
-        .in(
-          "signature_id",
-          validFields.map((f) => f.signature_id),
-        );
-
-      const existingIds = existingFields.data?.map((f) => f.signature_id) || [];
-      const newFields = validFields.filter(
-        (f) => !existingIds.includes(f.signature_id),
-      );
-
-      if (newFields.length === 0) return [];
-
       const { data, error } = await supabase
         .from("electronic_signature_fields")
-        .insert(newFields)
+        .upsert(validFields, {
+          onConflict: "signature_id",
+          ignoreDuplicates: false,
+        })
         .select();
 
       if (error) {
@@ -2986,7 +2972,7 @@ export const electronicSignatureService = {
         throw error;
       }
 
-      return data;
+      return data ?? [];
     } catch (error) {
       console.error("Error in saveSignatureFields:", error);
       throw error;

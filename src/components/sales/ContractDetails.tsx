@@ -66,6 +66,7 @@ import {
 import { mergePlaceholders, MergeData } from "@/lib/merge-fields";
 import MergeFieldsHelper from "./MergeFieldsHelper";
 import { electronicSignatureService } from "@/lib/supabase";
+import { getUploadServerBaseUrl } from "@/lib/invoice-asaas.client";
 import {
   ContractStatus,
   ContractData,
@@ -385,24 +386,24 @@ const ContractDetails: React.FC<{
       formData.append('contractId', contractId || '');
       formData.append('documentType', newDocumentType);
 
-      // Determine base URL based on environment
-      const hostname = window.location.hostname;
-      const baseUrl = hostname === 'localhost' 
-        ? 'http://localhost:3001' 
-        : 'https://sistema.credcarmultimarcas.com.br';
+      const baseUrl = getUploadServerBaseUrl();
 
-      // Upload file to local server
       const response = await fetch(`${baseUrl}/api/upload-contract-document`, {
         method: 'POST',
         body: formData,
       });
 
+      const contentType = response.headers.get('content-type') || '';
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Erro no upload');
+        const message = contentType.includes('application/json')
+          ? (await response.json()).error || `Erro ${response.status}`
+          : `Erro ${response.status}: a API não retornou JSON. Verifique se a URL do backend está correta.`;
+        throw new Error(message);
       }
 
-      const result = await response.json();
+      const result = contentType.includes('application/json')
+        ? await response.json()
+        : { data: { downloadUrl: '' } };
       console.log('✅ Document uploaded successfully:', result);
 
       // Save document info to database
@@ -432,7 +433,9 @@ const ContractDetails: React.FC<{
 
     } catch (error) {
       console.error('❌ Document upload error:', error);
-      alert(error instanceof Error ? error.message : 'Erro desconhecido');
+      const msg = error instanceof Error ? error.message : 'Erro desconhecido';
+      const isNetworkError = msg.includes('Failed to fetch') || msg.includes('NetworkError') || msg.includes('Connection refused');
+      alert(isNetworkError ? `${msg}\n\nEm ambiente local, inicie o servidor de upload: npm run server` : msg);
     } finally {
       setIsUploadingDocument(false);
     }
@@ -3641,14 +3644,7 @@ const ContractDetails: React.FC<{
 
                                 console.log('📥 Downloading document:', relativePath);
 
-                                // Determine base URL based on environment
-                                const hostname = window.location.hostname;
-                                const baseUrl = hostname === 'localhost' 
-                                  ? 'http://localhost:3001' 
-                                  : 'https://sistema.credcarmultimarcas.com.br';
-
-                                // Download the file
-                                const downloadUrl = `${baseUrl}/api/download-file?path=${encodeURIComponent(relativePath)}`;
+                                const downloadUrl = `${getUploadServerBaseUrl()}/api/download-file?path=${encodeURIComponent(relativePath)}`;
                                 window.open(downloadUrl, '_blank');
                               }}
                             >
