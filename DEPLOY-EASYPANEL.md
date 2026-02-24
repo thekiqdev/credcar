@@ -13,16 +13,15 @@
   (não use o nome do repositório nem deixe em branco)
 - **Porta:** 80
 
-### Build args do frontend (opcional)
-
-Para o bundle do Vite incluir a URL do Supabase na build, defina no Easypanel em **Build arguments**:
+### Build args do frontend
 
 | Nome | Descrição |
 |------|-----------|
 | `VITE_SUPABASE_URL` | URL do projeto Supabase (ex.: `https://xxxxx.supabase.co`) |
 | `VITE_SUPABASE_ANON_KEY` | Chave anônima (anon key) do Supabase |
+| **`VITE_UPLOAD_SERVER_URL`** | **URL do backend (upload-server)** quando está em outro host que o frontend. Ex.: se o frontend está em `sistema.credcarmultimarcas.com.br` e o backend em `api.credcarmultimarcas.com.br`, defina `https://api.credcarmultimarcas.com.br` (sem `/api`). Evita erro 405 ao anexar documentos e outras chamadas à API. |
 
-Os mesmos valores do backend. Sem eles, o build roda mas o app pode não conectar ao Supabase até que sejam definidos de outra forma.
+Se o frontend e o backend estiverem no **mesmo domínio** (ex.: proxy em sistema que encaminha `/api` para o Node), não é necessário definir `VITE_UPLOAD_SERVER_URL`. Se o frontend for servido por Nginx estático em um host e o backend em outro, defina este build arg com a URL pública do backend.
 
 ### Variáveis de ambiente em runtime (frontend)
 
