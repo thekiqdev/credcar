@@ -175,6 +175,8 @@ const QuotaSelection: React.FC<QuotaSelectionProps> = ({
   };
 
   const handleQuotaClick = async (quota: Quota) => {
+    // Cota com contrato atrelado nunca é selecionável (reforço: não confiar só no status)
+    if (quota.contracts && quota.contracts.length > 0) return;
     // Só permite clicar em cotas disponíveis ou reservadas (para desmarcar)
     if (quota.status !== "Disponível" && quota.status !== "Reservada") return;
 

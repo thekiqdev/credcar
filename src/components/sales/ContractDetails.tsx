@@ -32,6 +32,13 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   ArrowLeft,
   User,
   FileText,
@@ -117,6 +124,12 @@ const ContractDetails: React.FC<{
   });
   const [signatureBlocks, setSignatureBlocks] = useState<any[]>([]);
   const editorRef = useRef<any>(null);
+  // Admin: alterar grupo e cota quando contrato está Pendente
+  const [adminGroups, setAdminGroups] = useState<{ id: number; name: string; description?: string }[]>([]);
+  const [adminQuotas, setAdminQuotas] = useState<{ id: number; group_id: number; quota_number: number; status: string; contract_id: number | null }[]>([]);
+  const [editGroupId, setEditGroupId] = useState<string>("");
+  const [editQuotaId, setEditQuotaId] = useState<string>("");
+  const [isSavingQuota, setIsSavingQuota] = useState(false);
 
   const currentUser = authService.getCurrentUser();
   const isAdmin = currentUser?.role === "Administrador" || isAdminMode;
@@ -148,6 +161,48 @@ const ContractDetails: React.FC<{
       loadSignatureBlocks();
     }
   }, [contract, contractId]);
+
+  // Admin: carregar grupos quando contrato Pendente para permitir alterar grupo/cota
+  useEffect(() => {
+    if (!contract || !isAdmin || contract.status !== "Pendente") return;
+    const loadGroups = async () => {
+      const { data, error } = await supabase.from("groups").select("id, name, description").order("name");
+      if (!error) setAdminGroups(data || []);
+    };
+    loadGroups();
+    if (contract.quota) {
+      setEditGroupId(String(contract.quota.group.id));
+      setEditQuotaId(String(contract.quota.id));
+    } else {
+      setEditGroupId("");
+      setEditQuotaId("");
+    }
+  }, [contract?.id, contract?.status, contract?.quota, isAdmin]);
+
+  // Admin: carregar cotas do grupo selecionado (para edição grupo/cota)
+  useEffect(() => {
+    if (!editGroupId) {
+      setAdminQuotas([]);
+      setEditQuotaId("");
+      return;
+    }
+    const groupIdNum = parseInt(editGroupId, 10);
+    const loadQuotas = async () => {
+      const { data, error } = await supabase
+        .from("quotas")
+        .select("id, group_id, quota_number, status, contract_id")
+        .eq("group_id", groupIdNum)
+        .order("quota_number");
+      if (!error) setAdminQuotas(data || []);
+      setEditQuotaId((prev) => {
+        if (contract?.quota && contract.quota.group.id === groupIdNum) {
+          return String(contract.quota.id);
+        }
+        return "";
+      });
+    };
+    loadQuotas();
+  }, [editGroupId]);
 
   // Check if edit mode should be enabled after contract is loaded
   useEffect(() => {
@@ -1271,6 +1326,27 @@ const ContractDetails: React.FC<{
     } finally {
       setIsProcessing(false);
       setIsDeleteDialogOpen(false);
+    }
+  };
+
+  const handleSaveQuota = async () => {
+    if (!contractId || !currentUser || !editQuotaId) return;
+    setIsSavingQuota(true);
+    try {
+      await contractService.update(
+        contractId,
+        { quota_id: editQuotaId },
+        currentUser.id,
+        true
+      );
+      await loadContractDetails();
+      alert("Grupo e cota atualizados com sucesso.");
+    } catch (err) {
+      console.error("Error updating contract quota:", err);
+      const msg = err instanceof Error ? err.message : "Erro desconhecido";
+      alert(`Erro ao atualizar grupo/cota: ${msg}`);
+    } finally {
+      setIsSavingQuota(false);
     }
   };
 
@@ -2398,39 +2474,106 @@ const ContractDetails: React.FC<{
             </div>
 
             {/* Quota Information */}
-            {contract.quota && (
+            {(contract.quota || (isAdmin && contract.status === "Pendente")) && (
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <FileText className="h-5 w-5" />
                     Informações da Cota
                   </CardTitle>
+                  {isAdmin && contract.status === "Pendente" && (
+                    <CardDescription>
+                      Você pode alterar o grupo e a cota vinculados a este contrato enquanto estiver pendente.
+                    </CardDescription>
+                  )}
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="grid gap-4 md:grid-cols-3">
-                    <div>
-                      <Label className="text-sm font-medium">Grupo</Label>
-                      <p className="text-sm text-muted-foreground">
-                        {contract.quota.group.name}
-                      </p>
+                  {isAdmin && contract.status === "Pendente" ? (
+                    <>
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <div>
+                          <Label className="text-sm font-medium">Grupo</Label>
+                          <Select value={editGroupId} onValueChange={setEditGroupId}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selecione o grupo" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {adminGroups.map((g) => (
+                                <SelectItem key={g.id} value={String(g.id)}>
+                                  {g.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div>
+                          <Label className="text-sm font-medium">Cota</Label>
+                          <Select value={editQuotaId} onValueChange={setEditQuotaId}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selecione a cota" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {adminQuotas
+                                .filter(
+                                  (q) =>
+                                    (q.status === "Disponível" && (q.contract_id == null || (contract?.quota && q.contract_id === contract.id))) ||
+                                    (contract?.quota && q.id === contract.quota.id)
+                                )
+                                .map((q) => (
+                                  <SelectItem key={q.id} value={String(q.id)}>
+                                    Cota {q.quota_number}
+                                    {q.status !== "Disponível" && contract.quota?.id === q.id
+                                      ? " (atual)"
+                                      : ""}
+                                  </SelectItem>
+                                ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      <Button
+                        onClick={handleSaveQuota}
+                        disabled={!editQuotaId || isSavingQuota}
+                      >
+                        {isSavingQuota ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                            Salvando...
+                          </>
+                        ) : (
+                          <>
+                            <Save className="h-4 w-4 mr-2" />
+                            Salvar grupo e cota
+                          </>
+                        )}
+                      </Button>
+                    </>
+                  ) : contract.quota ? (
+                    <div className="grid gap-4 md:grid-cols-3">
+                      <div>
+                        <Label className="text-sm font-medium">Grupo</Label>
+                        <p className="text-sm text-muted-foreground">
+                          {contract.quota.group.name}
+                        </p>
+                      </div>
+                      <div>
+                        <Label className="text-sm font-medium">
+                          Número da Cota
+                        </Label>
+                        <p className="text-sm text-muted-foreground">
+                          {contract.quota.quota_number}
+                        </p>
+                      </div>
+                      <div>
+                        <Label className="text-sm font-medium">
+                          Descrição do Grupo
+                        </Label>
+                        <p className="text-sm text-muted-foreground">
+                          {contract.quota.group.description || "Sem descrição"}
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <Label className="text-sm font-medium">
-                        Número da Cota
-                      </Label>
-                      <p className="text-sm text-muted-foreground">
-                        {contract.quota.quota_number}
-                      </p>
-                    </div>
-                    <div>
-                      <Label className="text-sm font-medium">
-                        Descrição do Grupo
-                      </Label>
-                      <p className="text-sm text-muted-foreground">
-                        {contract.quota.group.description || "Sem descrição"}
-                      </p>
-                    </div>
-                  </div>
+                  ) : null}
                 </CardContent>
               </Card>
             )}

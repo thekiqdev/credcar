@@ -1374,31 +1374,55 @@ export const contractService = {
     isAdmin: boolean = false,
   ) {
     try {
-      // If not admin, check if user owns the contract and it has the right status
+      // Fetch current contract (for permission check and for quota release/assign)
+      const { data: currentContract, error: fetchError } = await supabase
+        .from("contracts")
+        .select("representative_id, status, quota_id")
+        .eq("id", contractId)
+        .single();
+
+      if (fetchError) {
+        console.error("Error fetching contract for update:", fetchError);
+        throw new Error("Contrato não encontrado");
+      }
+
       if (!isAdmin) {
-        const { data: contract, error: fetchError } = await supabase
-          .from("contracts")
-          .select("representative_id, status")
-          .eq("id", contractId)
-          .single();
-
-        if (fetchError) {
-          console.error("Error fetching contract for update:", fetchError);
-          throw new Error("Contrato não encontrado");
-        }
-
-        if (contract.representative_id !== userId) {
+        if (currentContract.representative_id !== userId) {
           throw new Error("Você não tem permissão para editar este contrato");
         }
 
-        if (contract.status !== "Pendente" && contract.status !== "Reprovado") {
+        if (currentContract.status !== "Pendente" && currentContract.status !== "Reprovado") {
           throw new Error(
             "Só é possível editar contratos com status Pendente ou Reprovado",
           );
         }
       }
 
-      // Add updated_at timestamp
+      const previousQuotaId = currentContract?.quota_id ?? null;
+      const newQuotaId = updates.quota_id ?? null;
+
+      // 1) Release previous quota if contract is changing to another quota
+      if (previousQuotaId && previousQuotaId !== newQuotaId) {
+        const { error: quotaReleaseError } = await supabase
+          .from("quotas")
+          .update({
+            status: "Disponível",
+            contract_id: null,
+            representative_id: null,
+            assigned_at: null,
+            reserved_at: null,
+            reserved_by: null,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", previousQuotaId);
+
+        if (quotaReleaseError) {
+          console.error("Error releasing previous quota:", quotaReleaseError);
+          throw new Error("Falha ao liberar a cota anterior. Tente novamente.");
+        }
+      }
+
+      // 2) Update contract
       const updateData = {
         ...updates,
         updated_at: new Date().toISOString(),
@@ -1414,6 +1438,31 @@ export const contractService = {
       if (error) {
         console.error("Error updating contract:", error);
         throw error;
+      }
+
+      // 3) Sempre sincronizar a cota vinculada ao contrato (estado final): marcá-la como Ocupada
+      // Assim, mesmo ao "re-vincular" o mesmo grupo/cota, a cota é atualizada e não permanece Disponível
+      const finalQuotaId = data?.quota_id ?? newQuotaId ?? null;
+      if (finalQuotaId) {
+        const repId = data?.representative_id ?? currentContract?.representative_id;
+        const contractIdNum = parseInt(contractId, 10);
+        const { error: quotaOccupyError } = await supabase
+          .from("quotas")
+          .update({
+            status: "Ocupada",
+            contract_id: contractIdNum,
+            representative_id: repId ?? null,
+            assigned_at: new Date().toISOString(),
+            reserved_at: null,
+            reserved_by: null,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", String(finalQuotaId));
+
+        if (quotaOccupyError) {
+          console.error("Error syncing quota to Ocupada:", quotaOccupyError);
+          throw new Error("Falha ao atualizar status da cota. Tente novamente.");
+        }
       }
 
       return data;
