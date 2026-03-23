@@ -4,6 +4,7 @@
  */
 
 import { systemConfigService } from './system-config.service';
+import { getUploadApiBaseUrl } from './invoice-asaas.client';
 
 // Type definitions for Asaas API
 export interface AsaasCustomer {
@@ -136,13 +137,9 @@ class AsaasHttpClient {
   }
 
   async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-    // Usar proxy local para evitar CORS - detectar ambiente baseado no hostname
-    const hostname = window.location.hostname;
-    const proxyUrl = hostname === 'localhost' || hostname === '127.0.0.1' 
-      ? 'http://localhost:3001/api/proxy/asaas'
-      : `${window.location.protocol}//${hostname}/api/proxy/asaas`;
-    
-    console.log(`AsaasHttpClient request: hostname=${hostname}, proxyUrl=${proxyUrl}`);
+    // Usar o mesmo resolvedor de URL do upload-server para manter consistência
+    const proxyUrl = `${getUploadApiBaseUrl()}/proxy/asaas`;
+    console.log(`AsaasHttpClient request: proxyUrl=${proxyUrl}`);
     
     try {
       const response = await fetch(proxyUrl, {

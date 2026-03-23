@@ -14,6 +14,7 @@ import {
   Eye 
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { getUploadServerBaseUrl } from '@/lib/invoice-asaas.client';
 
 interface RepresentativeContractUploadProps {
   representativeId: string;
@@ -63,14 +64,11 @@ const RepresentativeContractUpload: React.FC<RepresentativeContractUploadProps> 
       console.log('📁 Uploading contract to local server...');
 
       // Determine base URL based on environment
-      const hostname = window.location.hostname;
-      const baseUrl = hostname === 'localhost' || hostname === '127.0.0.1'
-        ? 'http://localhost:3001'
-        : 'https://sistema.credcarmultimarcas.com.br';
+      const baseUrl = getUploadServerBaseUrl();
 
       const uploadUrl = `${baseUrl}/api/upload-representative-contract`;
       console.log('🌐 Upload URL:', uploadUrl);
-      console.log('🏠 Hostname:', hostname);
+      console.log('🏠 Hostname:', window.location.hostname);
       console.log('📦 FormData keys:', Array.from(formData.keys()));
 
       // Upload file to local server
@@ -148,10 +146,7 @@ const RepresentativeContractUpload: React.FC<RepresentativeContractUploadProps> 
     console.log('👁️ Viewing contract:', relativePath);
 
     // Determine base URL based on environment
-    const hostname = window.location.hostname;
-    const baseUrl = hostname === 'localhost' 
-      ? 'http://localhost:3001' 
-      : 'https://sistema.credcarmultimarcas.com.br';
+    const baseUrl = getUploadServerBaseUrl();
 
     // Check file type
     const fileExtension = relativePath.split('.').pop()?.toLowerCase();
@@ -175,10 +170,7 @@ const RepresentativeContractUpload: React.FC<RepresentativeContractUploadProps> 
       console.log('🗑️ Deleting contract from local server...');
 
       // Determine base URL based on environment
-      const hostname = window.location.hostname;
-      const baseUrl = hostname === 'localhost' || hostname === '127.0.0.1'
-        ? 'http://localhost:3001'
-        : 'https://sistema.credcarmultimarcas.com.br';
+      const baseUrl = getUploadServerBaseUrl();
 
       // Delete file from local server
       const response = await fetch(`${baseUrl}/api/delete-representative-contract`, {

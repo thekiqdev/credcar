@@ -29,6 +29,7 @@ import {
 } from 'lucide-react';
 import { partnersService } from '../../lib/supabase';
 import { uploadService } from '../../lib/upload.service';
+import { getUploadServerBaseUrl } from '@/lib/invoice-asaas.client';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -152,10 +153,7 @@ const PartnerDocumentsView: React.FC<PartnerDocumentsViewProps> = ({
       console.log('👁️ Relative path:', relativePath);
       
       // Determine base URL based on environment
-      const hostname = window.location.hostname;
-      const baseUrl = hostname === 'localhost' 
-        ? 'http://localhost:3001' 
-        : 'https://sistema.credcarmultimarcas.com.br';
+      const baseUrl = getUploadServerBaseUrl();
       
       // Check file type
       const fileExtension = relativePath.split('.').pop()?.toLowerCase();
@@ -262,10 +260,7 @@ const PartnerDocumentsView: React.FC<PartnerDocumentsViewProps> = ({
       console.log('📄 Relative path:', relativePath);
       
       // Determine base URL based on environment
-      const hostname = window.location.hostname;
-      const baseUrl = hostname === 'localhost' 
-        ? 'http://localhost:3001' 
-        : 'https://sistema.credcarmultimarcas.com.br';
+      const baseUrl = getUploadServerBaseUrl();
       
       // For downloads, use download-file endpoint
       const downloadUrl = `${baseUrl}/api/download-file?path=${encodeURIComponent(relativePath)}`;
