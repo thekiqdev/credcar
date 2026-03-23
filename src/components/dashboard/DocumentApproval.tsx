@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { FileText, CheckCircle, XCircle, Eye, Download, Trash2 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import { getUploadServerBaseUrl } from '@/lib/invoice-asaas.client';
 
 interface DocumentApprovalProps {
   representativeId: string;
@@ -250,9 +251,7 @@ const DocumentApproval: React.FC<DocumentApprovalProps> = ({
       const fileName = relativePath.split('/').pop() || `${documentType}.pdf`;
       
       // Determinar URL base baseada no ambiente
-      const baseUrl = window.location.hostname === 'localhost' 
-        ? 'http://localhost:3001' 
-        : 'https://sistema.credcarmultimarcas.com.br';
+      const baseUrl = getUploadServerBaseUrl();
       
       console.log('🌐 Base URL:', baseUrl);
       
@@ -312,9 +311,7 @@ const DocumentApproval: React.FC<DocumentApprovalProps> = ({
       }
       
       // Determinar URL base baseada no ambiente
-      const baseUrl = window.location.hostname === 'localhost' 
-        ? 'http://localhost:3001' 
-        : 'https://sistema.credcarmultimarcas.com.br';
+      const baseUrl = getUploadServerBaseUrl();
       
       console.log('🌐 Base URL:', baseUrl);
       

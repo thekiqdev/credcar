@@ -4,7 +4,7 @@
  * Em produção, defina VITE_UPLOAD_SERVER_URL (sem /api) na build do frontend se o backend estiver em outro host.
  */
 
-function getUploadApiBaseUrl(): string {
+export function getUploadApiBaseUrl(): string {
   const envUrl = typeof import.meta !== "undefined" && (import.meta as any).env?.VITE_UPLOAD_SERVER_URL;
   const base = typeof envUrl === "string" && envUrl.trim() ? envUrl.trim().replace(/\/api\/?$/, "") : null;
   if (base) {

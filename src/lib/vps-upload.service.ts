@@ -80,8 +80,11 @@ class VPSUploadService {
   private baseUrl: string;
 
   constructor() {
-    // URL da sua API backend - usar URL fixa para evitar problemas com process.env
-    this.baseUrl = 'http://localhost:3001/api';
+    const envUrl = typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_UPLOAD_SERVER_URL;
+    const base = typeof envUrl === 'string' && envUrl.trim()
+      ? envUrl.trim().replace(/\/api\/?$/, '')
+      : '';
+    this.baseUrl = base ? `${base}/api` : 'http://localhost:3001/api';
     
     console.log('🚀 VPSUploadService inicializado');
     console.log('🌐 Base URL:', this.baseUrl);

@@ -68,28 +68,24 @@ interface BatchUploadResult {
     };
   };
 }
+function resolveUploadApiBaseUrl(): string {
+  const envUrl = typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_UPLOAD_SERVER_URL;
+  const base = typeof envUrl === 'string' && envUrl.trim() ? envUrl.trim().replace(/\/api\/?$/, '') : null;
+  if (base) return `${base}/api`;
+  const hostname = window.location.hostname;
+  if (hostname === 'localhost' || hostname === '127.0.0.1') return 'http://localhost:3001/api';
+  return `${window.location.protocol}//${hostname}/api`;
+}
 
 class UploadService {
   private baseUrl: string;
 
   constructor() {
-    // URL do servidor de upload - detectar ambiente baseado no hostname
-    const hostname = window.location.hostname;
-    
-    if (hostname === 'localhost' || hostname === '127.0.0.1') {
-      // Desenvolvimento local
-      this.baseUrl = 'http://localhost:3001/api';
-    } else if (hostname === 'sistema.credcarmultimarcas.com.br') {
-      // Produção - usar mesma URL do frontend (Nginx fará proxy)
-      this.baseUrl = 'https://sistema.credcarmultimarcas.com.br/api';
-    } else {
-      // Fallback para outros domínios
-      this.baseUrl = `${window.location.protocol}//${hostname}/api`;
-    }
+    this.baseUrl = resolveUploadApiBaseUrl();
     
     console.log('🚀 UploadService inicializado');
     console.log('🌐 Base URL:', this.baseUrl);
-    console.log('🏠 Hostname:', hostname);
+    console.log('🏠 Hostname:', window.location.hostname);
     console.log('📋 Suporte a 15 tipos de documentos organizados por categoria');
   }
 

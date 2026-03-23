@@ -5,7 +5,11 @@
 
 class SimpleUploadService {
   constructor() {
-    this.baseUrl = 'http://localhost:3001/api';
+    const envUrl = typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_UPLOAD_SERVER_URL;
+    const base = typeof envUrl === 'string' && envUrl.trim()
+      ? envUrl.trim().replace(/\/api\/?$/, '')
+      : '';
+    this.baseUrl = base ? `${base}/api` : 'http://localhost:3001/api';
   }
 
   // Testar se API está funcionando

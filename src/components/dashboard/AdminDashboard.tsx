@@ -37,7 +37,7 @@ function generateUUID(): string {
 }
 import { authService } from "@/lib/auth.service";
 import { uploadService } from "../../lib/upload.service";
-import { ensureInvoiceInAsaas, getEnsureAsaasErrorMessage, confirmInvoicePayment } from "@/lib/invoice-asaas.client";
+import { ensureInvoiceInAsaas, getEnsureAsaasErrorMessage, confirmInvoicePayment, getUploadServerBaseUrl } from "@/lib/invoice-asaas.client";
 import { Database } from "../../types/supabase";
 import {
   Card,
@@ -736,10 +736,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       const formData = new FormData();
       formData.append('file', file);
 
-      const hostname = window.location.hostname;
-      const baseUrl = hostname === 'localhost' 
-        ? 'http://localhost:3001' 
-        : 'https://sistema.credcarmultimarcas.com.br';
+      const baseUrl = getUploadServerBaseUrl();
 
       const response = await fetch(`${baseUrl}/api/upload-system-logo`, {
         method: 'POST',
@@ -1524,7 +1521,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       setIsLoadingCronTest(true);
       setCronTestResult(null);
 
-      const response = await fetch('http://localhost:3001/api/cron/test-generate-invoices', {
+      const response = await fetch(`${getUploadServerBaseUrl()}/api/cron/test-generate-invoices`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
