@@ -19,6 +19,7 @@ import {
 import SignatureCanvas from "@/components/ui/signature-canvas";
 import { supabase, electronicSignatureService, generalSettingsService } from "@/lib/supabase";
 import { storageService } from "@/lib/storage";
+import { getUploadServerBaseUrl } from "@/lib/invoice-asaas.client";
 import { Building, MapPin, Phone, Mail } from "lucide-react";
 
 interface ContractData {
@@ -122,17 +123,28 @@ const SignaturePage: React.FC = () => {
 
   const getLogoUrl = () => {
     if (!generalSettings) return null;
-    
-    // Usar logo_url diretamente como caminho relativo
-    if (generalSettings.logo_url && generalSettings.logo_url.trim() !== '') {
-      return `/${generalSettings.logo_url}`;
+
+    const rawLogoUrl = generalSettings.logo_url?.trim();
+    if (rawLogoUrl) {
+      if (/^https?:\/\//i.test(rawLogoUrl) || rawLogoUrl.startsWith("data:")) {
+        return rawLogoUrl;
+      }
+      if (rawLogoUrl.startsWith("/")) {
+        return rawLogoUrl;
+      }
+      if (rawLogoUrl.startsWith("documentos/")) {
+        const relativePath = rawLogoUrl.replace(/^documentos\//, "");
+        return `${getUploadServerBaseUrl()}/api/download-file?path=${encodeURIComponent(relativePath)}`;
+      }
+      return `/${rawLogoUrl}`;
     }
-    
-    // Fallback para logo_file_path
-    if (generalSettings.logo_file_path && generalSettings.logo_file_path.trim() !== '') {
-      return `/${generalSettings.logo_file_path}`;
+
+    const rawLogoPath = generalSettings.logo_file_path?.trim();
+    if (rawLogoPath) {
+      const relativePath = rawLogoPath.replace(/^documentos\//, "");
+      return `${getUploadServerBaseUrl()}/api/download-file?path=${encodeURIComponent(relativePath)}`;
     }
-    
+
     return null;
   };
 

@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { generalSettingsService } from "@/lib/supabase";
 import { downloadInvoicePdf } from "@/lib/invoice-pdf.service";
+import { getUploadServerBaseUrl } from "@/lib/invoice-asaas.client";
 import PixQrCodeDisplay from "@/components/sales/PixQrCodeDisplay";
 
 export interface GeneralSettings {
@@ -113,8 +114,28 @@ const InvoiceView: React.FC<InvoiceViewProps> = ({
 
   const getLogoUrl = () => {
     if (!generalSettings) return null;
-    if (generalSettings.logo_url?.trim()) return `/${generalSettings.logo_url}`;
-    if (generalSettings.logo_file_path?.trim()) return `/${generalSettings.logo_file_path}`;
+
+    const rawLogoUrl = generalSettings.logo_url?.trim();
+    if (rawLogoUrl) {
+      if (/^https?:\/\//i.test(rawLogoUrl) || rawLogoUrl.startsWith("data:")) {
+        return rawLogoUrl;
+      }
+      if (rawLogoUrl.startsWith("/")) {
+        return rawLogoUrl;
+      }
+      if (rawLogoUrl.startsWith("documentos/")) {
+        const relativePath = rawLogoUrl.replace(/^documentos\//, "");
+        return `${getUploadServerBaseUrl()}/api/download-file?path=${encodeURIComponent(relativePath)}`;
+      }
+      return `/${rawLogoUrl}`;
+    }
+
+    const rawLogoPath = generalSettings.logo_file_path?.trim();
+    if (rawLogoPath) {
+      const relativePath = rawLogoPath.replace(/^documentos\//, "");
+      return `${getUploadServerBaseUrl()}/api/download-file?path=${encodeURIComponent(relativePath)}`;
+    }
+
     return null;
   };
 
