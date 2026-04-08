@@ -744,8 +744,16 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Erro no upload');
+        let message = `Erro no upload (HTTP ${response.status})`;
+        try {
+          const errorData = await response.json();
+          if (errorData?.error) {
+            message = errorData.error;
+          }
+        } catch {
+          // resposta sem JSON válido
+        }
+        throw new Error(message);
       }
 
       const result = await response.json();

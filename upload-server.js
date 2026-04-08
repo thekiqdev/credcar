@@ -63,7 +63,12 @@ console.log('✅ Supabase conectado:', supabaseUrl.substring(0, 30) + '...');
 
 // Middleware
 app.use(cors());
-app.use(helmet());
+app.use(
+  helmet({
+    // Permite servir arquivos (logo/documentos) para frontend em outro domínio/subdomínio
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+  }),
+);
 app.use(morgan('combined'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -113,12 +118,14 @@ const upload = multer({
       'image/jpeg', 
       'image/png', 
       'image/jpg',
+      'image/gif',
+      'image/svg+xml',
       'application/msword',
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
     ];
     
     if (!allowedTypes.includes(file.mimetype)) {
-      return cb(new Error('Tipo de arquivo não permitido. Formatos aceitos: PDF, JPG, PNG, DOC, DOCX.'), false);
+      return cb(new Error('Tipo de arquivo não permitido. Formatos aceitos: PDF, JPG, PNG, GIF, SVG, DOC, DOCX.'), false);
     }
     
     // Validação de tamanho será feita após o upload
@@ -638,7 +645,9 @@ app.post('/api/upload-system-logo', upload.single('file'), async (req, res) => {
     fs.renameSync(req.file.path, filePath);
 
     // Gerar URL de download
-    const relativePath = path.relative(__dirname, filePath).replace(/\\/g, '/');
+    // Salvar relativo à pasta "documentos", pois /api/download-file já resolve a partir dela
+    const documentsDir = path.join(__dirname, 'documentos');
+    const relativePath = path.relative(documentsDir, filePath).replace(/\\/g, '/');
     const downloadUrl = `${req.protocol}://${req.get('host')}/api/download-file?path=${encodeURIComponent(relativePath)}`;
 
     console.log('✅ Logo do sistema salvo com sucesso:', relativePath);
