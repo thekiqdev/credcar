@@ -340,6 +340,7 @@ export type Database = {
           created_by: string | null
           description: string | null
           id: number
+          is_default: boolean
           name: string
           updated_at: string | null
           visibility: string
@@ -350,6 +351,7 @@ export type Database = {
           created_by?: string | null
           description?: string | null
           id?: number
+          is_default?: boolean
           name: string
           updated_at?: string | null
           visibility?: string
@@ -360,6 +362,7 @@ export type Database = {
           created_by?: string | null
           description?: string | null
           id?: number
+          is_default?: boolean
           name?: string
           updated_at?: string | null
           visibility?: string
@@ -1179,9 +1182,17 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      generate_contract_number: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
       generate_invoice_number: {
         Args: Record<PropertyKey, never>
         Returns: string
+      }
+      set_default_contract_template: {
+        Args: { template_id: number }
+        Returns: undefined
       }
       release_expired_reservations: {
         Args: Record<PropertyKey, never>

@@ -214,7 +214,9 @@ const SignaturePage: React.FC = () => {
       setContract({
         id: fieldData.contracts.id,
         contract_code:
-          fieldData.contracts.contract_code || `CONT-${fieldData.contracts.id}`,
+          fieldData.contracts.contract_number ||
+          fieldData.contracts.contract_code ||
+          `CONT-${fieldData.contracts.id}`,
         contract_content: fieldData.contracts.contract_content || "",
         status: fieldData.contracts.status,
         client: {
@@ -243,6 +245,7 @@ const SignaturePage: React.FC = () => {
           `
           id,
           contract_code,
+          contract_number,
           contract_content,
           status,
           clients!inner (
@@ -276,7 +279,8 @@ const SignaturePage: React.FC = () => {
 
       setContract({
         id: data.id,
-        contract_code: data.contract_code || `CONT-${data.id}`,
+        contract_code:
+          data.contract_number || data.contract_code || `CONT-${data.id}`,
         contract_content: data.contract_content || "",
         status: data.status,
         client: {

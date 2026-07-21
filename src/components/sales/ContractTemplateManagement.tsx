@@ -46,6 +46,8 @@ import {
   FileText,
   Users,
   Lock,
+  Star,
+  StarOff,
 } from "lucide-react";
 import { contractTemplateService } from "../../lib/supabase";
 import ContractTemplateEditor from "./ContractTemplateEditor";
@@ -56,6 +58,7 @@ interface ContractTemplate {
   description: string | null;
   content: string;
   visibility: "admin" | "all";
+  is_default?: boolean;
   created_by: string | null;
   created_at: string | null;
   updated_at: string | null;
@@ -267,6 +270,32 @@ const ContractTemplateManagement: React.FC<ContractTemplateManagementProps> = ({
     } catch (error) {
       console.error("Error deleting template:", error);
       setAlert({ type: "error", message: "Erro ao excluir modelo" });
+    }
+  };
+
+  const handleToggleDefault = async (template: ContractTemplate) => {
+    try {
+      if (template.is_default) {
+        await contractTemplateService.removeDefault(template.id);
+        setAlert({
+          type: "success",
+          message: `"${template.name}" não é mais o modelo padrão.`,
+        });
+      } else {
+        await contractTemplateService.setAsDefault(template.id);
+        setAlert({
+          type: "success",
+          message: `"${template.name}" definido como modelo padrão! Ele será carregado automaticamente ao criar novos contratos.`,
+        });
+      }
+      loadTemplates();
+    } catch (error) {
+      console.error("Error toggling default template:", error);
+      setAlert({
+        type: "error",
+        message:
+          "Erro ao alterar modelo padrão. Verifique se a migração do banco foi aplicada.",
+      });
     }
   };
 
@@ -493,7 +522,15 @@ const ContractTemplateManagement: React.FC<ContractTemplateManagementProps> = ({
                   {templates.map((template) => (
                     <TableRow key={template.id}>
                       <TableCell className="font-medium">
-                        {template.name}
+                        <div className="flex items-center gap-2">
+                          {template.name}
+                          {template.is_default && (
+                            <Badge className="bg-amber-500 hover:bg-amber-600 text-white">
+                              <Star className="mr-1 h-3 w-3" />
+                              Padrão
+                            </Badge>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell className="max-w-xs truncate">
                         {template.description || "-"}
@@ -548,6 +585,23 @@ const ContractTemplateManagement: React.FC<ContractTemplateManagementProps> = ({
                             </DropdownMenuItem>
                             {isAdmin && (
                               <DropdownMenuItem
+                                onClick={() => handleToggleDefault(template)}
+                              >
+                                {template.is_default ? (
+                                  <>
+                                    <StarOff className="mr-2 h-4 w-4" />
+                                    Remover padrão
+                                  </>
+                                ) : (
+                                  <>
+                                    <Star className="mr-2 h-4 w-4" />
+                                    Definir como padrão
+                                  </>
+                                )}
+                              </DropdownMenuItem>
+                            )}
+                            {isAdmin && (
+                              <DropdownMenuItem
                                 onClick={() => {
                                   setSelectedTemplate(template);
                                   setIsDeleteDialogOpen(true);
@@ -577,6 +631,17 @@ const ContractTemplateManagement: React.FC<ContractTemplateManagementProps> = ({
               <DialogDescription>
                 Tem certeza que deseja excluir o modelo "
                 {selectedTemplate?.name}"? Esta ação não pode ser desfeita.
+                {selectedTemplate?.is_default && (
+                  <>
+                    <br />
+                    <br />
+                    <strong className="text-red-600">
+                      Atenção: este é o modelo padrão. Ao excluí-lo, nenhum
+                      modelo será carregado automaticamente na criação de
+                      contratos até que outro seja definido como padrão.
+                    </strong>
+                  </>
+                )}
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>

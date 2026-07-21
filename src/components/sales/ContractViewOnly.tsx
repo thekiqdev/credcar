@@ -315,7 +315,7 @@ const ContractViewOnly: React.FC = () => {
       const contractData: ContractData = {
         id: data.id,
         contract_code:
-          data.contract_code || data.contract_number || `CONT-${data.id}`,
+          data.contract_number || data.contract_code || `CONT-${data.id}`,
         contract_number: data.contract_number,
         total_value: parseFloat(data.total_value || data.credit_amount || "0"),
         total_installments: data.total_installments || 0,
@@ -730,6 +730,9 @@ const ContractViewOnly: React.FC = () => {
               ${generalSettings?.company_address || "Rua das Empresas, 123 - Centro - São Paulo/SP"}<br>
               Tel: ${generalSettings?.company_phone || "(11) 3000-0000"} | Email: ${generalSettings?.company_email || "contato@credcar.com.br"}
             </div>
+            <div style="font-size: 14px; font-weight: bold; margin-top: 8px;">
+              CONTRATO Nº ${contract?.contract_code || ""}
+            </div>
           </div>
           
           <div class="contract-info">
@@ -965,6 +968,11 @@ const ContractViewOnly: React.FC = () => {
                       {generalSettings.company_email}
                     </span>
                   </div>
+                  {contract && (
+                    <p className="font-bold text-sm sm:text-base print:text-base text-gray-900 pt-1 print:pt-2">
+                      CONTRATO Nº {contract.contract_code}
+                    </p>
+                  )}
                 </div>
               </div>
             </div>

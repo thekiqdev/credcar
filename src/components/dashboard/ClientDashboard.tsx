@@ -381,7 +381,10 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({
 
           // Atualizar dados do cliente
           setClientData({
-            contractNumber: activeContract.contract_number || `CT-${activeContract.id}`,
+            contractNumber:
+              activeContract.contract_number ||
+              activeContract.contract_code ||
+              `CONT-${activeContract.id}`,
             totalValue,
             paidValue,
             remainingValue,

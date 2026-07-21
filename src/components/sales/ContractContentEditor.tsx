@@ -68,6 +68,7 @@ interface ContractContentEditorProps {
   selectedQuotas: Quota[];
   selectedGroup: Group;
   clientData: ClientData;
+  isAdminMode?: boolean;
   onContentSubmit: (content: string, signatureFields?: any[]) => void;
   onBack: () => void;
 }
@@ -78,6 +79,7 @@ const ContractContentEditor: React.FC<ContractContentEditorProps> = ({
   selectedQuotas,
   selectedGroup,
   clientData,
+  isAdminMode = false,
   onContentSubmit,
   onBack,
 }) => {
@@ -101,53 +103,6 @@ const ContractContentEditor: React.FC<ContractContentEditorProps> = ({
       { name: string; cpf: string; signed: boolean; imageUrl?: string }
     >
   >(new Map());
-  const getDefaultContent = () =>
-    `
-<h1>CONTRATO DE CONSÓRCIO</h1>
-
-<h2>DADOS DO CLIENTE</h2>
-<p><strong>Nome:</strong> ${clientData.full_name}</p>
-<p><strong>Email:</strong> ${clientData.email}</p>
-<p><strong>Telefone:</strong> ${clientData.phone}</p>
-<p><strong>CPF/CNPJ:</strong> ${clientData.cpf_cnpj}</p>
-<p><strong>Endereço:</strong> ${clientData.address}</p>
-
-<h2>DADOS DO GRUPO</h2>
-<p><strong>Grupo:</strong> ${selectedGroup.name}</p>
-<p><strong>Descrição:</strong> ${selectedGroup.description}</p>
-<p><strong>Cota{selectedQuotas.length > 1 ? 's' : ''}:</strong> ${selectedQuotas.length === 1 ? selectedQuotas[0].quota_number : selectedQuotas.map(q => q.quota_number).join(', ')}</p>
-
-<h2>PLANO DE COMISSÃO</h2>
-<p><strong>Plano:</strong> ${selectedPlan.nome}</p>
-<p><strong>Descrição:</strong> ${selectedPlan.descricao}</p>
-
-<h2>VALOR DO CRÉDITO</h2>
-<p><strong>Valor do Crédito:</strong> R$ ${selectedCreditRange.valor_credito.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</p>
-<p><strong>Primeira Parcela:</strong> R$ ${selectedCreditRange.valor_primeira_parcela.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</p>
-<p><strong>Parcelas Restantes:</strong> R$ ${selectedCreditRange.valor_parcelas_restantes.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</p>
-<p><strong>Total de Parcelas:</strong> ${selectedCreditRange.numero_total_parcelas}</p>
-
-<h2>TERMOS E CONDIÇÕES</h2>
-<p>Este contrato estabelece os termos e condições para participação no consórcio...</p>
-
-<h3>CLÁUSULA 1 - DO OBJETO</h3>
-<p>O presente contrato tem por objeto a participação do cliente no grupo de consórcio...</p>
-
-<h3>CLÁUSULA 2 - DAS OBRIGAÇÕES</h3>
-<p>São obrigações do consorciado:</p>
-<ul>
-  <li>Efetuar o pagamento das parcelas mensais;</li>
-  <li>Manter seus dados atualizados;</li>
-  <li>Cumprir as normas do grupo;</li>
-</ul>
-
-<h3>CLÁUSULA 3 - DA CONTEMPLAÇÃO</h3>
-<p>A contemplação poderá ocorrer por sorteio ou lance...</p>
-
-<p><strong>Data:</strong> ${new Date().toLocaleDateString("pt-BR")}</p>
-<p><strong>Assinatura do Cliente:</strong> _________________________</p>
-<p><strong>Assinatura do Representante:</strong> _________________________</p>
-  `.trim();
 
   const handleSubmit = async () => {
     if (content.trim()) {
@@ -276,13 +231,6 @@ const ContractContentEditor: React.FC<ContractContentEditorProps> = ({
     setIsSignatureModalOpen(false);
   };
 
-  // Initialize default content
-  useEffect(() => {
-    if (!content) {
-      setContent(getDefaultContent());
-    }
-  }, []);
-
   // Setup global function for signature modal
   useEffect(() => {
     (window as any).openSignatureModal = openSignatureModal;
@@ -293,24 +241,6 @@ const ContractContentEditor: React.FC<ContractContentEditorProps> = ({
 
   // Removido o handleEditorChange para evitar re-renderizações desnecessárias
   // O TinyMCE gerencia seu próprio estado interno
-
-  // Load available templates
-  useEffect(() => {
-    const loadTemplates = async () => {
-      try {
-        setIsLoadingTemplates(true);
-        const data = await contractTemplateService.getAll(true); // Load all templates including admin ones
-        console.log("Loaded templates:", data);
-        setTemplates(data);
-      } catch (error) {
-        console.error("Error loading templates:", error);
-      } finally {
-        setIsLoadingTemplates(false);
-      }
-    };
-
-    loadTemplates();
-  }, []);
 
   // Função para inserir campos de mesclagem
   const handleInsertField = (placeholder: string) => {
@@ -340,24 +270,26 @@ const ContractContentEditor: React.FC<ContractContentEditorProps> = ({
   };
 
   // Handle template selection
-  const handleTemplateSelect = async (templateId: string) => {
+  const handleTemplateSelect = async (
+    templateId: string,
+    loadedTemplate?: any,
+  ) => {
     if (
       !templateId ||
       templateId === "blank" ||
       templateId === "no-templates"
     ) {
       if (templateId === "blank") {
-        // Reset to default content for blank template
-        setContent(getDefaultContent());
+        setContent("");
       }
       return;
     }
 
     try {
       console.log("Loading template with ID:", templateId);
-      const template = await contractTemplateService.getById(
-        parseInt(templateId),
-      );
+      const template =
+        loadedTemplate ||
+        (await contractTemplateService.getById(parseInt(templateId)));
       console.log("Loaded template:", template);
 
       if (template) {
@@ -441,7 +373,8 @@ const ContractContentEditor: React.FC<ContractContentEditorProps> = ({
           contract: {
             value: selectedCreditRange.valor_credito,
             installments: selectedCreditRange.numero_total_parcelas,
-            number: `CONT-${Date.now()}`, // Gerar número único
+            // Placeholder: o número real (AA0000) é gerado e substituído na criação do contrato
+            number: '{contract_number}',
             date: new Date().toLocaleDateString('pt-BR'),
             // Novos campos de parcelas e grupo
             first_installment_value: selectedCreditRange.valor_primeira_parcela,
@@ -527,6 +460,39 @@ const ContractContentEditor: React.FC<ContractContentEditorProps> = ({
     }
   };
 
+  // Carrega os modelos acessíveis ao perfil e aplica o padrão automaticamente.
+  useEffect(() => {
+    const loadTemplates = async () => {
+      try {
+        setIsLoadingTemplates(true);
+        const data = await contractTemplateService.getAll(isAdminMode);
+        console.log("Loaded templates:", data);
+        setTemplates(data);
+
+        const defaultTemplate = data.find(
+          (template: any) => template.is_default,
+        );
+
+        if (defaultTemplate) {
+          const templateId = String(defaultTemplate.id);
+          setSelectedTemplateId(templateId);
+          await handleTemplateSelect(templateId, defaultTemplate);
+        } else {
+          setSelectedTemplateId("blank");
+          setContent("");
+        }
+      } catch (error) {
+        console.error("Error loading templates:", error);
+        setSelectedTemplateId("blank");
+        setContent("");
+      } finally {
+        setIsLoadingTemplates(false);
+      }
+    };
+
+    loadTemplates();
+  }, [isAdminMode]);
+
   return (
     <div className="min-h-screen bg-white">
       {/* Template Selection Bar */}
@@ -567,7 +533,10 @@ const ContractContentEditor: React.FC<ContractContentEditorProps> = ({
                       value={template.id.toString()}
                     >
                       <div className="flex items-center space-x-2">
-                        <span>{template.name}</span>
+                        <span>
+                          {template.name}
+                          {template.is_default ? " (Padrão)" : ""}
+                        </span>
                         {template.description && (
                           <span className="text-xs text-gray-500">
                             - {template.description}
@@ -647,6 +616,7 @@ const ContractContentEditor: React.FC<ContractContentEditorProps> = ({
             </Button>
           <Button
             onClick={handleSubmit}
+            disabled={isLoadingTemplates}
             className="bg-red-600 hover:bg-red-700 text-white flex items-center space-x-2"
           >
             <Save className="w-4 h-4" />
@@ -658,42 +628,48 @@ const ContractContentEditor: React.FC<ContractContentEditorProps> = ({
 
       {/* Full Screen Editor */}
       <div className="h-[calc(100vh-140px)] p-6">
-        <div className="flex gap-4 h-full">
-          <div className={showMergeFields ? "flex-1" : "w-full"}>
-          <CKEditorComponent
-            content={content}
-            onChange={setContent}
-            height="calc(100vh - 260px)"
-            placeholder="Digite o conteúdo do contrato..."
-            showMergeFields={showMergeFields}
-            onInit={(editor) => {
-              editorRef.current = editor;
-            }}
-            onInsertSignature={(signatoryName) => {
-              // Inserir campo de assinatura
-              const signatureBlock = `
+        {isLoadingTemplates ? (
+          <div className="flex h-full items-center justify-center text-gray-500">
+            Carregando modelo de contrato...
+          </div>
+        ) : (
+          <div className="flex gap-4 h-full">
+            <div className={showMergeFields ? "flex-1" : "w-full"}>
+              <CKEditorComponent
+                content={content}
+                onChange={setContent}
+                height="calc(100vh - 260px)"
+                placeholder="Digite o conteúdo do contrato..."
+                showMergeFields={showMergeFields}
+                onInit={(editor) => {
+                  editorRef.current = editor;
+                }}
+                onInsertSignature={(signatoryName) => {
+                  // Inserir campo de assinatura
+                  const signatureBlock = `
                 <div class="signature-field" style="border: 2px dashed #ccc; padding: 20px; margin: 10px 0; text-align: center; background-color: #f9f9f9;">
                   <p><strong>Assinatura: ${signatoryName}</strong></p>
                   <p>Data: _______________</p>
                 </div>
               `;
-              setContent(content + signatureBlock);
-            }}
-            onInsertMergeField={(fieldName) => {
-              // Inserir campo de mesclagem
-              const mergeField = `<span class="merge-field" style="background-color: #e3f2fd; padding: 2px 6px; border-radius: 3px; border: 1px solid #2196f3; color: #1976d2; font-weight: bold;">[${fieldName.toUpperCase()}]</span>`;
-              setContent(content + mergeField);
-            }}
-          />
-          </div>
-          
-          {/* Painel Lateral de Campos de Mesclagem */}
-          {showMergeFields && (
-            <div className="w-80 flex-shrink-0">
-              <MergeFieldsHelper onInsertField={handleInsertField} />
+                  setContent(content + signatureBlock);
+                }}
+                onInsertMergeField={(fieldName) => {
+                  // Inserir campo de mesclagem
+                  const mergeField = `<span class="merge-field" style="background-color: #e3f2fd; padding: 2px 6px; border-radius: 3px; border: 1px solid #2196f3; color: #1976d2; font-weight: bold;">[${fieldName.toUpperCase()}]</span>`;
+                  setContent(content + mergeField);
+                }}
+              />
             </div>
-          )}
-        </div>
+
+            {/* Painel Lateral de Campos de Mesclagem */}
+            {showMergeFields && (
+              <div className="w-80 flex-shrink-0">
+                <MergeFieldsHelper onInsertField={handleInsertField} />
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Signature Modal */}

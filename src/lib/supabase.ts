@@ -1900,7 +1900,7 @@ export const dashboardService = {
         return {
           id: contract?.id?.toString() || "unknown",
           contractNumber:
-            contract?.contract_code || contract?.contract_number || "N/A",
+            contract?.contract_number || contract?.contract_code || "N/A",
           clientName:
             contract?.clients?.full_name ||
             contract?.clients?.name ||
@@ -2287,6 +2287,66 @@ export const contractTemplateService = {
       return data;
     } catch (error) {
       console.error("Error in contractTemplateService.getById:", error);
+      throw error;
+    }
+  },
+
+  // Get the default template (returns null if none is set)
+  async getDefault() {
+    try {
+      const { data, error } = await supabase
+        .from("contract_templates")
+        .select("*")
+        .eq("is_default", true)
+        .maybeSingle();
+
+      if (error) {
+        console.error("Error fetching default contract template:", error);
+        throw error;
+      }
+
+      return data;
+    } catch (error) {
+      console.error("Error in contractTemplateService.getDefault:", error);
+      throw error;
+    }
+  },
+
+  // Set a template as the default (atomically unsets any previous default)
+  async setAsDefault(id: number) {
+    try {
+      const { error } = await supabase.rpc("set_default_contract_template", {
+        template_id: id,
+      });
+
+      if (error) {
+        console.error("Error setting default contract template:", error);
+        throw error;
+      }
+
+      return true;
+    } catch (error) {
+      console.error("Error in contractTemplateService.setAsDefault:", error);
+      throw error;
+    }
+  },
+
+  // Remove the default flag from a template
+  async removeDefault(id: number) {
+    try {
+      const { error } = await supabase
+        .from("contract_templates")
+        .update({ is_default: false, updated_at: new Date().toISOString() })
+        .eq("id", id);
+
+      if (error) {
+        console.error("Error removing default contract template:", error);
+        throw error;
+      }
+
+      return true;
+    } catch (error) {
+      console.error("Error in contractTemplateService.removeDefault:", error);
       throw error;
     }
   },
@@ -3039,6 +3099,7 @@ export const electronicSignatureService = {
           contracts!inner (
             id,
             contract_code,
+            contract_number,
             contract_content,
             status,
             clients!inner (

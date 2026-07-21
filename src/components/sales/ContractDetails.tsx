@@ -707,7 +707,7 @@ const ContractDetails: React.FC<{
       const contractData: ContractData = {
         id: data.id,
         contract_code:
-          data.contract_code || data.contract_number || `CONT-${data.id}`,
+          data.contract_number || data.contract_code || `CONT-${data.id}`,
         total_value: parseFloat(data.total_value || data.credit_amount || "0"),
         remaining_value: parseFloat(
           data.remaining_value ||

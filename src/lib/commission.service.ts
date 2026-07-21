@@ -77,7 +77,7 @@ class CommissionService {
 
       return {
         contractId: contract.id,
-        contractCode: contract.contract_code || contract.contract_number || `CONT-${contract.id}`,
+        contractCode: contract.contract_number || contract.contract_code || `CONT-${contract.id}`,
         clientName: contract.clients?.full_name || "Cliente não encontrado",
         representativeId: contract.profiles?.id || "",
         representativeName: contract.profiles?.full_name || "Representante não encontrado",
@@ -152,7 +152,7 @@ class CommissionService {
 
         return {
           contractId: contract.id,
-          contractCode: contract.contract_code || contract.contract_number || `CONT-${contract.id}`,
+          contractCode: contract.contract_number || contract.contract_code || `CONT-${contract.id}`,
           clientName: contract.clients?.full_name || "Cliente não encontrado",
           representativeId: contract.profiles?.id || "",
           representativeName: contract.profiles?.full_name || "Representante não encontrado",

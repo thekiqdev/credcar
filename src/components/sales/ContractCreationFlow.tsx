@@ -336,24 +336,33 @@ const ContractCreationFlow: React.FC<ContractCreationFlowProps> = ({
         clientId = newClient.id;
       }
 
-      // Generate contract number
-      const contractNumber = `CONT-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
-
       // Usar o ID do plano selecionado diretamente
       const planId = selectedPlan!.id;
 
       // Create contracts for each selected quota
       const contracts = [];
+      const contractNumbers: string[] = [];
       const baseContent = contentToSave || contractContent;
       
       for (let i = 0; i < selectedQuotas.length; i++) {
         const quota = selectedQuotas[i];
-        const contractNumberForQuota = selectedQuotas.length > 1 
-          ? `${contractNumber}-${i + 1}` 
-          : contractNumber;
+
+        // Gerar número de contrato no formato AA0000 via RPC (atômico, sem colisão)
+        const { data: generatedNumber, error: numberError } = await supabase.rpc(
+          "generate_contract_number",
+        );
+
+        if (numberError || !generatedNumber) {
+          console.error("Contract number generation error:", numberError);
+          throw new Error(
+            "Erro ao gerar número do contrato. Tente novamente.",
+          );
+        }
+
+        const contractNumberForQuota = generatedNumber as string;
+        contractNumbers.push(contractNumberForQuota);
 
         // Personalizar conteúdo para esta cota específica
-        // Substituir {quota_number} pelo número da cota atual
         let personalizedContent = baseContent;
         const quotaNumber = quota.quota_number?.toString() || '';
         
@@ -363,12 +372,19 @@ const ContractCreationFlow: React.FC<ContractCreationFlowProps> = ({
           quotaNumber
         );
 
+        // Substituir placeholder {contract_number} pelo número real do contrato
+        personalizedContent = personalizedContent.replace(
+          /\{contract_number\}/g,
+          contractNumberForQuota
+        );
+
         // Create contract using the correct schema from the migration
         const { data: contract, error: contractError } = await supabase
           .from("contracts")
           .insert([
             {
               contract_code: contractNumberForQuota, // Using 'contract_code' as per schema
+              contract_number: contractNumberForQuota, // Mesmo valor nos dois campos (novo padrão AA0000)
               representative_id: contractRepresentativeId,
               client_id: clientId, // Already a number
               commission_table_id: planId, // Usar o ID do plano selecionado
@@ -423,9 +439,9 @@ const ContractCreationFlow: React.FC<ContractCreationFlowProps> = ({
 
       // Show success message
       if (contracts.length === 1) {
-        alert(`Contrato ${contractNumber} criado com sucesso!`);
+        alert(`Contrato Nº ${contractNumbers[0]} criado com sucesso!`);
       } else {
-        alert(`${contracts.length} contratos criados com sucesso!\n\nCódigos dos contratos:\n${contracts.map((c, i) => `${i + 1}. ${contractNumber}-${i + 1}`).join('\n')}`);
+        alert(`${contracts.length} contratos criados com sucesso!\n\nNúmeros dos contratos:\n${contractNumbers.map((n, i) => `${i + 1}. Nº ${n}`).join('\n')}`);
       }
 
       if (onComplete) {
@@ -624,6 +640,7 @@ const ContractCreationFlow: React.FC<ContractCreationFlowProps> = ({
               selectedQuotas={selectedQuotas}
               selectedGroup={selectedGroup}
               clientData={clientData}
+              isAdminMode={isAdminMode}
               onContentSubmit={handleContractContentSubmit}
               onBack={handleBackToClientRegistration}
             />
