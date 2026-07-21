@@ -373,7 +373,7 @@ const ContractContentEditor: React.FC<ContractContentEditorProps> = ({
           contract: {
             value: selectedCreditRange.valor_credito,
             installments: selectedCreditRange.numero_total_parcelas,
-            // Placeholder: o número real (AA0000) é gerado e substituído na criação do contrato
+            // Placeholder: o número real (6 dígitos) é gerado e substituído na criação do contrato
             number: '{contract_number}',
             date: new Date().toLocaleDateString('pt-BR'),
             // Novos campos de parcelas e grupo

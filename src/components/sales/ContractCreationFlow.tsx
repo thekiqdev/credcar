@@ -347,7 +347,7 @@ const ContractCreationFlow: React.FC<ContractCreationFlowProps> = ({
       for (let i = 0; i < selectedQuotas.length; i++) {
         const quota = selectedQuotas[i];
 
-        // Gerar número de contrato no formato AA0000 via RPC (atômico, sem colisão)
+        // Gerar número de contrato (6 dígitos a partir de 101100) via RPC (atômico, sem colisão)
         const { data: generatedNumber, error: numberError } = await supabase.rpc(
           "generate_contract_number",
         );
@@ -384,7 +384,7 @@ const ContractCreationFlow: React.FC<ContractCreationFlowProps> = ({
           .insert([
             {
               contract_code: contractNumberForQuota, // Using 'contract_code' as per schema
-              contract_number: contractNumberForQuota, // Mesmo valor nos dois campos (novo padrão AA0000)
+              contract_number: contractNumberForQuota, // Mesmo valor nos dois campos (6 dígitos)
               representative_id: contractRepresentativeId,
               client_id: clientId, // Already a number
               commission_table_id: planId, // Usar o ID do plano selecionado
