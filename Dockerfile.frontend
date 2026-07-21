@@ -9,7 +9,12 @@ WORKDIR /app
 
 # Sem package-lock: npm install resolve optional deps para a plataforma atual (Linux)
 COPY package.json ./
-RUN npm install
+# Rede instável no build (EasyPanel/VPS): retries e timeouts maiores evitam ECONNRESET
+RUN npm config set fetch-retries 5 \
+ && npm config set fetch-retry-mintimeout 20000 \
+ && npm config set fetch-retry-maxtimeout 120000 \
+ && npm config set fetch-timeout 300000 \
+ && npm install --prefer-offline --no-audit --no-fund
 
 COPY . .
 ARG VITE_SUPABASE_URL
